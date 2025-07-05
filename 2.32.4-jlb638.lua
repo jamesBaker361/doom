@@ -16,5 +16,4 @@ prepend_path("CPATH", pathJoin(base, "include"))
 prepend_path("C_INCLUDE_PATH", pathJoin(base, "include"))
 prepend_path("CPLUS_INCLUDE_PATH", pathJoin(base, "include"))
 prepend_path("LD_LIBRARY_PATH", pathJoin(base, "lib"))
-
-load("gcc/5.4")
+prepend_path("MANPATH", pathJoin(base, "share/man"))
