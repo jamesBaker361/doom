@@ -65,7 +65,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
 args=parser.parse_args()
 gymnasium.register_envs(ale_py)
 
-env = gymnasium.make(args.name, render_mode="rgb_array",
+env = gymnasium.make(args.game, render_mode="rgb_array",
                      full_action_space=True,
                      difficulty=args.difficulty,
                      mode=args.mode)
