@@ -18,90 +18,106 @@ from stable_baselines3.common.vec_env import (
 import retro
 
 
-class StochasticFrameSkip(gym.Wrapper):
-    def __init__(self, env, n, stickprob):
-        gym.Wrapper.__init__(self, env)
-        self.n = n
-        self.stickprob = stickprob
-        self.curac = None
-        self.rng = np.random.RandomState()
-        self.supports_want_render = hasattr(env, "supports_want_render")
+import gymnasium
+import ale_py
+from PIL import Image
+import numpy as np
+from datasets import Dataset
+from stable_baselines3 import PPO
+from stable_baselines3.common.env_util import make_vec_env
 
-    def reset(self, **kwargs):
-        self.curac = None
-        return self.env.reset(**kwargs)
+from stable_baselines3.common.callbacks import BaseCallback
+from PIL import Image
+import os
+import csv
+import argparse
+import random
 
-    def step(self, ac):
-        terminated = False
-        truncated = False
-        totrew = 0
-        for i in range(self.n):
-            # First step after reset, use action
-            if self.curac is None:
-                self.curac = ac
-            # First substep, delay with probability=stickprob
-            elif i == 0:
-                if self.rng.rand() > self.stickprob:
-                    self.curac = ac
-            # Second substep, new action definitely kicks in
-            elif i == 1:
-                self.curac = ac
-            if self.supports_want_render and i < self.n - 1:
-                ob, rew, terminated, truncated, info = self.env.step(
-                    self.curac,
-                    want_render=False,
-                )
-            else:
-                ob, rew, terminated, truncated, info = self.env.step(self.curac)
-            totrew += rew
-            if terminated or truncated:
-                break
-        return ob, totrew, terminated, truncated, info
+parser=argparse.ArgumentParser()
+parser.add_argument("--game",type=str,default="Alien-v5")
+parser.add_argument("--state",default=retro.State.DEFAULT)
+parser.add_argument("--scenario", default=None)
+parser.add_argument("--timesteps",type=int,default=100)
+
+CSV_NAME="actions.csv"
+
+class FrameActionPerEpisodeLogger(BaseCallback):
+    def __init__(self, save_freq: int, save_dir: str, frame_dir:str,verbose: int = 0):
+        super().__init__(verbose)
+        self.save_freq = save_freq
+        self.save_dir = save_dir
+        self.frame_dir = os.path.join(save_dir, frame_dir)
+        self.csv_path = os.path.join(save_dir,frame_dir, CSV_NAME)
+        os.makedirs(self.frame_dir, exist_ok=True)
+        self.episode_idx = 0
+        self.frame_idx = 0  # frame index within episode
+
+        with open(self.csv_path, mode="w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["episode", "frame_in_episode", "action","file"])
+
+    def _on_step(self) -> bool:
+        # Environment is vectorized; assume single environment
+        dones = self.locals["dones"]
+        if dones[0]:
+            self.episode_idx += 1
+            self.frame_idx = 0  # reset per episode
+
+        if self.n_calls % self.save_freq == 0:
+            # Save image
+            frame = self.training_env.get_images()[0]
+            if frame is not None:
+                filename = f"ep_{self.episode_idx:05d}_frame_{self.frame_idx:06d}.png"
+                path = os.path.join(self.frame_dir, filename)
+                img = Image.fromarray(frame)
+                img.save(path)
+
+            # Save action
+            action = self.locals["actions"][0]
+            with open(self.csv_path, mode="a", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow([self.episode_idx, self.frame_idx, int(action),filename])
+
+            self.frame_idx += 1
+
+        return True
+
+args=parser.parse_args()
+gymnasium.register_envs(ale_py)
+
+env = retro.make(
+            game=args.game,
+            state=args.state,
+            scenario=args.scenario,
+            render_mode="rgb_array",
+        )
+'''env = gymnasium.wrappers.RecordVideo(
+    env,
+    episode_trigger=lambda num: num % 1 == 0,
+    video_folder="saved-video-folder",
+    name_prefix="video-",
+)'''
+
+FOLDER_NAME=args.game
+
+random_noun_list=[]
+with open("random_nouns.txt","r") as file:
+    for line in file:
+        random_noun_list.append(line.strip())
 
 
-def make_retro(*, game, state=None, max_episode_steps=4500, **kwargs):
-    if state is None:
-        state = retro.State.DEFAULT
-    env = retro.make(game, state, **kwargs)
-    env = StochasticFrameSkip(env, n=4, stickprob=0.25)
-    if max_episode_steps is not None:
-        env = TimeLimit(env, max_episode_steps=max_episode_steps)
-    return env
 
+frame_dir="-".join(random.sample(random_noun_list, 3))
+print("frame dir",frame_dir)
 
-def wrap_deepmind_retro(env):
-    """
-    Configure environment for retro games, using config similar to DeepMind-style Atari in openai/baseline's wrap_deepmind
-    """
-    env = WarpFrame(env)
-    env = ClipRewardEnv(env)
-    return env
+callback = FrameActionPerEpisodeLogger(
+    save_freq=1,           # Save every frame; increase if needed
+    save_dir=FOLDER_NAME,
+    frame_dir=frame_dir
+)
 
+model = PPO("CnnPolicy", env, verbose=1)
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--game", default="Airstriker-Genesis")
-    parser.add_argument("--state", default=retro.State.DEFAULT)
-    parser.add_argument("--scenario", default=None)
-    args = parser.parse_args()
+model.learn(args.timesteps,callback=callback)
 
-    def make_env():
-        env = make_retro(game=args.game, state=args.state, scenario=args.scenario,render_mode="rgb_array")
-        env = wrap_deepmind_retro(env)
-        return env
-
-    env=retro.make(args.game, args.state,render_mode="rgb_array")
-    #venv = VecTransposeImage(VecFrameStack(SubprocVecEnv([make_env] * 8), n_stack=4))
-    model = PPO(
-        policy="CnnPolicy",
-        env=env,
-        verbose=1,
-    )
-    model.learn(
-        total_timesteps=100,
-        log_interval=1,
-    )
-
-
-if __name__ == "__main__":
-    main()
+print("all done :)")
