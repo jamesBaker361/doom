@@ -14,7 +14,7 @@ import argparse
 import random
 
 parser=argparse.ArgumentParser()
-parser.add_argument("--game",type=str,default="ALE/Alien-v5")
+parser.add_argument("--game",type=str,default="Alien-v5")
 parser.add_argument("--mode",type=int,default=0)
 parser.add_argument("--difficulty",type=int,default=0)
 parser.add_argument("--timesteps",type=int,default=100)
@@ -65,7 +65,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
 args=parser.parse_args()
 gymnasium.register_envs(ale_py)
 
-env = gymnasium.make(args.game, render_mode="rgb_array",
+env = gymnasium.make("ALE/"+args.game, render_mode="rgb_array",
                      full_action_space=True,
                      difficulty=args.difficulty,
                      mode=args.mode)
@@ -76,7 +76,7 @@ env = gymnasium.make(args.game, render_mode="rgb_array",
     name_prefix="video-",
 )'''
 
-FOLDER_NAME=args.game.split("/")[-1]
+FOLDER_NAME=args.game
 
 random_noun_list=[]
 with open("random_nouns.txt","r") as file:
