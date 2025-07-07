@@ -86,6 +86,7 @@ with open("random_nouns.txt","r") as file:
 
 
 frame_dir="-".join([random.sample(random_noun_list, 3)])
+print("frame dir",frame_dir)
 
 callback = FrameActionPerEpisodeLogger(
     save_freq=1,           # Save every frame; increase if needed
