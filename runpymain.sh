@@ -23,8 +23,14 @@
 day=$(date +'%m/%d/%Y %R')
 echo "main" ${day} $SLURM_JOBID "node_list" $SLURM_NODELIST $@  "\n" >> jobs.txt
 module purge
+export MODULEPATH=$MODULEPATH:/projects/community/modulefiles
+module load intel/17.0.4
+#module load cudnn/7.0.3
+module load gcc/10.3.0-pgarias
+module load boost/1.71.0-gc563
+module load openjdk/1.8.0_362
 eval "$(conda shell.bash hook)"
-conda activate deephands
+conda activate deepdoom
 export TRANSFORMERS_CACHE="/scratch/jlb638/trans_cache"
 export HF_HOME="/scratch/jlb638/trans_cache"
 export HF_HUB_CACHE="/scratch/jlb638/trans_cache"
