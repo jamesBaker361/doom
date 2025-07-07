@@ -11,6 +11,7 @@ from PIL import Image
 import os
 import csv
 import argparse
+import random
 
 parser=argparse.ArgumentParser()
 parser.add_argument("--game",type=str,default="ALE/Alien-v5")
@@ -19,14 +20,13 @@ parser.add_argument("--difficulty",type=int,default=0)
 parser.add_argument("--timesteps",type=int,default=100)
 
 CSV_NAME="actions.csv"
-FRAME_DIR="frames"
 
 class FrameActionPerEpisodeLogger(BaseCallback):
-    def __init__(self, save_freq: int, save_dir: str, verbose: int = 0):
+    def __init__(self, save_freq: int, save_dir: str, frame_dir:str,verbose: int = 0):
         super().__init__(verbose)
         self.save_freq = save_freq
         self.save_dir = save_dir
-        self.frame_dir = os.path.join(save_dir, FRAME_DIR)
+        self.frame_dir = os.path.join(save_dir, frame_dir)
         self.csv_path = os.path.join(save_dir, CSV_NAME)
         os.makedirs(self.frame_dir, exist_ok=True)
         self.episode_idx = 0
@@ -78,9 +78,19 @@ env = gymnasium.make(args.game, render_mode="rgb_array",
 
 FOLDER_NAME=args.game.split("/")[-1]
 
+random_noun_list=[]
+with open("random_nouns.txt","r") as file:
+    for line in file:
+        random_noun_list.append(line.strip())
+
+
+
+frame_dir="-".join([random.sample(random_noun_list, 3)])
+
 callback = FrameActionPerEpisodeLogger(
     save_freq=1,           # Save every frame; increase if needed
-    save_dir=FOLDER_NAME
+    save_dir=FOLDER_NAME,
+    frame_dir=frame_dir
 )
 
 model = PPO("CnnPolicy", env, verbose=1)
