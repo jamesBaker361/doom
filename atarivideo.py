@@ -76,7 +76,7 @@ env = gymnasium.make(args.game, render_mode="rgb_array",
     name_prefix="video-",
 )'''
 
-FOLDER_NAME=args.name.split("/")[-1]
+FOLDER_NAME=args.game.split("/")[-1]
 
 callback = FrameActionPerEpisodeLogger(
     save_freq=1,           # Save every frame; increase if needed
