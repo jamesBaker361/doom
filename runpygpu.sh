@@ -34,7 +34,7 @@ module load boost/1.71.0-gc563
 module load openjdk/1.8.0_362
 gcc --version
 eval "$(conda shell.bash hook)"
-conda activate deephands
+conda activate deepdoom
 export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:64
 export TORCH_USE_CUDA_DSA="1"
 export CUDA_LAUNCH_BLOCKING="1"
