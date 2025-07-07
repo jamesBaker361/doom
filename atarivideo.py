@@ -27,7 +27,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
         self.save_freq = save_freq
         self.save_dir = save_dir
         self.frame_dir = os.path.join(save_dir, frame_dir)
-        self.csv_path = os.path.join(save_dir, CSV_NAME)
+        self.csv_path = os.path.join(save_dir,frame_dir, CSV_NAME)
         os.makedirs(self.frame_dir, exist_ok=True)
         self.episode_idx = 0
         self.frame_idx = 0  # frame index within episode
@@ -85,7 +85,7 @@ with open("random_nouns.txt","r") as file:
 
 
 
-frame_dir="-".join([random.sample(random_noun_list, 3)])
+frame_dir="-".join(random.sample(random_noun_list, 3))
 print("frame dir",frame_dir)
 
 callback = FrameActionPerEpisodeLogger(
