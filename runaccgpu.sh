@@ -33,6 +33,7 @@ export MODULEPATH=$MODULEPATH:/projects/community/modulefiles
 module load intel/17.0.4
 #module load cudnn/7.0.3
 module load gcc/10.3.0-pgarias
+module load boost/1.71.0-gc563
 module load cuda/12.1.0
 gcc --version
 eval "$(conda shell.bash hook)"
