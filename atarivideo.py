@@ -98,3 +98,4 @@ model = PPO("CnnPolicy", env, verbose=1)
 
 model.learn(args.timesteps,callback=callback)
 
+print("all done :)")
