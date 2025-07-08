@@ -37,7 +37,7 @@ parser=argparse.ArgumentParser()
 parser.add_argument("--game",type=str,default="SonicTheHedgehog2-Genesis")
 parser.add_argument("--state",default=retro.State.DEFAULT)
 parser.add_argument("--scenario", default=None)
-parser.add_argument("--timesteps",type=int,default=100)
+parser.add_argument("--timesteps",type=int,default=1)
 
 CSV_NAME="actions.csv"
 
@@ -80,6 +80,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
 
     def _on_step(self) -> bool:
         # Environment is vectorized; assume single environment
+        print([k for k in self.locals.keys()])
         dones = self.locals["dones"]
         if dones[0]:
             self.episode_idx += 1
