@@ -34,7 +34,7 @@ import argparse
 import random
 
 parser=argparse.ArgumentParser()
-parser.add_argument("--game",type=str,default="Alien-v5")
+parser.add_argument("--game",type=str,default="NHL941on1-Genesis")
 parser.add_argument("--state",default=retro.State.DEFAULT)
 parser.add_argument("--scenario", default=None)
 parser.add_argument("--timesteps",type=int,default=100)
