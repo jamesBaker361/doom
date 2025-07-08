@@ -18,7 +18,7 @@ def _check_zipfile(f, process_f):
 
 
 def main():
-    paths = os.getcwd()
+    paths = [os.getcwd()]
     known_hashes = retro.data.get_known_hashes()
 
     imported_games = 0
