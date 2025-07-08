@@ -32,6 +32,9 @@ import os
 import csv
 import argparse
 import random
+import struct
+
+
 
 parser=argparse.ArgumentParser()
 parser.add_argument("--game",type=str,default="SonicTheHedgehog2-Genesis")
@@ -40,6 +43,54 @@ parser.add_argument("--scenario", default=None)
 parser.add_argument("--timesteps",type=int,default=1)
 
 CSV_NAME="actions.csv"
+
+from PIL import Image, ImageDraw, ImageFont
+
+def pad_image_with_text(img:Image.Image, lines:list, font_size:int=20)->Image.Image:
+    # Load original image
+    width, height = img.size
+
+    pad_height=len(lines)*font_size
+    # Create new image with extra white padding at the bottom
+    new_img = Image.new("RGB", (width, height + pad_height), color="white")
+    new_img.paste(img, (0, 0))
+
+    # Draw text in the padding area
+    draw = ImageDraw.Draw(new_img)
+    try:
+        font = ImageFont.truetype("arial.ttf", font_size)  # Windows/mac
+    except:
+        font = ImageFont.load_default()  # fallback
+
+    line_spacing = pad_height // max(len(lines), 1)
+
+    for i, line in enumerate(lines):
+        y = height + i * line_spacing
+        draw.text((10, y), line, fill="black", font=font)
+
+    return new_img
+
+
+# Define variable memory references
+VAR_MAP = {
+    "x":         (16756744, ">H"),  # player world X
+    "y":         (16756748, ">H"),  # player world Y
+    "screen_x":  (16772608, ">H"),  # camera X
+    "screen_y":  (16772612, ">H"),  # camera Y
+    "screen_x_end": (16772810, ">H")
+}
+
+def read_variable(ram: bytes, address: int, fmt: str):
+    # Map absolute address to RAM index (offset in 2KB RAM)
+    ram_index = address % len(ram)
+    return struct.unpack(fmt, ram[ram_index:ram_index + struct.calcsize(fmt)])[0]
+
+def get_coords(env):
+    ram = env.get_ram()
+    return {
+        name: read_variable(ram, addr, fmt)
+        for name, (addr, fmt) in VAR_MAP.items()
+    }
 
 class SonicDiscretizer(gym.ActionWrapper):
     """
@@ -93,6 +144,10 @@ class FrameActionPerEpisodeLogger(BaseCallback):
                 filename = f"ep_{self.episode_idx:05d}_frame_{self.frame_idx:06d}.png"
                 path = os.path.join(self.frame_dir, filename)
                 img = Image.fromarray(frame)
+                ram=self.model.get_env().get_ram()
+                coord_dict=get_coords(ram)
+                lines=[f"{key}={value}" for key,value in coord_dict.items()]
+                img=pad_image_with_text(img,path,lines)
                 img.save(path)
 
             # Save action
