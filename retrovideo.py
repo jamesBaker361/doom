@@ -41,6 +41,28 @@ parser.add_argument("--timesteps",type=int,default=100)
 
 CSV_NAME="actions.csv"
 
+class SonicDiscretizer(gym.ActionWrapper):
+    """
+    Wrap a gym-retro environment and make it use discrete
+    actions for the Sonic game.
+    """
+    def __init__(self, env):
+        super(SonicDiscretizer, self).__init__(env)
+        buttons = ["B", "A", "MODE", "START", "UP", "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"]
+        actions = [['LEFT'], ['RIGHT'], ['LEFT', 'DOWN'], ['RIGHT', 'DOWN'], ['DOWN'],
+                   ['DOWN', 'B'], ['B']]
+        self._actions = []
+        for action in actions:
+            arr = np.array([False] * 12)
+            for button in action:
+                arr[buttons.index(button)] = True
+            self._actions.append(arr)
+        self.action_space = gym.spaces.Discrete(len(self._actions))
+
+    def action(self, a): # pylint: disable=W0221
+        print("a",a)
+        return self._actions[a].copy()
+
 class FrameActionPerEpisodeLogger(BaseCallback):
     def __init__(self, save_freq: int, save_dir: str, frame_dir:str,verbose: int = 0):
         super().__init__(verbose)
@@ -76,6 +98,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
             action = self.locals["actions"][0]
             with open(self.csv_path, mode="a", newline="") as f:
                 writer = csv.writer(f)
+                print("action",action)
                 writer.writerow([self.episode_idx, self.frame_idx, int(action),filename])
 
             self.frame_idx += 1
