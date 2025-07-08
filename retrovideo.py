@@ -131,7 +131,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
 
     def _on_step(self) -> bool:
         # Environment is vectorized; assume single environment
-        print([k for k in self.locals.keys()])
+        print(self.locals["info"])
         dones = self.locals["dones"]
         if dones[0]:
             self.episode_idx += 1
@@ -146,8 +146,8 @@ class FrameActionPerEpisodeLogger(BaseCallback):
                 img = Image.fromarray(frame)
                 vec_env = self.model.get_env()
                 retro_env = vec_env.envs[0].unwrapped
-                ram = retro_env.get_ram()
-                coord_dict=get_coords(env)
+                #retro_env=
+                coord_dict=get_coords(retro_env)
                 lines=[f"{key}={value}" for key,value in coord_dict.items()]
                 img=pad_image_with_text(img,path,lines)
                 img.save(path)
