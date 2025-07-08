@@ -34,7 +34,7 @@ import argparse
 import random
 
 parser=argparse.ArgumentParser()
-parser.add_argument("--game",type=str,default="NHL941on1-Genesis")
+parser.add_argument("--game",type=str,default="SonicTheHedgehog2-Genesis")
 parser.add_argument("--state",default=retro.State.DEFAULT)
 parser.add_argument("--scenario", default=None)
 parser.add_argument("--timesteps",type=int,default=100)
@@ -98,7 +98,8 @@ env = retro.make(
     name_prefix="video-",
 )'''
 
-FOLDER_NAME=args.game
+FOLDER_NAME=os.path.join("saved_retro_videos",args.game)
+os.makedirs(FOLDER_NAME,exist_ok=True)
 
 random_noun_list=[]
 with open("random_nouns.txt","r") as file:
