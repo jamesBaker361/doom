@@ -144,7 +144,9 @@ class FrameActionPerEpisodeLogger(BaseCallback):
                 filename = f"ep_{self.episode_idx:05d}_frame_{self.frame_idx:06d}.png"
                 path = os.path.join(self.frame_dir, filename)
                 img = Image.fromarray(frame)
-                ram=self.model.get_env().get_ram()
+                vec_env = self.model.get_env()
+                retro_env = vec_env.envs[0].unwrapped
+                ram = retro_env.get_ram()
                 coord_dict=get_coords(ram)
                 lines=[f"{key}={value}" for key,value in coord_dict.items()]
                 img=pad_image_with_text(img,path,lines)
