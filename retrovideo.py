@@ -114,6 +114,9 @@ env = retro.make(
             scenario=args.scenario,
             render_mode="rgb_array",
         )
+
+if args.game=="SonicTheHedgehog2-Genesis":
+    env=SonicDiscretizer(env)
 '''env = gymnasium.wrappers.RecordVideo(
     env,
     episode_trigger=lambda num: num % 1 == 0,
