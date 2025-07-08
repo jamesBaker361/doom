@@ -76,7 +76,7 @@ env = gymnasium.make("ALE/"+args.game, render_mode="rgb_array",
     name_prefix="video-",
 )'''
 
-FOLDER_NAME=os.path.join("atari_videos",args.game)
+FOLDER_NAME=os.path.join("saved_atari_videos",args.game)
 os.makedirs(FOLDER_NAME,exist_ok=True)
 
 random_noun_list=[]
