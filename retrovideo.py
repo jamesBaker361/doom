@@ -53,6 +53,7 @@ def pad_image_with_text(img:Image.Image, lines:list, font_size:int=20)->Image.Im
     print("w,h",width,height)
 
     pad_height=len(lines)*font_size
+    print("pad hieghts",pad_height)
     # Create new image with extra white padding at the bottom
     new_img = Image.new("RGB", (width, height + pad_height), color="white")
     new_img.paste(img, (0, 0))
