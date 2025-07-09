@@ -36,4 +36,4 @@ def extract_sprites(sprite_sheet_path, output_dir, min_area=100):
 
     print(f"✅ Extracted {count} sprites to '{output_dir}'")
 
-extract_sprites("eric_lecards.png","eric")
+extract_sprites("eric_lecarde.png","eric")
