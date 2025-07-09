@@ -3,7 +3,7 @@ import numpy as np
 from PIL import Image
 import os
 
-limit=10
+limit=25
 
 
 import cv2
