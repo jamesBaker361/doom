@@ -85,6 +85,8 @@ VAR_MAP = {
 
 def read_variable(ram: bytes, address: int, fmt: str):
     # Map absolute address to RAM index (offset in 2KB RAM)
+    print("ram type",type(ram))
+    print("ram[0]",ram[0])
     ram_index = address % len(ram)
     return struct.unpack(fmt, ram[ram_index:ram_index + struct.calcsize(fmt)])[0]
 
