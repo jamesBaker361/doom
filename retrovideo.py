@@ -50,6 +50,8 @@ def pad_image_with_text(img:Image.Image, lines:list, font_size:int=20)->Image.Im
     # Load original image
     width, height = img.size
 
+    print("w,h",width,height)
+
     pad_height=len(lines)*font_size
     # Create new image with extra white padding at the bottom
     new_img = Image.new("RGB", (width, height + pad_height), color="white")
@@ -148,6 +150,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
                 retro_env = vec_env.envs[0].unwrapped
                 #retro_env=
                 coord_dict=get_coords(retro_env)
+                print("coord dict",coord_dict)
                 lines=[f"{key}={value}" for key,value in coord_dict.items()]
                 img=pad_image_with_text(img,path,lines)
                 img.save(path)
