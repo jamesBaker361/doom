@@ -73,30 +73,6 @@ def pad_image_with_text(img:Image.Image, lines:list, font_size:int=20)->Image.Im
 
     return new_img
 
-
-# Define variable memory references
-VAR_MAP = {
-    "x":         (16756744, ">H"),  # player world X
-    "y":         (16756748, ">H"),  # player world Y
-    "screen_x":  (16772608, ">H"),  # camera X
-    "screen_y":  (16772612, ">H"),  # camera Y
-    "screen_x_end": (16772810, ">H")
-}
-
-def read_variable(ram: bytes, address: int, fmt: str):
-    # Map absolute address to RAM index (offset in 2KB RAM)
-    print("ram type",type(ram))
-    print("ram[0]",ram[0])
-    ram_index = address % len(ram)
-    return struct.unpack(fmt, ram[ram_index:ram_index + struct.calcsize(fmt)])[0]
-
-def get_coords(env):
-    ram = env.get_ram()
-    return {
-        name: read_variable(ram, addr, fmt)
-        for name, (addr, fmt) in VAR_MAP.items()
-    }
-
 class SonicDiscretizer(gym.ActionWrapper):
     """
     Wrap a gym-retro environment and make it use discrete
@@ -129,14 +105,14 @@ class FrameActionPerEpisodeLogger(BaseCallback):
         os.makedirs(self.frame_dir, exist_ok=True)
         self.episode_idx = 0
         self.frame_idx = 0  # frame index within episode
+        self.info_keys=["x","y","screen_x","screen_y","score","lives"]
 
         with open(self.csv_path, mode="w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["episode", "frame_in_episode", "action","file"])
+            writer.writerow(["episode", "frame_in_episode", "action","file"]+self.info_keys)
 
     def _on_step(self) -> bool:
         # Environment is vectorized; assume single environment
-        print(self.locals["infos"])
         dones = self.locals["dones"]
         if dones[0]:
             self.episode_idx += 1
@@ -149,21 +125,14 @@ class FrameActionPerEpisodeLogger(BaseCallback):
                 filename = f"ep_{self.episode_idx:05d}_frame_{self.frame_idx:06d}.png"
                 path = os.path.join(self.frame_dir, filename)
                 img = Image.fromarray(frame)
-                vec_env = self.model.get_env()
-                retro_env = vec_env.envs[0].unwrapped
-                #retro_env=
-                coord_dict=get_coords(retro_env)
-                print("coord dict",coord_dict)
-                lines=[f"{key}={value}" for key,value in coord_dict.items()]
-                img=pad_image_with_text(img,lines)
                 img.save(path)
 
             # Save action
             action = self.locals["actions"][0]
             with open(self.csv_path, mode="a", newline="") as f:
                 writer = csv.writer(f)
-                print("action",action)
-                writer.writerow([self.episode_idx, self.frame_idx, int(action),filename])
+                row=[self.episode_idx, self.frame_idx, int(action),filename]+[self.locals["infos"][value] for value in self.info_keys]
+                writer.writerow(row)
 
             self.frame_idx += 1
 
