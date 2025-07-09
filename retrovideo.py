@@ -38,8 +38,8 @@ import struct
 
 parser=argparse.ArgumentParser()
 parser.add_argument("--game",type=str,default="SonicTheHedgehog2-Genesis")
-parser.add_argument("--state",default="AquaticRuinZone.Act1.state")
-parser.add_argument("--scenario", default=None)
+parser.add_argument("--state",default=retro.State.DEFAULT)
+parser.add_argument("--scenario", default="MetropolisZone.Act1")
 parser.add_argument("--timesteps",type=int,default=10)
 parser.add_argument("--record",action="store_true")
 
