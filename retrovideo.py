@@ -93,7 +93,6 @@ class SonicDiscretizer(gym.ActionWrapper):
         self.action_space = gym.spaces.Discrete(len(self._actions))
 
     def action(self, a): # pylint: disable=W0221
-        print("a",a)
         return self._actions[a].copy()
 
 class FrameActionPerEpisodeLogger(BaseCallback):
