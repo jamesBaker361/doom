@@ -153,7 +153,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
                 coord_dict=get_coords(retro_env)
                 print("coord dict",coord_dict)
                 lines=[f"{key}={value}" for key,value in coord_dict.items()]
-                img=pad_image_with_text(img,path,lines)
+                img=pad_image_with_text(img,lines)
                 img.save(path)
 
             # Save action
