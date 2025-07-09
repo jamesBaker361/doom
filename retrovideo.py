@@ -115,7 +115,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
     def _on_step(self) -> bool:
         # Environment is vectorized; assume single environment
         dones = self.locals["dones"]
-        print(self.locals["infos"])
+        #print(self.locals["infos"])
         if dones[0]:
             self.episode_idx += 1
             self.frame_idx = 0  # reset per episode
@@ -133,7 +133,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
             action = self.locals["actions"][0]
             with open(self.csv_path, mode="a", newline="") as f:
                 writer = csv.writer(f)
-                row=[self.episode_idx, self.frame_idx, int(action),filename]+[self.locals["infos"][value] for value in self.info_keys]
+                row=[self.episode_idx, self.frame_idx, int(action),filename]+[self.locals["infos"][0][value] for value in self.info_keys]
                 writer.writerow(row)
 
             self.frame_idx += 1
