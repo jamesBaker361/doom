@@ -115,6 +115,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
     def _on_step(self) -> bool:
         # Environment is vectorized; assume single environment
         dones = self.locals["dones"]
+        print(self.locals["infos"])
         if dones[0]:
             self.episode_idx += 1
             self.frame_idx = 0  # reset per episode
