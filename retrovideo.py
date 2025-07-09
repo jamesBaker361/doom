@@ -190,7 +190,7 @@ except:
 checkpoint_callback = CheckpointCallback(
     save_freq=10_000,
     save_path=checkpoint_path,
-    name_prefix="ppo_sonic"
+    name_prefix="ppo"
 )
 
 model.learn(args.timesteps,callback=CallbackList([checkpoint_callback, callback]))
