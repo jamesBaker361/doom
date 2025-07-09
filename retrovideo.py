@@ -40,7 +40,8 @@ parser=argparse.ArgumentParser()
 parser.add_argument("--game",type=str,default="SonicTheHedgehog2-Genesis")
 parser.add_argument("--state",default=retro.State.DEFAULT)
 parser.add_argument("--scenario", default=None)
-parser.add_argument("--timesteps",type=int,default=1)
+parser.add_argument("--timesteps",type=int,default=10)
+parser.add_argument("--record",action="store_true")
 
 CSV_NAME="actions.csv"
 
@@ -150,12 +151,14 @@ env = retro.make(
 
 if args.game=="SonicTheHedgehog2-Genesis":
     env=SonicDiscretizer(env)
-'''env = gymnasium.wrappers.RecordVideo(
-    env,
-    episode_trigger=lambda num: num % 1 == 0,
-    video_folder="saved-video-folder",
-    name_prefix="video-",
-)'''
+
+if args.record:
+    env = gymnasium.wrappers.RecordVideo(
+        env,
+        episode_trigger=lambda num: num % 1 == 0,
+        video_folder="saved-video-folder",
+        name_prefix="video-",
+    )
 
 FOLDER_NAME=os.path.join("saved_retro_videos",args.game)
 os.makedirs(FOLDER_NAME,exist_ok=True)
