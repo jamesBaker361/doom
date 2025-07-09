@@ -26,7 +26,7 @@ from datasets import Dataset
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 
-from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.callbacks import BaseCallback, CallbackList,CheckpointCallback
 from PIL import Image
 import os
 import csv
@@ -44,6 +44,7 @@ parser.add_argument("--timesteps",type=int,default=10)
 parser.add_argument("--record",action="store_true")
 
 CSV_NAME="actions.csv"
+MODEL_SAVE_DIR="saved_rl_models"
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -179,8 +180,20 @@ callback = FrameActionPerEpisodeLogger(
     frame_dir=frame_dir
 )
 
-model = PPO("CnnPolicy", env, verbose=1)
+save_path=os.path.join(MODEL_SAVE_DIR,args.game,args.scenario)
+checkpoint_path=os.path.join(save_path,"checkpoints")
+try:
+    model=PPO.load(save_path, env=env, verbose=1)
+except:
+    model = PPO("CnnPolicy", env, verbose=1)
 
-model.learn(args.timesteps,callback=callback)
+checkpoint_callback = CheckpointCallback(
+    save_freq=10_000,
+    save_path=checkpoint_path,
+    name_prefix="ppo_sonic"
+)
+
+model.learn(args.timesteps,callback=CallbackList([checkpoint_callback, callback]))
+model.save(save_path)
 
 print("all done :)")
