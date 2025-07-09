@@ -38,7 +38,7 @@ import struct
 
 parser=argparse.ArgumentParser()
 parser.add_argument("--game",type=str,default="SonicTheHedgehog2-Genesis")
-parser.add_argument("--state",default=retro.State.DEFAULT)
+parser.add_argument("--state",default="AquaticRuinZone.Act1.state")
 parser.add_argument("--scenario", default=None)
 parser.add_argument("--timesteps",type=int,default=10)
 parser.add_argument("--record",action="store_true")
@@ -160,7 +160,7 @@ if args.record:
         name_prefix="video-",
     )
 
-FOLDER_NAME=os.path.join("saved_retro_videos",args.game)
+FOLDER_NAME=os.path.join("saved_retro_videos",args.game,args.scenario)
 os.makedirs(FOLDER_NAME,exist_ok=True)
 
 random_noun_list=[]
