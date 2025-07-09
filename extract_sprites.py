@@ -3,6 +3,9 @@ import numpy as np
 from PIL import Image
 import os
 
+limit=10
+
+
 def extract_sprites(sprite_sheet_path, output_dir, min_area=100):
     os.makedirs(output_dir, exist_ok=True)
 
@@ -23,6 +26,8 @@ def extract_sprites(sprite_sheet_path, output_dir, min_area=100):
 
     count = 0
     for i, cnt in enumerate(contours):
+        if i==limit:
+            break
         x, y, w, h = cv2.boundingRect(cnt)
         if w * h < min_area:
             continue  # skip small dots
@@ -36,4 +41,7 @@ def extract_sprites(sprite_sheet_path, output_dir, min_area=100):
 
     print(f"✅ Extracted {count} sprites to '{output_dir}'")
 
-extract_sprites("eric_lecarde.png","eric")
+for character in ["eric_lecarde","john_morris","mario","megaman","tails","sonic"]:
+    output_dir=os.path.join("sprites",character)
+    os.makedirs(output_dir,exist_ok=True)
+    extract_sprites(f"{character}.png",output_dir)
