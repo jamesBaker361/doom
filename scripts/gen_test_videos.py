@@ -1,4 +1,4 @@
-for name in ["castle","megaman","mario"]:
+for name in ["castle","megaman","mario","sonic","indiana","pink","mortal","street"]:
     command=f"sbatch -J retro --err=slurm_chip/retro/{name}.err --out=slurm_chip/retro/{name}.out runpygpu_chip.sh retrovideo.py "
     game={
         "castle":"CastlevaniaBloodlines-Genesis",
