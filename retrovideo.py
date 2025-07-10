@@ -97,7 +97,7 @@ class SonicDiscretizer(gym.ActionWrapper):
         return self._actions[a].copy()
 
 class FrameActionPerEpisodeLogger(BaseCallback):
-    def __init__(self, save_freq: int, save_dir: str, frame_dir:str,verbose: int = 0):
+    def __init__(self, save_freq: int, save_dir: str, frame_dir:str,info_keys:list,verbose: int = 0,):
         super().__init__(verbose)
         self.save_freq = save_freq
         self.save_dir = save_dir
@@ -106,7 +106,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
         os.makedirs(self.frame_dir, exist_ok=True)
         self.episode_idx = 0
         self.frame_idx = 0  # frame index within episode
-        self.info_keys=["x","y","screen_x","screen_y","score","lives"]
+        self.info_keys=info_keys
 
         with open(self.csv_path, mode="w", newline="") as f:
             writer = csv.writer(f)
@@ -152,6 +152,9 @@ env = retro.make(
 
 if args.game=="SonicTheHedgehog2-Genesis":
     env=SonicDiscretizer(env)
+    info_keys=["x","y","screen_x","screen_y","score","lives"]
+else:
+    info_keys=[]
 
 if args.record:
     env = gymnasium.wrappers.RecordVideo(
@@ -174,10 +177,12 @@ with open("random_nouns.txt","r") as file:
 frame_dir="-".join(random.sample(random_noun_list, 3))
 print("frame dir",frame_dir)
 
+
 callback = FrameActionPerEpisodeLogger(
     save_freq=1,           # Save every frame; increase if needed
     save_dir=FOLDER_NAME,
-    frame_dir=frame_dir
+    frame_dir=frame_dir,
+    info_keys=info_keys
 )
 
 save_path=os.path.join(MODEL_SAVE_DIR,args.game,args.scenario)
