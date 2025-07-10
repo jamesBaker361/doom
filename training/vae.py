@@ -129,7 +129,7 @@ def main(args):
 
         loader = DataLoader(combined_dataset, batch_size=args.batch_size, shuffle=True)
 
-        autoencoder=AutoencoderKL.from_pretrained("digiplay/DreamShaper_7")
+        autoencoder=AutoencoderKL.from_pretrained("digiplay/DreamShaper_7",subfolder="vae").to(device)
         params=[p for p in autoencoder.parameters()]
 
         optimizer=torch.optim.AdamW(params,args.lr)
@@ -148,6 +148,7 @@ def main(args):
                 if b==args.limit:
                     break
                 with accelerator.accumulate(params):
+                    predicted=predicted.to(device)
                     predicted=autoencoder(batch).sample
                     loss=F.mse_loss(predicted.float(),batch.float())
                     accelerator.backward(loss)
