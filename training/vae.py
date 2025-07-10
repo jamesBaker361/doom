@@ -142,7 +142,9 @@ def main(args):
     for e in range(1,args.epochs+1):
         start=time.time()
         loss_buffer=[]
-        for batch in loader:
+        for b,batch in enumerate(loader):
+            if b==args.limit:
+                break
             with accelerator.accumulate(params):
                 predicted=autoencoder(batch).sample
                 loss=F.mse_loss(predicted.float(),batch.float())
@@ -180,6 +182,8 @@ def main(args):
         accelerator.log({
             f"image_{k}":wandb.Image(concatenated_image)
         })
+
+    autoencoder.push_to_hub(args.name)
 
 
 
