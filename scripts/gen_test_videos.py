@@ -11,6 +11,6 @@ for name in ["castle","megaman","mario"]:
         "mario":"DonutPlains1",
         "castle":"Level1-2"
     }[name]
-    command=f" sbatch -J test --err=slurm_chip/test/{name}.err --out=slurm_chip/test/{name}.out sbatch runpygpu_chip.sh retrovideo.py "
+    command=f" sbatch -J test --err=slurm_chip/test/{name}.err --out=slurm_chip/test/{name}.out runpygpu_chip.sh retrovideo.py "
     command+=f" --scenario {scenario} --game {game} --timesteps 1 "
     print(command)
