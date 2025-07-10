@@ -289,6 +289,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
         return True
 
 args=parser.parse_args()
+print(args)
 gymnasium.register_envs(ale_py)
 
 env = retro.make(
