@@ -42,6 +42,7 @@ parser.add_argument("--state",default=retro.State.DEFAULT)
 parser.add_argument("--scenario", default="MetropolisZone.Act1")
 parser.add_argument("--timesteps",type=int,default=10)
 parser.add_argument("--record",action="store_true")
+parser.add_argument("--save_dir",type=str,default="saved_retro_videos")
 
 CSV_NAME="actions.csv"
 MODEL_SAVE_DIR="saved_rl_models"
@@ -75,13 +76,117 @@ def pad_image_with_text(img:Image.Image, lines:list, font_size:int=20)->Image.Im
 
     return new_img
 
-class SonicDiscretizer(gym.ActionWrapper):
+'''
+
+SNES street fighter 2
+A: Forward (medium kick)
+
+B: Short (light kick)
+
+X: Strong (medium punch)
+
+Y: Jab (light punch)
+
+L: Fierce (hard punch)
+
+R: Roundhouse (hard kick)
+
+
+Genesis Street fighter 2
+
+A-	Light Kick
+B-	 Medium Kick
+C-	 Hard Kick
+
+X- Light Punch
+Y- Medium Punch
+Z- Hard Punch
+
+Genesis-SNES
+B=A
+A=B
+C=R
+X=Y
+Y=X
+Z=L
+
+'''
+
+# SNES: ["B", "Y", "SELECT", "START", "UP", "DOWN", "LEFT", "RIGHT", "A", "X", "L", "R"]
+SNES_BUTTONS = ["B", "Y", "SELECT", "START", "UP", "DOWN", "LEFT", "RIGHT", "A", "X", "L", "R"]
+
+# Genesis: ["B", "A", "MODE", "START", "UP", "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"]
+GENESIS_BUTTONS = ["B", "A", "MODE", "START", "UP", "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"]
+
+SHARED_ACTION_MAP ={
+    'NOOP':[],
+    "UP":['UP'],
+    'DOWN':['DOWN'],
+    'LEFT':['LEFT'],
+    'RIGHT':['RIGHT'],
+}
+
+GENESIS_BUTTON_BINDING={
+    'BA':["B"],
+    'AB':['A'],
+    'CR':['C'],
+    'XY':['X'],
+    'YX':['Y'],
+    'ZL':['Z']
+}
+
+SNES_BUTTON_BINDING={
+    'BA':["A"],
+    'AB':['B'],
+    'CR':['R'],
+    'XY':['Y'],
+    'YX':['X'],
+    'ZL':['L']
+}
+
+SNES_MAP={}
+GENESIS_MAP={}
+
+for console_map,button_binding in zip([SNES_MAP,GENESIS_MAP],[GENESIS_BUTTON_BINDING,SNES_BUTTON_BINDING]):
+    for shared_k,shared_v in SHARED_ACTION_MAP.items():
+        for button_k,button_v in button_binding.items():
+            console_map[f"{shared_k}-{button_k}"]=shared_v+button_v
+
+print("snes_map",SNES_MAP)
+print("genesis_map",GENESIS_MAP)
+
+
+class Discretizer(gym.ActionWrapper):
+    def __init__(self, env,console:str="Genesis"):
+        super().__init__(env)
+        if console=="Genesis":
+            self.buttons=GENESIS_BUTTONS
+            self.console_map=GENESIS_MAP
+        elif console=="Snes":
+            self.buttons=SNES_BUTTONS
+            self.console_map=SNES_MAP
+        self._actions=[]
+        for action in self.console_map.keys():
+            button_combo = self.console_map[action]
+            arr = np.array([False] * len(self.buttons))
+            for btn in button_combo:
+                arr[self.buttons.index(btn)] = True
+            self._actions.append(arr)
+        
+        self.action_space = gym.spaces.Discrete(len(self._actions))
+
+    def action(self, a): # pylint: disable=W0221
+        return self._actions[a].copy()
+
+
+
+class GenesisDiscretizer(gym.ActionWrapper):
     """
     Wrap a gym-retro environment and make it use discrete
     actions for the Sonic game.
     """
     def __init__(self, env):
-        super(SonicDiscretizer, self).__init__(env)
+        super(GenesisDiscretizer, self).__init__(env)
         buttons = ["B", "A", "MODE", "START", "UP", "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"]
         actions = [['LEFT'], ['RIGHT'], ['LEFT', 'DOWN'], ['RIGHT', 'DOWN'], ['DOWN'],
                    ['DOWN', 'B'], ['B']]
@@ -94,6 +199,45 @@ class SonicDiscretizer(gym.ActionWrapper):
         self.action_space = gym.spaces.Discrete(len(self._actions))
 
     def action(self, a): # pylint: disable=W0221
+        return self._actions[a].copy()
+    
+class SNESDiscretizer(gym.ActionWrapper):
+    """
+    Wrap a gym-retro environment and make it use discrete
+    actions for SNES games (e.g. Super Mario World, F-Zero).
+    """
+    def __init__(self, env):
+        super(SNESDiscretizer, self).__init__(env)
+
+        # SNES button layout in gym-retro
+        buttons = ["B", "Y", "SELECT", "START", "UP", "DOWN", "LEFT", "RIGHT", "A", "X", "L", "R"]
+
+        # Define a reasonable set of discrete actions
+        actions = [
+            [],                     # NOOP
+            ['LEFT'],              # Walk left
+            ['RIGHT'],             # Walk right
+            ['LEFT', 'B'],         # Run left
+            ['RIGHT', 'B'],        # Run right
+            ['B'],                 # Jump or run
+            ['A'],                 # Spin jump or jump alt
+            ['DOWN'],              # Duck/crouch
+            ['UP'],                # Look up / enter pipe
+            ['Y'],                 # Shoot / grab
+            ['RIGHT', 'Y'],        # Shoot while moving
+            ['RIGHT', 'B', 'Y'],   # Run + shoot + right
+        ]
+
+        self._actions = []
+        for action in actions:
+            arr = np.array([False] * len(buttons))
+            for button in action:
+                arr[buttons.index(button)] = True
+            self._actions.append(arr)
+
+        self.action_space = gym.spaces.Discrete(len(self._actions))
+
+    def action(self, a):
         return self._actions[a].copy()
 
 class FrameActionPerEpisodeLogger(BaseCallback):
@@ -155,7 +299,6 @@ env = retro.make(
         )
 
 if args.game=="SonicTheHedgehog2-Genesis":
-    env=SonicDiscretizer(env)
     info_keys=["x","y","screen_x","screen_y","score","lives"]
 else:
     info_keys=[]
@@ -168,7 +311,10 @@ if args.record:
         name_prefix="video-",
     )
 
-FOLDER_NAME=os.path.join("saved_retro_videos",args.game,args.scenario)
+console=args.name.split("-")[-1]
+env=Discretizer(env,console)
+
+FOLDER_NAME=os.path.join(args.save_dir,args.game,args.scenario)
 os.makedirs(FOLDER_NAME,exist_ok=True)
 
 random_noun_list=[]
