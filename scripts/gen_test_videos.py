@@ -3,13 +3,22 @@ for name in ["castle","megaman","mario"]:
     game={
         "castle":"CastlevaniaBloodlines-Genesis",
         "megaman":"MegaManTheWilyWars-Genesis",
-        "mario": "SuperMarioWorld-Snes"
+        "mario": "SuperMarioWorld-Snes",
+        "sonic":"SonicTheHedgehog2-Genesis",
+        "indiana":"IndianaJonesAndTheLastCrusade-Genesis",
+        "pink":"PinkGoesToHollywood-Genesis",
+        "mortal":"MortalKombatII-Genesis",
+        "street":"StreetFighterIISpecialChampionEdition-Genesis"
     }[name]
     scenario={
-       # "sonic":"MetropolisZone.Act1",
-        "megaman":"Level1.Swiv.state",
+        "sonic":"MetropolisZone.Act1",
+        "megaman":"Level1.Swiv",
         "mario":"DonutPlains1",
-        "castle":"Level1-2"
+        "castle":"Level1-2",
+        "indiana":"Level1",
+        "pink":"Level1",
+        "mortal":"Level1.SubZeroVsRyden",
+        "street":"Champion.Level1.RyuVsGuile"
     }[name]
     command=f" sbatch -J test --err=slurm_chip/test/{name}.err --out=slurm_chip/test/{name}.out runpygpu_chip.sh retrovideo.py "
     command+=f" --scenario {scenario} --game {game} --timesteps 1 "
