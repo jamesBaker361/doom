@@ -112,78 +112,80 @@ def main(args):
         "bf16":torch.bfloat16
     }[args.mixed_precision]
 
-    transform = transforms.Compose([
-    transforms.Resize((args.image_size, args.image_size)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                         std=[0.5, 0.5, 0.5])
-    ])
+    with accelerator.autocast():
 
-    dataset_list=[]
-    for path in args.image_folder_paths:
-        dataset_list.append(FlatImageFolder(path,transform=transform))
+        transform = transforms.Compose([
+        transforms.Resize((args.image_size, args.image_size)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5, 0.5, 0.5],
+                            std=[0.5, 0.5, 0.5])
+        ])
 
-    combined_dataset = ConcatDataset(dataset_list)
+        dataset_list=[]
+        for path in args.image_folder_paths:
+            dataset_list.append(FlatImageFolder(path,transform=transform))
 
-    loader = DataLoader(combined_dataset, batch_size=args.batch_size, shuffle=True)
+        combined_dataset = ConcatDataset(dataset_list)
 
-    autoencoder=AutoencoderKL.from_pretrained("digiplay/DreamShaper_7")
-    params=[p for p in autoencoder.parameters()]
+        loader = DataLoader(combined_dataset, batch_size=args.batch_size, shuffle=True)
 
-    optimizer=torch.optim.AdamW(params,args.lr)
+        autoencoder=AutoencoderKL.from_pretrained("digiplay/DreamShaper_7")
+        params=[p for p in autoencoder.parameters()]
 
-    loader,autoencoder,optimizer=accelerator.prepare(loader,autoencoder,optimizer)
+        optimizer=torch.optim.AdamW(params,args.lr)
 
-    image_processor=VaeImageProcessor()
+        loader,autoencoder,optimizer=accelerator.prepare(loader,autoencoder,optimizer)
 
-    for initial_batch in loader:
-        break
+        image_processor=VaeImageProcessor()
 
-    for e in range(1,args.epochs+1):
-        start=time.time()
-        loss_buffer=[]
-        for b,batch in enumerate(loader):
-            if b==args.limit:
-                break
-            with accelerator.accumulate(params):
-                predicted=autoencoder(batch).sample
-                loss=F.mse_loss(predicted.float(),batch.float())
-                accelerator.backward(loss)
-                optimizer.step()
-                optimizer.zero_grad()
-                loss_buffer.append(loss.cpu().detach().item())
+        for initial_batch in loader:
+            break
 
-        end=time.time()
+        for e in range(1,args.epochs+1):
+            start=time.time()
+            loss_buffer=[]
+            for b,batch in enumerate(loader):
+                if b==args.limit:
+                    break
+                with accelerator.accumulate(params):
+                    predicted=autoencoder(batch).sample
+                    loss=F.mse_loss(predicted.float(),batch.float())
+                    accelerator.backward(loss)
+                    optimizer.step()
+                    optimizer.zero_grad()
+                    loss_buffer.append(loss.cpu().detach().item())
 
-        accelerator.print(f"\t epoch {e} elapsed {end-start}")
+            end=time.time()
 
-        accelerator.log({
-                "loss_mean":np.mean(loss_buffer),
-                "loss_std":np.std(loss_buffer),
-            })
-        
-        if e%args.image_interval==1:
-            predicted_batch=autoencoder(initial_batch).sample
-            batch_size=predicted_batch.size()[0]
-            predicted_images=image_processor(predicted_batch,[True]*batch_size)
-            initial_images=image_processor(initial_batch,[True]*batch_size)
-            for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
-                concatenated_image=concat_images_horizontally([real,reconstructed])
-                accelerator.log({
-                    f"image_{k}":wandb.Image(concatenated_image)
+            accelerator.print(f"\t epoch {e} elapsed {end-start}")
+
+            accelerator.log({
+                    "loss_mean":np.mean(loss_buffer),
+                    "loss_std":np.std(loss_buffer),
                 })
+            
+            if e%args.image_interval==1:
+                predicted_batch=autoencoder(initial_batch).sample
+                batch_size=predicted_batch.size()[0]
+                predicted_images=image_processor(predicted_batch,[True]*batch_size)
+                initial_images=image_processor(initial_batch,[True]*batch_size)
+                for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
+                    concatenated_image=concat_images_horizontally([real,reconstructed])
+                    accelerator.log({
+                        f"image_{k}":wandb.Image(concatenated_image)
+                    })
 
-    predicted_batch=autoencoder(initial_batch).sample
-    batch_size=predicted_batch.size()[0]
-    predicted_images=image_processor(predicted_batch,[True]*batch_size)
-    initial_images=image_processor(initial_batch,[True]*batch_size)
-    for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
-        concatenated_image=concat_images_horizontally([real,reconstructed])
-        accelerator.log({
-            f"image_{k}":wandb.Image(concatenated_image)
-        })
+        predicted_batch=autoencoder(initial_batch).sample
+        batch_size=predicted_batch.size()[0]
+        predicted_images=image_processor(predicted_batch,[True]*batch_size)
+        initial_images=image_processor(initial_batch,[True]*batch_size)
+        for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
+            concatenated_image=concat_images_horizontally([real,reconstructed])
+            accelerator.log({
+                f"image_{k}":wandb.Image(concatenated_image)
+            })
 
-    autoencoder.push_to_hub(args.name)
+        autoencoder.push_to_hub(args.name)
 
 
 
