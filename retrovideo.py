@@ -302,6 +302,12 @@ env = retro.make(
             render_mode="rgb_array",
         )
 
+action = env.action_space.sample()
+
+# Take the step using the random action
+obs, reward, done, info = env.step(action)
+print('info',info)
+
 if args.game=="SonicTheHedgehog2-Genesis":
     info_keys=["x","y","screen_x","screen_y","score","lives"]
 else:
