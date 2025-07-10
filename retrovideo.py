@@ -43,6 +43,8 @@ parser.add_argument("--scenario", default="MetropolisZone.Act1")
 parser.add_argument("--timesteps",type=int,default=10)
 parser.add_argument("--record",action="store_true")
 parser.add_argument("--save_dir",type=str,default="saved_retro_videos")
+parser.add_argument("--use_timelimit",action="store_true")
+parser.add_argument("--max_episode_steps",type=int,default=50)
 
 CSV_NAME="actions.csv"
 MODEL_SAVE_DIR="saved_rl_models"
@@ -315,6 +317,9 @@ if args.record:
 
 console=args.game.split("-")[-1]
 env=Discretizer(env,console)
+
+if args.use_timelimit:
+    env=gym.wrappers.TimeLimit(env,args.max_episode_steps)
 
 FOLDER_NAME=os.path.join(args.save_dir,args.game,args.scenario)
 os.makedirs(FOLDER_NAME,exist_ok=True)
