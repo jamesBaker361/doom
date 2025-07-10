@@ -151,6 +151,7 @@ for console_map,button_binding in zip([SNES_MAP,GENESIS_MAP],[SNES_BUTTON_BINDIN
     for shared_k,shared_v in SHARED_ACTION_MAP.items():
         for button_k,button_v in button_binding.items():
             console_map[f"{shared_k}-{button_k}"]=shared_v+button_v
+        console_map[f"{shared_k}"]=shared_v
 
 print("snes_map",SNES_MAP)
 print("genesis_map",GENESIS_MAP)
