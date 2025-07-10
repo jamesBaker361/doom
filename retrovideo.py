@@ -311,7 +311,7 @@ if args.record:
         name_prefix="video-",
     )
 
-console=args.name.split("-")[-1]
+console=args.game.split("-")[-1]
 env=Discretizer(env,console)
 
 FOLDER_NAME=os.path.join(args.save_dir,args.game,args.scenario)
