@@ -21,5 +21,5 @@ for name in ["castle","megaman","mario","sonic","indiana","pink","mortal","stree
         "street":"Champion.Level1.RyuVsGuile"
     }[name]
     command=f" sbatch -J test --err=slurm_chip/test/{name}.err --out=slurm_chip/test/{name}.out runpygpu_chip.sh retrovideo.py "
-    command+=f" --scenario {scenario} --game {game} --timesteps 1 "
+    command+=f" --scenario {scenario} --game {game} --timesteps 1 --save_dir test_videos "
     print(command)
