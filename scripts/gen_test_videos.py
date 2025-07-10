@@ -2,11 +2,12 @@ for name in ["castle","megaman","mario"]:
     command=f"sbatch -J retro --err=slurm_chip/retro/{name}.err --out=slurm_chip/retro/{name}.out runpygpu_chip.sh retrovideo.py "
     game={
         "castle":"CastlevaniaBloodlines-Genesis",
-        "sonic":"SonicTheHedgehog2-Genesis",
+        "megaman":"MegaManTheWilyWars-Genesis",
         "mario": "SuperMarioWorld-Snes"
     }[name]
     scenario={
-        "sonic":"MetropolisZone.Act1",
+       # "sonic":"MetropolisZone.Act1",
+        "megaman":"Level1.Swiv.state",
         "mario":"DonutPlains1",
         "castle":"Level1-2"
     }[name]
