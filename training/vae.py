@@ -166,25 +166,27 @@ def main(args):
                 })
             
             if e%args.image_interval==1:
-                predicted_batch=autoencoder(initial_batch).sample
-                batch_size=predicted_batch.size()[0]
-                predicted_images=image_processor.postprocess(predicted_batch,[True]*batch_size)
-                initial_images=image_processor(initial_batch,[True]*batch_size)
-                for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
-                    concatenated_image=concat_images_horizontally([real,reconstructed])
-                    accelerator.log({
-                        f"image_{k}":wandb.Image(concatenated_image)
-                    })
+                with torch.no_grad():
+                    predicted_batch=autoencoder(initial_batch).sample
+                    batch_size=predicted_batch.size()[0]
+                    predicted_images=image_processor.postprocess(predicted_batch,[True]*batch_size)
+                    initial_images=image_processor(initial_batch,[True]*batch_size)
+                    for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
+                        concatenated_image=concat_images_horizontally([real,reconstructed])
+                        accelerator.log({
+                            f"image_{k}":wandb.Image(concatenated_image)
+                        })
 
-        predicted_batch=autoencoder(initial_batch).sample
-        batch_size=predicted_batch.size()[0]
-        predicted_images=image_processor.postprocess(predicted_batch,[True]*batch_size)
-        initial_images=image_processor(initial_batch,[True]*batch_size)
-        for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
-            concatenated_image=concat_images_horizontally([real,reconstructed])
-            accelerator.log({
-                f"image_{k}":wandb.Image(concatenated_image)
-            })
+        with torch.no_grad():
+            predicted_batch=autoencoder(initial_batch).sample
+            batch_size=predicted_batch.size()[0]
+            predicted_images=image_processor.postprocess(predicted_batch,[True]*batch_size)
+            initial_images=image_processor(initial_batch,[True]*batch_size)
+            for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
+                concatenated_image=concat_images_horizontally([real,reconstructed])
+                accelerator.log({
+                    f"image_{k}":wandb.Image(concatenated_image)
+                })
 
         autoencoder.push_to_hub(args.name)
 
