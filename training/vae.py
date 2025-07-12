@@ -168,7 +168,7 @@ def main(args):
             if e%args.image_interval==1:
                 predicted_batch=autoencoder(initial_batch).sample
                 batch_size=predicted_batch.size()[0]
-                predicted_images=image_processor(predicted_batch,[True]*batch_size)
+                predicted_images=image_processor.postprocess(predicted_batch,[True]*batch_size)
                 initial_images=image_processor(initial_batch,[True]*batch_size)
                 for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
                     concatenated_image=concat_images_horizontally([real,reconstructed])
@@ -178,7 +178,7 @@ def main(args):
 
         predicted_batch=autoencoder(initial_batch).sample
         batch_size=predicted_batch.size()[0]
-        predicted_images=image_processor(predicted_batch,[True]*batch_size)
+        predicted_images=image_processor.postprocess(predicted_batch,[True]*batch_size)
         initial_images=image_processor(initial_batch,[True]*batch_size)
         for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
             concatenated_image=concat_images_horizontally([real,reconstructed])
