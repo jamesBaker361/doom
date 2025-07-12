@@ -169,8 +169,9 @@ def main(args):
                 with torch.no_grad():
                     predicted_batch=autoencoder(initial_batch).sample
                     batch_size=predicted_batch.size()[0]
-                    predicted_images=image_processor.postprocess(predicted_batch,[True]*batch_size)
-                    initial_images=image_processor.postprocess(initial_batch,[True]*batch_size)
+                    predicted_images=image_processor.postprocess(predicted_batch,do_denormalize= [True]*batch_size)
+                    initial_images=image_processor.postprocess(initial_batch,do_denormalize= [True]*batch_size)
+                    print('type(predicted_images)',type(predicted_images))
                     for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
                         concatenated_image=concat_images_horizontally([real,reconstructed])
                         accelerator.log({
@@ -180,8 +181,8 @@ def main(args):
         with torch.no_grad():
             predicted_batch=autoencoder(initial_batch).sample
             batch_size=predicted_batch.size()[0]
-            predicted_images=image_processor.postprocess(predicted_batch,[True]*batch_size)
-            initial_images=image_processor.postprocess(initial_batch,[True]*batch_size)
+            predicted_images=image_processor.postprocess(predicted_batch,do_denormalize= [True]*batch_size)
+            initial_images=image_processor.postprocess(initial_batch,do_denormalize= [True]*batch_size)
             for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
                 concatenated_image=concat_images_horizontally([real,reconstructed])
                 accelerator.log({
