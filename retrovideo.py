@@ -305,6 +305,7 @@ env = retro.make(
 action = env.action_space.sample()
 
 # Take the step using the random action
+env.reset()
 obs, reward, done, info = env.step(action)
 print('info',info)
 
