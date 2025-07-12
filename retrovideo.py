@@ -307,13 +307,10 @@ action = env.action_space.sample()
 # Take the step using the random action
 env.reset()
 step= env.step(action)
-print('info',step)
+print('info',step[-1])
 env.reset()
 
-if args.game=="SonicTheHedgehog2-Genesis":
-    info_keys=["x","y","screen_x","screen_y","score","lives"]
-else:
-    info_keys=[]
+info_keys=[k for k in step[-1].keys()]
 
 if args.record:
     env = gymnasium.wrappers.RecordVideo(
