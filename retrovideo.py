@@ -306,8 +306,9 @@ action = env.action_space.sample()
 
 # Take the step using the random action
 env.reset()
-obs, reward, done, info = env.step(action)
-print('info',info)
+step= env.step(action)
+print('info',step)
+env.reset()
 
 if args.game=="SonicTheHedgehog2-Genesis":
     info_keys=["x","y","screen_x","screen_y","score","lives"]
