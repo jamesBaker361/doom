@@ -148,7 +148,7 @@ def main(args):
                 if b==args.limit:
                     break
                 with accelerator.accumulate(params):
-                    predicted=predicted.to(device)
+                    batch=batch.to(device)
                     predicted=autoencoder(batch).sample
                     loss=F.mse_loss(predicted.float(),batch.float())
                     accelerator.backward(loss)
