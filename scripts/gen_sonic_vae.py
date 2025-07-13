@@ -7,7 +7,7 @@ image_folder_path_list=[base_path+expanded_path for expanded_path in [
    # "HillTopZone.Act1/bogbean-unau-phoeniculus",
    # "MetropolisZone.Act1/clasp-beeper-injuriousness"
 ]]
-for gpus in [1,2,4]:
+for gpus in [1,2]:
     for zone in [
    # "AquaticRuinZone.Act1/constitution-ketoacidosis-nystan",
    # "CasinoNightZone.Act1/underbrush-constitution-plebeian",
