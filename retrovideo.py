@@ -278,6 +278,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
 
             # Save action
             action = self.locals["actions"][0]
+            print(action)
             with open(self.csv_path, mode="a", newline="") as f:
                 writer = csv.writer(f)
                 try:
