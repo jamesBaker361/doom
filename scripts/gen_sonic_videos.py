@@ -1,4 +1,4 @@
-for timesteps in [100000]:
+for timesteps in [10]:
   for num in [1]:
     for _scenario in ["AquaticRuinZone.Act",
                       "CasinoNightZone.Act",
