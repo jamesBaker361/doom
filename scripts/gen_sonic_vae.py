@@ -1,4 +1,4 @@
-base_path="saved_retro_videos/SonicTheHedgehog2-Genesis/"
+base_path="sonic_videos_100000/SonicTheHedgehog2-Genesis/"
 image_folder_path_list=[base_path+expanded_path for expanded_path in [
    # "AquaticRuinZone.Act1/constitution-ketoacidosis-nystan",
    # "CasinoNightZone.Act1/underbrush-constitution-plebeian",
@@ -18,7 +18,7 @@ for gpus in [1,2]:
    ]:
         
         zone_name=zone.split("/")[0]
-        command=f"sbatch -J vae --err=slurm_chip/vae{gpus}_{zone_name}/sonic.err --out=slurm_chip/vae{gpus}_{zone_name}/sonic.out "
+        command=f"sbatch -J vae --err=slurm_chip/vae/{gpus}_{zone_name}/sonic.err --out=slurm_chip/vae/{gpus}_{zone_name}/sonic.out "
         if gpus!=1:
             command+=f" --gres=gpu:{gpus} "
         command+=" runaccgpu_chip.sh "
