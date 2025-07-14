@@ -323,6 +323,8 @@ if args.record:
 
 console=args.game.split("-")[-1]
 env=Discretizer(env,console)
+action_space_size = env.action_space.n
+print("Action space size:", action_space_size)
 
 if args.use_timelimit:
     env=gym.wrappers.TimeLimit(env,args.max_episode_steps)
