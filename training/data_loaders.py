@@ -46,15 +46,22 @@ class MovieImageFolder(Dataset):
     def __getitem__(self, index):
         episode=self.df.iloc[index]["episode"]
         start=index-self.lookback
-        output_dict={column:[] for column in self.df.columns}
-        output_dict["posterior"]=[]
+        #output_dict={column for column in self.df.columns}
+        #output_dict["posterior"]=[]
+        posterior=[]
         for i in range(start,index):
             if i<0 or self.df.iloc[i]["episode"]!=episode:
-                for column in self.df.columns:
-                    output_dict[column].append(-1)
-                output_dict["posterior"].append(self.zero_posterior)
+                '''for column in self.df.columns:
+                    output_dict[column].append(-1)'''
+                posterior.append(self.zero_posterior.sample())
             else:
-                for column in self.df.columns:
-                    output_dict[column].append(self.df.iloc[i][column])
-                output_dict["posterior"].append(self.posterior_list[i])
+                '''for column in self.df.columns:
+                    output_dict[column].append(self.df.iloc[i][column])'''
+                posterior.append(self.posterior_list[i].sample())
+        output_dict={
+            "posterior":torch.stack(posterior,dim=-1)
+        }
+        for column in self.df.columns:
+            output_dict[column]=self.df.iloc[i][column]
+
         return output_dict
