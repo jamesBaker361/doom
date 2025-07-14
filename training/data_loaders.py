@@ -49,11 +49,13 @@ class MovieImageFolder(Dataset):
         #output_dict={column for column in self.df.columns}
         #output_dict["posterior"]=[]
         posterior=[]
+        skip_num=0
         for i in range(start,index):
             if i<0 or self.df.iloc[i]["episode"]!=episode:
                 '''for column in self.df.columns:
                     output_dict[column].append(-1)'''
                 posterior.append(self.zero_posterior.sample())
+                skip_num+=1
             else:
                 '''for column in self.df.columns:
                     output_dict[column].append(self.df.iloc[i][column])'''
@@ -63,5 +65,5 @@ class MovieImageFolder(Dataset):
         }
         for column in self.df.columns:
             output_dict[column]=self.df.iloc[i][column]
-
+        output_dict["skip_num"]=skip_num
         return output_dict
