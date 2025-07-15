@@ -27,7 +27,9 @@ class MovieImageFolder(Dataset):
     def __init__(self,folder,vae,image_processor,lookback:int):
         super().__init__()
         csv_file=os.path.join(folder,"actions.csv")
+        print("df?")
         self.df=pd.read_csv(csv_file)
+        print("df!!!!")
         self.posterior_list=[] #images are stored from 0=t_0, 1=t_1
         self.lookback=lookback
         
@@ -60,6 +62,8 @@ class MovieImageFolder(Dataset):
                 '''for column in self.df.columns:
                     output_dict[column].append(self.df.iloc[i][column])'''
                 posterior.append(self.posterior_list[i].sample())
+
+            print("posterior")
         output_dict={
             "posterior":torch.stack(posterior,dim=-1)
         }
