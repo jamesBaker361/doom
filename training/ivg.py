@@ -100,10 +100,10 @@ def main(args):
                                  unet.conv_in.kernel_size,
                                  unet.conv_in.stride,
                                  unet.conv_in.padding)
-    unet.conv_in=torch.nn.Conv2d(4*args.lookback,unet.conv_in.out_channels,
+    '''unet.conv_in=torch.nn.Conv2d(4*args.lookback,unet.conv_in.out_channels,
                                  kernel_size=unet.conv_in.kernel_size,
                                  stride=unet.conv_in.stride,
-                                 padding=unet.conv_in.padding)
+                                 padding=unet.conv_in.padding)'''
     accelerator.print("made conv in")
     scheduler=pipeline.scheduler
     if args.use_lora:
