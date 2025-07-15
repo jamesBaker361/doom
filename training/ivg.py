@@ -235,6 +235,8 @@ def main(args):
                 "loss_std":np.std(loss_buffer),
             })
 
+    
+
                 
 
 
@@ -253,3 +255,4 @@ if __name__=='__main__':
     hours=seconds/(60*60)
     print(f"successful generating:) time elapsed: {seconds} seconds = {hours} hours")
     print("all done!")
+    print(x)
