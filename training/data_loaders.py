@@ -43,33 +43,38 @@ class MovieImageFolder(Dataset):
             self.posterior_list.append(posterior)
             if f ==0:
                 self.zero_posterior=torch.zeros(posterior.sample().size())
+
+        self.output_dict_list=[]
+        for index in range(len(self.posterior_list)):
+            episode=self.df.iloc[index]["episode"]
+            start=index-self.lookback
+            #output_dict={column for column in self.df.columns}
+            #output_dict["posterior"]=[]
+            posterior=[]
+            skip_num=0
+            for i in range(start,index):
+                if i<0 or self.df.iloc[i]["episode"]!=episode:
+                    '''for column in self.df.columns:
+                        output_dict[column].append(-1)'''
+                    posterior.append(self.zero_posterior.sample())
+                    skip_num+=1
+                else:
+                    '''for column in self.df.columns:
+                        output_dict[column].append(self.df.iloc[i][column])'''
+                    posterior.append(self.posterior_list[i].sample())
+
+                print("posterior")
+            output_dict={
+                "posterior":torch.stack(posterior,dim=-1)
+            }
+            for column in self.df.columns:
+                output_dict[column]=self.df.iloc[i][column]
+            output_dict["skip_num"]=skip_num
+        self.output_dict_list.append(output_dict)
         
     def __len__(self):
         return len(self.posterior_list)
     
     def __getitem__(self, index):
-        episode=self.df.iloc[index]["episode"]
-        start=index-self.lookback
-        #output_dict={column for column in self.df.columns}
-        #output_dict["posterior"]=[]
-        posterior=[]
-        skip_num=0
-        for i in range(start,index):
-            if i<0 or self.df.iloc[i]["episode"]!=episode:
-                '''for column in self.df.columns:
-                    output_dict[column].append(-1)'''
-                posterior.append(self.zero_posterior.sample())
-                skip_num+=1
-            else:
-                '''for column in self.df.columns:
-                    output_dict[column].append(self.df.iloc[i][column])'''
-                posterior.append(self.posterior_list[i].sample())
-
-            print("posterior")
-        output_dict={
-            "posterior":torch.stack(posterior,dim=-1)
-        }
-        for column in self.df.columns:
-            output_dict[column]=self.df.iloc[i][column]
-        output_dict["skip_num"]=skip_num
-        return output_dict
+        
+        return self.output_dict_list[index]
