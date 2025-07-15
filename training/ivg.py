@@ -84,8 +84,10 @@ def main(args):
         "fp16":torch.float16,
         "bf16":torch.bfloat16
     }[args.mixed_precision]
+    accelerator.print("torch dtype",torch_dtype)
 
     pipeline=DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7")
+    accelerator.print("pipeline loaded")
     '''
     vae loading path?
     '''
