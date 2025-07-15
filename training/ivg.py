@@ -19,7 +19,7 @@ import wandb
 import numpy as np
 import random
 from gpu_helpers import *
-from diffusers import LCMScheduler,DiffusionPipeline,DEISMultistepScheduler,DDIMScheduler,SCMScheduler,AutoencoderDC
+from diffusers import LCMScheduler,DiffusionPipeline,DEISMultistepScheduler,DDIMScheduler,SCMScheduler,AutoencoderDC,AutoencoderKL,UNet2DConditionModel
 from diffusers.models.attention_processor import IPAdapterAttnProcessor2_0
 from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
@@ -34,6 +34,7 @@ from huggingface_hub import create_repo,HfApi
 from data_loaders import MovieImageFolder
 from torch.utils.data import DataLoader
 from peft import LoraConfig
+from diffusers.image_processor import VaeImageProcessor
 
 
 parser=argparse.ArgumentParser()
@@ -88,16 +89,16 @@ def main(args):
     with accelerator.autocast():
 
         #pipeline=DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7")
-        pipeline=DiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-2-1")
+        #pipeline=DiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-2-1")
         accelerator.print("pipeline loaded")
         '''
         vae loading path?
         '''
-        vae=pipeline.vae
+        vae=AutoencoderKL.from_pretrained("SimianLuo/LCM_Dreamshaper_v7",subfolder="vae")
         accelerator.print('vae')
-        image_processor=pipeline.image_processor
+        image_processor=VaeImageProcessor(vae_scale_factor=8)
         accelerator.print('image_processor')
-        unet=pipeline.unet
+        unet=UNet2DConditionModel.from_pretrained("SimianLuo/LCM_Dreamshaper_v7",subfolder="unet")
         accelerator.print("unet")
 
         accelerator.print(4*args.lookback,unet.conv_in.out_channels,
