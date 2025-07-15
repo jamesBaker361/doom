@@ -43,7 +43,12 @@ class MovieImageFolder(Dataset):
             file = row["file"]
             pil_image = Image.open(os.path.join(folder, file))
             pt_image = image_processor.preprocess(pil_image)
-            posterior = vae.encode(pt_image.to(vae.device)).latent_dist.to("cpu")
+            posterior = vae.encode(pt_image.to(vae.device)).latent_dist
+            posterior.logvar.to(vae.device)
+            posterior.mean.to(vae.device)
+            posterior.std.to(vae.device)
+            posterior.var.to(vae.device)
+            posterior.parameters.to(vae.device)
             torch.cuda.empty_cache()
             self.posterior_list.append(posterior)
 
@@ -90,4 +95,6 @@ class MovieImageFolder(Dataset):
             if i==-1:
                 tiny_posterior_list.append(self.zero_posterior)
             else:
-                tiny_posterior_list.append(self.posterior_list[i])
+                tiny_posterior_list.append(self.posterior_list[i].sample())
+        output_dict["posterior"]=torch.stack(tiny_posterior_list)
+        return output_dict
