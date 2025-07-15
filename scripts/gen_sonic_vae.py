@@ -12,9 +12,9 @@ for gpus in [1,2]:
    # "AquaticRuinZone.Act1/constitution-ketoacidosis-nystan",
    # "CasinoNightZone.Act1/underbrush-constitution-plebeian",
    # "ChemicalPlantZone.Act1/accordion-cash-hopi",
-    "EmeraldHillZone.Act1/phylloscopus-wrongness-steam",
-    "HillTopZone.Act1/bogbean-unau-phoeniculus",
-    "MetropolisZone.Act1/clasp-beeper-injuriousness"
+    "EmeraldHillZone.Act1/aminoaciduria-popery-clozapine",
+    "HillTopZone.Act1/quamassia-cervus-plateful",
+    "MetropolisZone.Act1/sonograph-tinner-laudability"
    ]:
         
         zone_name=zone.split("/")[0]
