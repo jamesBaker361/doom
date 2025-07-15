@@ -38,7 +38,7 @@ class MovieImageFolder(Dataset):
             posterior=vae.encode(pt_image).latent_dist
             self.posterior_list.append(posterior)
             if f ==0:
-                self.zero_posterior=torch.zeros(posterior.size())
+                self.zero_posterior=torch.zeros(posterior.sample().size())
         
     def __len__(self):
         return len(self.posterior_list)
