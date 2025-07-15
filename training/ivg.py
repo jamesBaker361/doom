@@ -85,151 +85,152 @@ def main(args):
         "bf16":torch.bfloat16
     }[args.mixed_precision]
     accelerator.print("torch dtype",torch_dtype)
+    with accelerator.autocast():
 
-    pipeline=DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7")
-    accelerator.print("pipeline loaded")
-    '''
-    vae loading path?
-    '''
-    vae=pipeline.vae
-    accelerator.print('vae')
-    image_processor=pipeline.image_processor
-    accelerator.print('image_processor')
-    unet=pipeline.unet
-    accelerator.print("unet")
+        pipeline=DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7")
+        accelerator.print("pipeline loaded")
+        '''
+        vae loading path?
+        '''
+        vae=pipeline.vae
+        accelerator.print('vae')
+        image_processor=pipeline.image_processor
+        accelerator.print('image_processor')
+        unet=pipeline.unet
+        accelerator.print("unet")
 
-    accelerator.print(4*args.lookback,unet.conv_in.out_channels,
-                                 unet.conv_in.kernel_size,
-                                 unet.conv_in.stride,
-                                 unet.conv_in.padding)
-    '''unet.conv_in=torch.nn.Conv2d(4*args.lookback,unet.conv_in.out_channels,
-                                 kernel_size=unet.conv_in.kernel_size,
-                                 stride=unet.conv_in.stride,
-                                 padding=unet.conv_in.padding)'''
-    accelerator.print("made conv in")
-    scheduler=pipeline.scheduler
-    if args.use_lora:
-        unet.requires_grad_(False)
-        unet_lora_config = LoraConfig(
-        r=args.rank,
-        lora_alpha=args.rank,
-        init_lora_weights="gaussian",
-        target_modules=["to_k", "to_q", "to_v", "to_out.0"],)
+        accelerator.print(4*args.lookback,unet.conv_in.out_channels,
+                                    unet.conv_in.kernel_size,
+                                    unet.conv_in.stride,
+                                    unet.conv_in.padding)
+        '''unet.conv_in=torch.nn.Conv2d(4*args.lookback,unet.conv_in.out_channels,
+                                    kernel_size=unet.conv_in.kernel_size,
+                                    stride=unet.conv_in.stride,
+                                    padding=unet.conv_in.padding)'''
+        accelerator.print("made conv in")
+        scheduler=pipeline.scheduler
+        if args.use_lora:
+            unet.requires_grad_(False)
+            unet_lora_config = LoraConfig(
+            r=args.rank,
+            lora_alpha=args.rank,
+            init_lora_weights="gaussian",
+            target_modules=["to_k", "to_q", "to_v", "to_out.0"],)
 
-        unet.add_adapter(unet_lora_config)
-    unet.conv_in.requires_grad_(True)
-    params=[p for p in unet.parameters() if p.requires_grad]
-    print("params",len(params))
-    dataset=MovieImageFolder(args.folder,vae,image_processor,args.lookback)
-    loader=DataLoader(dataset,args.batch_size,shuffle=True)
+            unet.add_adapter(unet_lora_config)
+        unet.conv_in.requires_grad_(True)
+        params=[p for p in unet.parameters() if p.requires_grad]
+        print("params",len(params))
+        dataset=MovieImageFolder(args.folder,vae,image_processor,args.lookback)
+        loader=DataLoader(dataset,args.batch_size,shuffle=True)
 
-    for batch in loader:
-        break
+        for batch in loader:
+            break
 
-    print("posertior size",batch["posterior"].size())
+        print("posertior size",batch["posterior"].size())
 
-    optimizer=torch.optim.AdamW(params,args.lr)
+        optimizer=torch.optim.AdamW(params,args.lr)
 
-    optimizer,unet,loader=accelerator.prepare(optimizer,unet,loader)
+        optimizer,unet,loader=accelerator.prepare(optimizer,unet,loader)
 
-    '''@torch.no_grad()
-    def logging(unet,loader):'''
+        '''@torch.no_grad()
+        def logging(unet,loader):'''
 
 
-    for e in range(1,args.epochs+1):
-        loss_buffer=[]
-        for b,batch in enumerate(loader):
-            with accelerator.accumulate(params):
-                latent=batch["posterior"].to(device)
-                skip_num=batch["skip_num"]
-                (B,C,H,W)=latent.size()
-                num_chunks=C//4
-                latent_chunks = latent.view(B, num_chunks, 4, H, W)
-                noise_chunks = torch.randn_like(latent_chunks)
+        for e in range(1,args.epochs+1):
+            loss_buffer=[]
+            for b,batch in enumerate(loader):
+                with accelerator.accumulate(params):
+                    latent=batch["posterior"].to(device)
+                    skip_num=batch["skip_num"]
+                    (B,C,H,W)=latent.size()
+                    num_chunks=C//4
+                    latent_chunks = latent.view(B, num_chunks, 4, H, W)
+                    noise_chunks = torch.randn_like(latent_chunks)
 
-                # Generate timesteps:
-                # - one value for each chunk except the last → shape (B, num_chunks - 1)
-                # - one value for the last chunk only → shape (B,)
-                main_timesteps = torch.randint(
-                    0, scheduler.config.num_train_timesteps, (B,), device=latent.device
-                )
-                last_timestep = torch.randint(
-                    0, scheduler.config.num_train_timesteps, (B,), device=latent.device
-                )
+                    # Generate timesteps:
+                    # - one value for each chunk except the last → shape (B, num_chunks - 1)
+                    # - one value for the last chunk only → shape (B,)
+                    main_timesteps = torch.randint(
+                        0, scheduler.config.num_train_timesteps, (B,), device=latent.device
+                    )
+                    last_timestep = torch.randint(
+                        0, scheduler.config.num_train_timesteps, (B,), device=latent.device
+                    )
 
-                # Run per chunk
-                noised_latent_chunks = []
+                    # Run per chunk
+                    noised_latent_chunks = []
 
-                for i in range(num_chunks):
-                    latent_i = latent_chunks[:, i]      # (B, 4, H, W)
-                    noise_i = noise_chunks[:, i]
+                    for i in range(num_chunks):
+                        latent_i = latent_chunks[:, i]      # (B, 4, H, W)
+                        noise_i = noise_chunks[:, i]
 
-                    if i == num_chunks - 1:
-                        t_i = last_timestep             # (B,)
-                    else:
-                        t_i = main_timesteps      # (B,)
+                        if i == num_chunks - 1:
+                            t_i = last_timestep             # (B,)
+                        else:
+                            t_i = main_timesteps      # (B,)
 
-                    noised_i = scheduler.add_noise(latent_i, noise_i, t_i)  # (B, 4, H, W)
-                    noised_latent_chunks.append(noised_i)
+                        noised_i = scheduler.add_noise(latent_i, noise_i, t_i)  # (B, 4, H, W)
+                        noised_latent_chunks.append(noised_i)
 
-                # Reassemble
-                noised_latent_chunks = torch.stack(noised_latent_chunks, dim=1)           # (B, num_chunks, 4, H, W)
-                noised_latent = noised_latent_chunks.view(B, C, H, W)              # (B, C, H, W)
-                noise=noise_chunks.view(B,C,H,W)
-                # Reshape to blocks of 4 channels
-                '''latent_blocks = latent.view(B, C // 4, 4, H, W)
+                    # Reassemble
+                    noised_latent_chunks = torch.stack(noised_latent_chunks, dim=1)           # (B, num_chunks, 4, H, W)
+                    noised_latent = noised_latent_chunks.view(B, C, H, W)              # (B, C, H, W)
+                    noise=noise_chunks.view(B,C,H,W)
+                    # Reshape to blocks of 4 channels
+                    '''latent_blocks = latent.view(B, C // 4, 4, H, W)
 
-                # Sample noise and timesteps
-                noise_blocks = torch.randn_like(latent_blocks)
-                timesteps = torch.randint(
-                    0, scheduler.config.num_train_timesteps, 
-                    (B, C // 4), 
-                    device=device
-                )
+                    # Sample noise and timesteps
+                    noise_blocks = torch.randn_like(latent_blocks)
+                    timesteps = torch.randint(
+                        0, scheduler.config.num_train_timesteps, 
+                        (B, C // 4), 
+                        device=device
+                    )
 
-                # Apply add_noise to each 4-channel block individually
-                noised_latent_blocks = []
-                for i in range(C // 4):
-                    latent_i = latent_blocks[:, i]         # (B, 4, H, W)
-                    noise_i = noise_blocks[:, i]
-                    t_i = timesteps[:, i]                  # (B,)
+                    # Apply add_noise to each 4-channel block individually
+                    noised_latent_blocks = []
+                    for i in range(C // 4):
+                        latent_i = latent_blocks[:, i]         # (B, 4, H, W)
+                        noise_i = noise_blocks[:, i]
+                        t_i = timesteps[:, i]                  # (B,)
 
-                    # scheduler.add_noise expects (B, C, H, W) and (B,)
-                    noised_i = scheduler.add_noise(latent_i, noise_i, t_i)
-                    noised_latent_blocks.append(noised_i)
+                        # scheduler.add_noise expects (B, C, H, W) and (B,)
+                        noised_i = scheduler.add_noise(latent_i, noise_i, t_i)
+                        noised_latent_blocks.append(noised_i)
 
-                # Stack along channel block dimension → (B, C//4, 4, H, W)
-                noised_latent_blocks = torch.stack(noised_latent_blocks, dim=1)
+                    # Stack along channel block dimension → (B, C//4, 4, H, W)
+                    noised_latent_blocks = torch.stack(noised_latent_blocks, dim=1)
 
-                # Reshape back to (B, C, H, W)
-                noised_latent = noised_latent_blocks.view(B, C, H, W)
-                noise=noise_blocks.view(B,C,H,W)'''
+                    # Reshape back to (B, C, H, W)
+                    noised_latent = noised_latent_blocks.view(B, C, H, W)
+                    noise=noise_blocks.view(B,C,H,W)'''
 
-                if scheduler.config.prediction_type == "epsilon":
-                    target = noise[:, - (C - 4):, :, :] 
-                elif scheduler.config.prediction_type == "v_prediction":
-                    target = scheduler.get_velocity(noised_latent[:, - (C - 4):, :, :] , noise[:, - (C - 4):, :, :] , last_timestep)
-                if b==0 and e==1:
-                    print('noised_latent.size()',noised_latent.size())
-                    print('noised_latent[:, - (C - 4):, :, :].size()',noised_latent[:, - (C - 4):, :, :].size())
-                    print('noise[:, - (C - 4):, :, :].size()',noise[:, - (C - 4):, :, :].size())
-                model_pred=unet(noised_latent,last_timestep,return_dict=False)[0] #somehow condiiton on main_timesteps ???
-                if b==0 and e==1:
-                    print("model pred size",model_pred.size())
+                    if scheduler.config.prediction_type == "epsilon":
+                        target = noise[:, - (C - 4):, :, :] 
+                    elif scheduler.config.prediction_type == "v_prediction":
+                        target = scheduler.get_velocity(noised_latent[:, - (C - 4):, :, :] , noise[:, - (C - 4):, :, :] , last_timestep)
+                    if b==0 and e==1:
+                        print('noised_latent.size()',noised_latent.size())
+                        print('noised_latent[:, - (C - 4):, :, :].size()',noised_latent[:, - (C - 4):, :, :].size())
+                        print('noise[:, - (C - 4):, :, :].size()',noise[:, - (C - 4):, :, :].size())
+                    model_pred=unet(noised_latent,last_timestep,return_dict=False)[0] #somehow condiiton on main_timesteps ???
+                    if b==0 and e==1:
+                        print("model pred size",model_pred.size())
 
-                loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+                    loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
 
-                accelerator.backward(loss)
-                optimizer.step()
-                optimizer.zero_grad()
-                loss_buffer.append(loss.cpu().detach().item())
-        end=time.time()
-        elapsed=end-start
-        accelerator.print(f"\t epoch {e} elapsed {elapsed}")
-        accelerator.log({
-            "loss_mean":np.mean(loss_buffer),
-            "loss_std":np.std(loss_buffer),
-        })
+                    accelerator.backward(loss)
+                    optimizer.step()
+                    optimizer.zero_grad()
+                    loss_buffer.append(loss.cpu().detach().item())
+            end=time.time()
+            elapsed=end-start
+            accelerator.print(f"\t epoch {e} elapsed {elapsed}")
+            accelerator.log({
+                "loss_mean":np.mean(loss_buffer),
+                "loss_std":np.std(loss_buffer),
+            })
 
                 
 
