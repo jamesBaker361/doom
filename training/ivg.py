@@ -90,8 +90,12 @@ def main(args):
     vae loading path?
     '''
     vae=pipeline.vae
+    accelerator.print('vae')
     image_processor=pipeline.image_processor
+    accelerator.print('image_processor')
     unet=pipeline.unet
+    accelerator.print("unet")
+
     accelerator.print(4*args.lookback,unet.conv_in.out_channels,
                                  unet.conv_in.kernel_size,
                                  unet.conv_in.stride,
