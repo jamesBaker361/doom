@@ -108,6 +108,7 @@ def main(args):
         unet.add_adapter(unet_lora_config)
     unet.conv_in.requires_grad_(True)
     params=[p for p in unet.parameters() if p.requires_grad]
+    print("params",len(params))
     dataset=MovieImageFolder(args.folder,vae,image_processor,args.lookback)
     loader=DataLoader(dataset,args.batch_size,shuffle=True)
 
