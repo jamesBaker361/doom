@@ -87,7 +87,8 @@ def main(args):
     accelerator.print("torch dtype",torch_dtype)
     with accelerator.autocast():
 
-        pipeline=DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7")
+        #pipeline=DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7")
+        pipeline=DiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-2-1")
         accelerator.print("pipeline loaded")
         '''
         vae loading path?
