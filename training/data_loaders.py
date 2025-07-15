@@ -6,6 +6,7 @@ import pandas as pd
 from PIL import Image
 import torch
 import random
+import csv
 
 class FlatImageFolder(Dataset):
     def __init__(self, folder, transform=None,skip_frac=0):
@@ -26,55 +27,58 @@ class FlatImageFolder(Dataset):
 
 class MovieImageFolder(Dataset):
 
-    def __init__(self,folder,vae,image_processor,lookback:int):
+    def __init__(self, folder, vae, image_processor, lookback: int):
         super().__init__()
-        csv_file=os.path.join(folder,"actions.csv")
-        print("df?")
-        df=pd.read_csv(csv_file)
-        print("df!!!!")
-        self.posterior_list=[] #images are stored from 0=t_0, 1=t_1
-        self.lookback=lookback
-        
-        for f,file in enumerate( df["file"]):
-            
-            pil_image=Image.open(os.path.join(folder,file))
-            pt_image=image_processor.preprocess(pil_image)
-            posterior=vae.encode(pt_image).latent_dist
-            self.posterior_list.append(posterior)
-            if f ==0:
-                self.zero_posterior=torch.zeros(posterior.sample().size())
+        self.lookback = lookback
+        csv_file = os.path.join(folder, "actions.csv")
 
-        self.output_dict_list=[]
+        # Load CSV into a list of dicts (like a DataFrame)
+        with open(csv_file, newline='') as f:
+            reader = csv.DictReader(f)
+            self.data = list(reader)  # Each row is a dict with keys like "file", "episode", etc.
+
+        self.posterior_list = []
+        for f, row in enumerate(self.data):
+            file = row["file"]
+            pil_image = Image.open(os.path.join(folder, file))
+            pt_image = image_processor.preprocess(pil_image)
+            posterior = vae.encode(pt_image).latent_dist
+            self.posterior_list.append(posterior)
+
+            if f == 0:
+                self.zero_posterior = torch.zeros(posterior.sample().size())
+
+        self.output_dict_list = []
         for index in range(len(self.posterior_list)):
-            episode=df.iloc[index]["episode"]
-            start=index-self.lookback
-            #output_dict={column for column in df.columns}
-            #output_dict["posterior"]=[]
-            posterior=[]
-            skip_num=0
-            for i in range(start,index):
-                if i<0 or df.iloc[i]["episode"]!=episode:
-                    '''for column in df.columns:
-                        output_dict[column].append(-1)'''
+            episode = self.data[index]["episode"]
+            start = index - self.lookback
+            posterior = []
+            skip_num = 0
+
+            for i in range(start, index):
+                if i < 0 or self.data[i]["episode"] != episode:
                     posterior.append(self.zero_posterior.sample())
-                    skip_num+=1
+                    skip_num += 1
                 else:
-                    '''for column in df.columns:
-                        output_dict[column].append(df.iloc[i][column])'''
                     posterior.append(self.posterior_list[i].sample())
 
-                print("posterior")
-            output_dict={
-                "posterior":torch.stack(posterior,dim=-1)
+            output_dict = {
+                "posterior": torch.stack(posterior, dim=-1),
+                "skip_num": skip_num
             }
-            for column in df.columns:
-                output_dict[column]=df.iloc[i][column]
-            output_dict["skip_num"]=skip_num
-        self.output_dict_list.append(output_dict)
-        
+
+            # Add all other metadata columns (except 'file')
+            for key, value in self.data[index].items():
+                if key != "file":
+                    try:
+                        output_dict[key] = int(value)
+                    except ValueError:
+                        output_dict[key] = value
+
+            self.output_dict_list.append(output_dict)
+
     def __len__(self):
         return len(self.posterior_list)
-    
+
     def __getitem__(self, index):
-        
         return self.output_dict_list[index]
