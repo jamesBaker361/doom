@@ -7,6 +7,7 @@ from PIL import Image
 import torch
 import random
 import csv
+from gpu_helpers import *
 
 class FlatImageFolder(Dataset):
     def __init__(self, folder, transform=None,skip_frac=0):
@@ -39,6 +40,7 @@ class MovieImageFolder(Dataset):
 
         self.posterior_list = []
         for f, row in enumerate(self.data):
+            before=find_cuda_objects()
             print(f)
             file = row["file"]
             pil_image = Image.open(os.path.join(folder, file))
@@ -54,7 +56,8 @@ class MovieImageFolder(Dataset):
 
             if f == 0:
                 self.zero_posterior = torch.zeros(posterior.sample().size())
-
+            after=find_cuda_objects()
+            delete_unique_objects(before,after)
         self.output_dict_list = []
         for index in range(len(self.posterior_list)):
             episode = self.data[index]["episode"]
