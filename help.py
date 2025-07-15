@@ -2,6 +2,10 @@ from training.data_loaders import MovieImageFolder
 from diffusers import AutoencoderKL
 from diffusers.image_processor import VaeImageProcessor
 import torch
+import os
+import sys
+
+sys.path.append(os.path.join(os.getcwd(), "training"))
 
 folder="sonic_videos_10/SonicTheHedgehog2-Genesis/EmeraldHillZone.Act1/gelly-religiousness-brazos/"
 vae=AutoencoderKL.from_pretrained("SimianLuo/LCM_Dreamshaper_v7",subfolder="vae")
