@@ -21,6 +21,7 @@ import random
 from gpu_helpers import *
 from diffusers import LCMScheduler,DiffusionPipeline,DEISMultistepScheduler,DDIMScheduler,SCMScheduler,AutoencoderDC,AutoencoderKL,UNet2DConditionModel
 from diffusers.models.attention_processor import IPAdapterAttnProcessor2_0
+from diffusers.schedulers.scheduling_lcm import LCMScheduler
 from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
 
@@ -110,7 +111,7 @@ def main(args):
                                     stride=unet.conv_in.stride,
                                     padding=unet.conv_in.padding)'''
         accelerator.print("made conv in")
-        scheduler=pipeline.scheduler
+        scheduler=LCMScheduler()
         if args.use_lora:
             unet.requires_grad_(False)
             unet_lora_config = LoraConfig(
