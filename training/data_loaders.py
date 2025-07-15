@@ -44,11 +44,11 @@ class MovieImageFolder(Dataset):
             pil_image = Image.open(os.path.join(folder, file))
             pt_image = image_processor.preprocess(pil_image)
             posterior = vae.encode(pt_image.to(vae.device)).latent_dist
-            posterior.logvar.to(vae.device)
-            posterior.mean.to(vae.device)
-            posterior.std.to(vae.device)
-            posterior.var.to(vae.device)
-            posterior.parameters.to(vae.device)
+            posterior.logvar.to("cpu")
+            posterior.mean.to("cpu")
+            posterior.std.to("cpu")
+            posterior.var.to("cpu")
+            posterior.parameters.to("cpu")
             torch.cuda.empty_cache()
             self.posterior_list.append(posterior)
 
