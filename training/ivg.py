@@ -96,6 +96,7 @@ def main(args):
                                  kernel_size=unet.conv_in.kernel_size,
                                  stride=unet.conv_in.stride,
                                  padding=unet.conv_in.padding)
+    print("made conv in")
     scheduler=pipeline.scheduler
     if args.use_lora:
         unet.requires_grad_(False)
@@ -120,6 +121,10 @@ def main(args):
     optimizer=torch.optim.AdamW(params,args.lr)
 
     optimizer,unet,loader=accelerator.prepare(optimizer,unet,loader)
+
+    '''@torch.no_grad()
+    def logging(unet,loader):'''
+
 
     for e in range(1,args.epochs+1):
         loss_buffer=[]
