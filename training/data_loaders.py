@@ -39,10 +39,12 @@ class MovieImageFolder(Dataset):
 
         self.posterior_list = []
         for f, row in enumerate(self.data):
+            print(f)
             file = row["file"]
             pil_image = Image.open(os.path.join(folder, file))
             pt_image = image_processor.preprocess(pil_image)
-            posterior = vae.encode(pt_image.to(vae.device)).latent_dist
+            posterior = vae.encode(pt_image.to(vae.device)).latent_dist.to("cpu")
+            torch.cuda.empty_cache()
             self.posterior_list.append(posterior)
 
             if f == 0:
@@ -52,18 +54,18 @@ class MovieImageFolder(Dataset):
         for index in range(len(self.posterior_list)):
             episode = self.data[index]["episode"]
             start = index - self.lookback
-            posterior = []
+            posterior_indices = []
             skip_num = 0
 
             for i in range(start, index):
                 if i < 0 or self.data[i]["episode"] != episode:
-                    posterior.append(self.zero_posterior.sample())
+                    posterior_indices.append(-1)
                     skip_num += 1
                 else:
-                    posterior.append(self.posterior_list[i].sample())
+                    posterior_indices.append(i)
 
             output_dict = {
-                "posterior": torch.stack(posterior, dim=-1),
+                "posterior_indices": posterior_indices,
                 "skip_num": skip_num
             }
 
@@ -81,4 +83,11 @@ class MovieImageFolder(Dataset):
         return len(self.posterior_list)
 
     def __getitem__(self, index):
-        return self.output_dict_list[index]
+        output_dict= self.output_dict_list[index]
+        posterior_indices=output_dict["posterior_indices"]
+        tiny_posterior_list=[]
+        for i in posterior_indices:
+            if i==-1:
+                tiny_posterior_list.append(self.zero_posterior)
+            else:
+                tiny_posterior_list.append(self.posterior_list[i])
