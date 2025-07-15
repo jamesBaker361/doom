@@ -7,3 +7,4 @@ vae=AutoencoderKL.from_pretrained("SimianLuo/LCM_Dreamshaper_v7",subfolder="vae"
 
 image_processor=VaeImageProcessor(vae_scale_factor=8)
 data=MovieImageFolder(folder,vae,image_processor)
+print("done")
