@@ -42,7 +42,7 @@ class MovieImageFolder(Dataset):
             file = row["file"]
             pil_image = Image.open(os.path.join(folder, file))
             pt_image = image_processor.preprocess(pil_image)
-            posterior = vae.encode(pt_image).latent_dist
+            posterior = vae.encode(pt_image.to(vae.device)).latent_dist
             self.posterior_list.append(posterior)
 
             if f == 0:
