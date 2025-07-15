@@ -92,11 +92,15 @@ def main(args):
     vae=pipeline.vae
     image_processor=pipeline.image_processor
     unet=pipeline.unet
+    accelerator.print(4*args.lookback,unet.conv_in.out_channels,
+                                 unet.conv_in.kernel_size,
+                                 unet.conv_in.stride,
+                                 unet.conv_in.padding)
     unet.conv_in=torch.nn.Conv2d(4*args.lookback,unet.conv_in.out_channels,
                                  kernel_size=unet.conv_in.kernel_size,
                                  stride=unet.conv_in.stride,
                                  padding=unet.conv_in.padding)
-    print("made conv in")
+    accelerator.print("made conv in")
     scheduler=pipeline.scheduler
     if args.use_lora:
         unet.requires_grad_(False)
