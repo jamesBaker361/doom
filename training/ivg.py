@@ -141,6 +141,7 @@ def main(args):
 
 
         for e in range(1,args.epochs+1):
+            start=time.time()
             loss_buffer=[]
             for b,batch in enumerate(loader):
                 with accelerator.accumulate(params):
