@@ -5,11 +5,13 @@ from torchvision import transforms
 import pandas as pd
 from PIL import Image
 import torch
+import random
 
 class FlatImageFolder(Dataset):
-    def __init__(self, folder, transform=None):
-        self.paths = [os.path.join(folder, f) for f in os.listdir(folder)
+    def __init__(self, folder, transform=None,skip_frac=0):
+        paths = [os.path.join(folder, f) for f in os.listdir(folder)
                       if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp'))]
+        self.paths=[p for p in paths if random.random()>skip_frac]
         self.transform = transform
 
     def __len__(self):

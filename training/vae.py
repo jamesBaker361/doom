@@ -47,6 +47,7 @@ parser.add_argument("--batch_size",type=int,default=4)
 parser.add_argument("--epochs",type=int,default=100)
 parser.add_argument("--limit",type=int,default=-1)
 parser.add_argument("--image_interval",type=int,default=10)
+parser.add_argument("--skip_frac",type=float,default=1.0)
 
 def concat_images_horizontally(images)-> Image.Image:
     """
@@ -123,7 +124,7 @@ def main(args):
 
         dataset_list=[]
         for path in args.image_folder_paths:
-            dataset_list.append(FlatImageFolder(path,transform=transform))
+            dataset_list.append(FlatImageFolder(path,transform=transform,skip_frac=args.skip_frac))
 
         combined_dataset = ConcatDataset(dataset_list)
 
