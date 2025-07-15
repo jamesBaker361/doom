@@ -30,12 +30,12 @@ class MovieImageFolder(Dataset):
         super().__init__()
         csv_file=os.path.join(folder,"actions.csv")
         print("df?")
-        self.df=pd.read_csv(csv_file)
+        df=pd.read_csv(csv_file)
         print("df!!!!")
         self.posterior_list=[] #images are stored from 0=t_0, 1=t_1
         self.lookback=lookback
         
-        for f,file in enumerate( self.df["file"]):
+        for f,file in enumerate( df["file"]):
             
             pil_image=Image.open(os.path.join(folder,file))
             pt_image=image_processor.preprocess(pil_image)
@@ -46,29 +46,29 @@ class MovieImageFolder(Dataset):
 
         self.output_dict_list=[]
         for index in range(len(self.posterior_list)):
-            episode=self.df.iloc[index]["episode"]
+            episode=df.iloc[index]["episode"]
             start=index-self.lookback
-            #output_dict={column for column in self.df.columns}
+            #output_dict={column for column in df.columns}
             #output_dict["posterior"]=[]
             posterior=[]
             skip_num=0
             for i in range(start,index):
-                if i<0 or self.df.iloc[i]["episode"]!=episode:
-                    '''for column in self.df.columns:
+                if i<0 or df.iloc[i]["episode"]!=episode:
+                    '''for column in df.columns:
                         output_dict[column].append(-1)'''
                     posterior.append(self.zero_posterior.sample())
                     skip_num+=1
                 else:
-                    '''for column in self.df.columns:
-                        output_dict[column].append(self.df.iloc[i][column])'''
+                    '''for column in df.columns:
+                        output_dict[column].append(df.iloc[i][column])'''
                     posterior.append(self.posterior_list[i].sample())
 
                 print("posterior")
             output_dict={
                 "posterior":torch.stack(posterior,dim=-1)
             }
-            for column in self.df.columns:
-                output_dict[column]=self.df.iloc[i][column]
+            for column in df.columns:
+                output_dict[column]=df.iloc[i][column]
             output_dict["skip_num"]=skip_num
         self.output_dict_list.append(output_dict)
         
