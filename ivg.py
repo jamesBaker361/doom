@@ -107,10 +107,10 @@ def main(args):
                                     unet.conv_in.kernel_size,
                                     unet.conv_in.stride,
                                     unet.conv_in.padding)
-        '''unet.conv_in=torch.nn.Conv2d(4*args.lookback,unet.conv_in.out_channels,
+        unet.conv_in=torch.nn.Conv2d(4*args.lookback,unet.conv_in.out_channels,
                                     kernel_size=unet.conv_in.kernel_size,
                                     stride=unet.conv_in.stride,
-                                    padding=unet.conv_in.padding)'''
+                                    padding=unet.conv_in.padding)
         accelerator.print("made conv in")
         scheduler=LCMScheduler()
         if args.use_lora:
@@ -140,6 +140,8 @@ def main(args):
         '''@torch.no_grad()
         def logging(unet,loader):'''
 
+        
+
 
         for e in range(1,args.epochs+1):
             start=time.time()
@@ -147,6 +149,8 @@ def main(args):
             for b,batch in enumerate(loader):
                 with accelerator.accumulate(params):
                     latent=batch["posterior"].to(device)
+                    if e==1 and b==0:
+                        accelerator.print("latent",latent.size())
                     skip_num=batch["skip_num"]
                     (B,C,H,W)=latent.size()
                     num_chunks=C//4
