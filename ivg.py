@@ -96,6 +96,7 @@ def main(args):
         vae loading path?
         '''
         vae=AutoencoderKL.from_pretrained("SimianLuo/LCM_Dreamshaper_v7",subfolder="vae")
+        vae.requires_grad_(False)
         accelerator.print('vae')
         image_processor=VaeImageProcessor(vae_scale_factor=8)
         accelerator.print('image_processor')
