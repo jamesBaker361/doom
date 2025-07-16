@@ -21,10 +21,11 @@ print(args)
 
 accelerator=Accelerator()
 
-vae=AutoencoderKL.from_pretrained(args.vae_checkpoint)
+vae=AutoencoderKL.from_pretrained(args.vae_checkpoint,subfolder="vae")
 image_processor=VaeImageProcessor(vae_scale_factor=8)
 
 csv_file = os.path.join(args.folder, "actions.csv")
 df=pd.read_csv(csv_file)
+
 
 accelerator.print("all done :) ")
