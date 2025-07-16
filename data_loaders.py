@@ -42,7 +42,6 @@ class MovieImageFolder(Dataset):
         self.posterior_list = []
         for f, row in enumerate(self.data):
             before=find_cuda_objects()
-            print(f)
             file = row["file"]
             pil_image = Image.open(os.path.join(folder, file))
             pt_image = image_processor.preprocess(pil_image)
