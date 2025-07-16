@@ -1,4 +1,4 @@
-from training.data_loaders import MovieImageFolder
+from data_loaders import MovieImageFolder
 from diffusers import AutoencoderKL
 from diffusers.image_processor import VaeImageProcessor
 import torch
