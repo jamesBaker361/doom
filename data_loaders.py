@@ -8,6 +8,7 @@ import torch
 import random
 import csv
 from gpu_helpers import *
+from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
 
 class FlatImageFolder(Dataset):
     def __init__(self, folder, transform=None,skip_frac=0):
@@ -45,15 +46,10 @@ class MovieImageFolder(Dataset):
             file = row["file"]
             pil_image = Image.open(os.path.join(folder, file))
             pt_image = image_processor.preprocess(pil_image)
-            posterior = vae.encode(pt_image.to(vae.device)).latent_dist
-            posterior.logvar.to("cpu")
-            posterior.mean.to("cpu")
-            posterior.std.to("cpu")
-            posterior.var.to("cpu")
-            posterior.parameters.to("cpu")
-            torch.cuda.empty_cache()
+            posterior = vae.encode(pt_image.to(vae.device)).latent_dist.parameters
+            
             self.posterior_list.append(posterior)
-
+            torch.cuda.empty_cache()
             if f == 0:
                 self.zero_posterior = torch.zeros(posterior.sample().size())
             after=find_cuda_objects()
@@ -98,6 +94,6 @@ class MovieImageFolder(Dataset):
             if i==-1:
                 tiny_posterior_list.append(self.zero_posterior)
             else:
-                tiny_posterior_list.append(self.posterior_list[i].sample())
+                tiny_posterior_list.append(DiagonalGaussianDistribution(self.posterior_list[i]).sample())
         output_dict["posterior"]=torch.stack(tiny_posterior_list)
         return output_dict
