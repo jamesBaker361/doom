@@ -21,12 +21,8 @@ for gpus in [2]:
         
         zone_name=zone.split("/")[0]
         command=f"sbatch -J vae --err=slurm_chip/vae/{gpus}_{zone_name}/sonic.err --out=slurm_chip/vae/{gpus}_{zone_name}/sonic.out "
-        if gpus!=1:
-            command+=f" --gres=gpu:{gpus} "
-        command+=" runaccgpu_chip.sh "
+        command+=" runpygpu_chip.sh "
         port+=1
-        if gpus!=1:
-            command+=f" --multi_gpu --num_processes {gpus} --main_process_port {port} "
         command+=f" training/vae.py --image_folder_paths "
         command+=f" {base_path}{zone} "
         command+=f" --batch_size 2 --gradient_accumulation_steps 16  --limit -1 --epochs 20 --image_interval 5 --name jlbaker361/sonic-vae{gpus}-{zone_name} "
