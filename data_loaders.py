@@ -50,7 +50,8 @@ class MovieImageFolder(Dataset):
             self.posterior_list.append(posterior)
             torch.cuda.empty_cache()
             if f == 0:
-                self.zero_posterior = torch.zeros(DiagonalGaussianDistribution(posterior).sample().size())
+                self.zero_posterior = torch.zeros(DiagonalGaussianDistribution(posterior).sample().size()).squeeze(0)
+                print("zero posterior",self.zero_posterior.size())
             after=find_cuda_objects()
             delete_unique_objects(before,after)
         self.output_dict_list = []
@@ -93,6 +94,6 @@ class MovieImageFolder(Dataset):
             if i==-1:
                 tiny_posterior_list.append(self.zero_posterior)
             else:
-                tiny_posterior_list.append(DiagonalGaussianDistribution(self.posterior_list[i]).sample())
-        output_dict["posterior"]=torch.stack(tiny_posterior_list)
+                tiny_posterior_list.append(DiagonalGaussianDistribution(self.posterior_list[i]).sample().squeeze(0))
+        output_dict["posterior"]=torch.cat(tiny_posterior_list)
         return output_dict
