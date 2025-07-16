@@ -56,6 +56,8 @@ parser.add_argument(
         default=4,
         help=("The dimension of the LoRA update matrices."),
     )
+parser.add_argument("--n_actions",type=int,default=35,help="number of action embeddings that can be learned ")
+parser.add_argument("--action_tokens",type=int,default=2,help="amount of text tokens to be learned for each action")
 
 
 def main(args):
@@ -127,6 +129,9 @@ def main(args):
         print("params",len(params))
         dataset=MovieImageFolder(args.folder,vae,image_processor,args.lookback)
         loader=DataLoader(dataset,args.batch_size,shuffle=True)
+        action_embedding=torch.nn.Embedding(args.n_actions,768*args.n_tokens)
+        accelerator.print(f" each embedding = 768 * {args.n_actions} ={768*args.n_tokens} ")
+        params+=[p for p in action_embedding.parameters()]
 
         for batch in loader:
             break
@@ -149,6 +154,7 @@ def main(args):
             for b,batch in enumerate(loader):
                 with accelerator.accumulate(params):
                     latent=batch["posterior"].to(device)
+                    action=batch["action"]
                     if e==1 and b==0:
                         accelerator.print("latent",latent.size())
                     skip_num=batch["skip_num"]
@@ -219,11 +225,14 @@ def main(args):
                         target = noise[:, - (C - 4):, :, :] 
                     elif scheduler.config.prediction_type == "v_prediction":
                         target = scheduler.get_velocity(noised_latent[:, - (C - 4):, :, :] , noise[:, - (C - 4):, :, :] , last_timestep)
+                    encoder_hidden_states=action_embedding(action).reshape(B,2 -1)
                     if b==0 and e==1:
                         print('noised_latent.size()',noised_latent.size())
                         print('noised_latent[:, - (C - 4):, :, :].size()',noised_latent[:, - (C - 4):, :, :].size())
                         print('noise[:, - (C - 4):, :, :].size()',noise[:, - (C - 4):, :, :].size())
-                    model_pred=unet(noised_latent,last_timestep,return_dict=False)[0] #somehow condiiton on main_timesteps ???
+                        print("encodr hiden states",encoder_hidden_states.size())
+                    
+                    model_pred=unet(noised_latent,last_timestep,encoder_hidden_states=encoder_hidden_states,return_dict=False)[0] #somehow condiiton on main_timesteps ???
                     if b==0 and e==1:
                         print("model pred size",model_pred.size())
 
