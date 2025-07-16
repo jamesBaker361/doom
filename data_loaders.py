@@ -46,12 +46,12 @@ class MovieImageFolder(Dataset):
             file = row["file"]
             pil_image = Image.open(os.path.join(folder, file))
             pt_image = image_processor.preprocess(pil_image)
-            posterior = vae.encode(pt_image.to(vae.device)).latent_dist.parameters
+            posterior = vae.encode(pt_image.to(vae.device)).latent_dist.parameters.cpu().detach()
             
             self.posterior_list.append(posterior)
             torch.cuda.empty_cache()
             if f == 0:
-                self.zero_posterior = torch.zeros(posterior.sample().size())
+                self.zero_posterior = torch.zeros(DiagonalGaussianDistribution(posterior).sample().size())
             after=find_cuda_objects()
             delete_unique_objects(before,after)
         self.output_dict_list = []
