@@ -27,5 +27,5 @@ for name in ["castle","megaman","mario","sonic",
         "mortal3":"LiuKangVsKitana_VeryHard_05",
     }[name]
     command=f" sbatch -J test --err=slurm_chip/retro/{name}.err --out=slurm_chip/retro/{name}.out runpygpu_chip.sh retrovideo.py "
-    command+=f" --scenario {scenario} --game {game} --timesteps 2000000 --save_dir retro_diverse_videos --use_timelimit "
+    command+=f" --scenario {scenario} --game {game} --timesteps 100000 --save_dir retro_diverse_videos --use_timelimit "
     print(command)
