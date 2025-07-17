@@ -45,6 +45,7 @@ parser.add_argument("--record",action="store_true")
 parser.add_argument("--save_dir",type=str,default="saved_retro_videos")
 parser.add_argument("--use_timelimit",action="store_true")
 parser.add_argument("--max_episode_steps",type=int,default=50)
+parser.add_argument("--image_saving",action="store_true")
 
 CSV_NAME="actions.csv"
 MODEL_SAVE_DIR="saved_rl_models"
@@ -244,7 +245,7 @@ class SNESDiscretizer(gym.ActionWrapper):
         return self._actions[a].copy()
 
 class FrameActionPerEpisodeLogger(BaseCallback):
-    def __init__(self, save_freq: int, save_dir: str, frame_dir:str,info_keys:list,verbose: int = 0,):
+    def __init__(self, save_freq: int, save_dir: str, frame_dir:str,info_keys:list,verbose: int = 0,image_saving:bool=True):
         super().__init__(verbose)
         self.save_freq = save_freq
         self.save_dir = save_dir
@@ -254,6 +255,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
         self.episode_idx = 0
         self.frame_idx = 0  # frame index within episode
         self.info_keys=info_keys
+        self.image_saving=image_saving
 
         with open(self.csv_path, mode="w", newline="") as f:
             writer = csv.writer(f)
@@ -270,7 +272,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
         if self.n_calls % self.save_freq == 0:
             # Save image
             frame = self.training_env.get_images()[0]
-            if frame is not None:
+            if frame is not None and self.image_saving:
                 filename = f"ep_{self.episode_idx:05d}_frame_{self.frame_idx:06d}.png"
                 path = os.path.join(self.frame_dir, filename)
                 img = Image.fromarray(frame)
@@ -347,7 +349,8 @@ callback = FrameActionPerEpisodeLogger(
     save_freq=1,           # Save every frame; increase if needed
     save_dir=FOLDER_NAME,
     frame_dir=frame_dir,
-    info_keys=info_keys
+    info_keys=info_keys,
+    image_saving=args.image_saving
 )
 
 save_path=os.path.join(MODEL_SAVE_DIR,args.game,args.scenario)
