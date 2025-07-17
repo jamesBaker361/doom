@@ -9,6 +9,7 @@ import random
 import csv
 from gpu_helpers import *
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
+from datasets import load_dataset
 
 class FlatImageFolder(Dataset):
     def __init__(self, folder, transform=None,skip_frac=0):
@@ -97,3 +98,32 @@ class MovieImageFolder(Dataset):
                 tiny_posterior_list.append(DiagonalGaussianDistribution(self.posterior_list[i]).sample().squeeze(0))
         output_dict["posterior"]=torch.cat(tiny_posterior_list)
         return output_dict
+    
+
+class MovieImageFolderFromHF(MovieImageFolder):
+    def __init__(self, hf_path, lookback):
+        self.data=load_dataset(hf_path,split="train")
+        self.output_dict_list=[]
+        self.posterior_list=self.data["posterior_list"]
+        del self.data["posterior_list"]
+
+        for f,row in enumerate(self.data):
+            output_dict={}
+            for key,value in row.items():
+                output_dict[key]=value
+            episode = row["episode"]
+            start = f- self.lookback
+            posterior_indices = []
+            skip_num = 0
+
+            for i in range(start, f):
+                if i < 0 or self.data[i]["episode"] != episode:
+                    posterior_indices.append(-1)
+                    skip_num += 1
+                else:
+                    posterior_indices.append(i)
+
+            output_dict = {
+                "posterior_indices": posterior_indices,
+                "skip_num": skip_num
+            }
