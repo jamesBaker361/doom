@@ -277,6 +277,8 @@ class FrameActionPerEpisodeLogger(BaseCallback):
                 path = os.path.join(self.frame_dir, filename)
                 img = Image.fromarray(frame)
                 img.save(path)
+            else:
+                filename="none"
 
             # Save action
             action = self.locals["actions"][0]
