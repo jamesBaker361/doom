@@ -32,7 +32,7 @@ except ImportError:
     print("cant import register_fsdp_forward_method")
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
 from huggingface_hub import create_repo,HfApi
-from data_loaders import MovieImageFolder
+from data_loaders import MovieImageFolder,MovieImageFolderFromHF
 from torch.utils.data import DataLoader
 from peft import LoraConfig
 from diffusers.image_processor import VaeImageProcessor
@@ -43,6 +43,8 @@ parser.add_argument("--mixed_precision",type=str,default="fp16")
 parser.add_argument("--project_name",type=str,default="person")
 parser.add_argument("--gradient_accumulation_steps",type=int,default=4)
 parser.add_argument("--name",type=str,default="jlbaker361/model",help="name on hf")
+parser.add_argument("--use_hf_training_data",action="store_true")
+parser.add_argument("--hf_training_data",type=str,default="jlbaker361/sonic_emerald_100000")
 parser.add_argument("--lr",type=float,default=0.0001)
 parser.add_argument("--folder",type=str,default="sonic_videos_10/SonicTheHedgehog2-Genesis/EmeraldHillZone.Act1/gelly-religiousness-brazos/")
 parser.add_argument("--batch_size",type=int,default=4)
@@ -127,7 +129,10 @@ def main(args):
         unet.conv_in.requires_grad_(True)
         params=[p for p in unet.parameters() if p.requires_grad]
         print("params",len(params))
-        dataset=MovieImageFolder(args.folder,vae,image_processor,args.lookback)
+        if args.use_hf_training_data:
+            dataset=MovieImageFolderFromHF(args.hf_training_data,args.lookback)
+        else:
+            dataset=MovieImageFolder(args.folder,vae,image_processor,args.lookback)
         loader=DataLoader(dataset,args.batch_size,shuffle=True)
         action_embedding=torch.nn.Embedding(args.n_actions,768*args.n_tokens)
         accelerator.print(f" each embedding = 768 * {args.n_actions} ={768*args.n_tokens} ")
