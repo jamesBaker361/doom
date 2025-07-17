@@ -22,7 +22,7 @@ print(args)
 
 accelerator=Accelerator()
 
-vae=AutoencoderKL.from_pretrained(args.vae_checkpoint,subfolder="vae").to(accelerator.device)
+vae=AutoencoderKL.from_pretrained(args.vae_checkpoint).to(accelerator.device)
 image_processor=VaeImageProcessor(vae_scale_factor=8)
 
 csv_file = os.path.join(args.folder, "actions.csv")
