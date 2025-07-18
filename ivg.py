@@ -59,7 +59,7 @@ parser.add_argument(
         help=("The dimension of the LoRA update matrices."),
     )
 parser.add_argument("--n_actions",type=int,default=35,help="number of action embeddings that can be learned ")
-parser.add_argument("--action_tokens",type=int,default=2,help="amount of text tokens to be learned for each action")
+parser.add_argument("--n_action_tokens",type=int,default=2,help="amount of text tokens to be learned for each action")
 
 
 def main(args):
@@ -135,7 +135,7 @@ def main(args):
             dataset=MovieImageFolder(args.folder,vae,image_processor,args.lookback)
         loader=DataLoader(dataset,args.batch_size,shuffle=True)
         action_embedding=torch.nn.Embedding(args.n_actions,768*args.n_tokens)
-        accelerator.print(f" each embedding = 768 * {args.n_actions} ={768*args.n_tokens} ")
+        accelerator.print(f" each embedding = 768 * {args.n_actions} ={768*args.n_action_tokens} ")
         params+=[p for p in action_embedding.parameters()]
 
         for batch in loader:
