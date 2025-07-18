@@ -4,21 +4,20 @@ import torch
 import math
 
 class BasicRNN(torch.nn.Module):
-    def __init__(self, input_size:int,
+    def __init__(self, embedding_dim:int,
                  vocab_size:int,
                  hidden_size:int,
                  num_layers:int,
-                 num_layers_meta:int,
                  n_meta:int):
         super().__init__()
-        self.input_size=input_size
+        self.embedding_dim=embedding_dim
         self.hidden_size=hidden_size
         self.num_layers=num_layers
         #self.num_layers_meta=num_layers_meta
         self.n_meta=n_meta
 
-        self.embedding=nn.Embedding(vocab_size,input_size)
-        self.sequence_rnn=RNN(input_size,hidden_size,num_layers,batch_first=True)
+        self.embedding=nn.Embedding(vocab_size,embedding_dim)
+        self.sequence_rnn=RNN(embedding_dim,hidden_size,num_layers,batch_first=True)
         self.meta_network=torch.nn.Sequential(
             *[Linear(hidden_size,hidden_size//2),
               LayerNorm(hidden_size//2),
