@@ -1,5 +1,5 @@
 '''
-this module is for making a hf dataset from a saved folder
+this module is for uploading a hf dataset from a saved folder
 '''
 
 import torch
