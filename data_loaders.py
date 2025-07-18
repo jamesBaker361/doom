@@ -128,3 +128,9 @@ class MovieImageFolderFromHF(MovieImageFolder):
                 "posterior_indices": posterior_indices,
                 "skip_num": skip_num
             }
+
+            self.output_dict_list.append(output_dict)
+
+class SequenceDatasetFromHF(Dataset):
+    def __init__(self,hf_path,sequence_length):
+        super().__init__()
