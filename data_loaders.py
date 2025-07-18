@@ -102,6 +102,7 @@ class MovieImageFolder(Dataset):
 
 class MovieImageFolderFromHF(MovieImageFolder):
     def __init__(self, hf_path, lookback):
+        self.lookback=lookback
         self.data=load_dataset(hf_path,split="train")
         self.output_dict_list=[]
         self.posterior_list=self.data["posterior_list"]
