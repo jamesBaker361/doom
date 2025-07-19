@@ -30,7 +30,7 @@ class BasicRNN(torch.nn.Module):
         )
 
 
-    def forward(self,input_batch):
+    def forward(self,input_batch,*args,**kwargs):
         #input_batch (B,L)
         embedded_batch=self.embedding(input_batch)
         rnn_output,rnn_h=self.sequence_rnn(embedded_batch) #(B,L,H_in) #(num_layers, B,hidden_size)
@@ -39,6 +39,15 @@ class BasicRNN(torch.nn.Module):
         meta=self.meta_network(hidden)
 
         return meta
+    
+    def to_config(self):
+        return {
+            "embedding_dim":self.embedding_dim,
+            "vocab_size":self.embedding.num_embeddings,
+            "hidden_size":self.hidden_size,
+            "num_layers":self.num_layers,
+            "n_meta":self.n_meta
+        }
         
 
 class PositionalEncoding(torch.nn.Module):
@@ -70,6 +79,9 @@ class BasicTransformer(torch.nn.Module):
         self.embedding=nn.Embedding(vocab_size,embedding_dim)
         encoder_layer=nn.TransformerEncoderLayer(d_model=embedding_dim,nhead=nhead)
         self.encoder=nn.TransformerEncoder(encoder_layer,num_layers)
+        self.nhead=nhead
+        self.num_layers=num_layers
+        self.n_meta=n_meta
 
         self.meta_network=torch.nn.Sequential(
             *[Linear(embedding_dim,embedding_dim//2),
@@ -82,10 +94,19 @@ class BasicTransformer(torch.nn.Module):
               ]
         )
 
-    def forward(self,input_batch):
+    def forward(self,input_batch,*args,**kwargs):
         embedded_batch=self.embedding(input_batch)
         embedded_batch=self.positional_encoding(embedded_batch)
         encoded=self.encoder(embedded_batch)[0]
         meta=self.meta_network(encoded)
 
         return meta
+
+    def to_config(self):
+        return {
+            "embedding_dim":self.embedding.embedding_dim,
+            "vocab_size":self.embedding.num_embeddings,
+            "num_layers":self.num_layers,
+            "n_meta":self.n_meta,
+            "nhead":self.nhead
+        }

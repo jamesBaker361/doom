@@ -135,7 +135,7 @@ def main(args):
             dataset=MovieImageFolder(args.folder,vae,image_processor,args.lookback)
         loader=DataLoader(dataset,args.batch_size,shuffle=True)
         action_embedding=torch.nn.Embedding(args.n_actions,768*args.n_action_tokens)
-        accelerator.print(f" each embedding = 768 * {args.n_actions} ={768*args.n_action_tokens} ")
+        accelerator.print(f" each embedding = 768 * {args.n_action_tokens} ={768*args.n_action_tokens} ")
         params+=[p for p in action_embedding.parameters()]
 
         for batch in loader:
