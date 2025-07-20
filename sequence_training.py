@@ -4,6 +4,7 @@ from experiment_helpers.gpu_details import print_details
 from datasets import load_dataset
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader,random_split
+from torch.utils.data import Subset
 import json
 
 import torch
@@ -54,6 +55,7 @@ parser.add_argument("--epochs",type=int,default=50)
 parser.add_argument("--train_fraction",type=float,default=0.9)
 parser.add_argument("--batch_size",type=int,default=16)
 parser.add_argument("--test_interval",type=int,default=10)
+parser.add_argument("--limit",type=int,default=-1)
 
 def main(args):
     accelerator=Accelerator(log_with="wandb",mixed_precision=args.mixed_precision,gradient_accumulation_steps=args.gradient_accumulation_steps)
@@ -103,6 +105,11 @@ def main(args):
             )
 
         data=SequenceDatasetFromHF(args.sequence_dataset,args.lookback)
+
+        if args.limit!=-1:
+            indices = list(range(len(data)))
+            random.shuffle(indices)
+            data = Subset(data, indices[:args.limit])
 
         train_size = int(args.train_fraction * len(data))
         test_size = len(data) - train_size
@@ -164,7 +171,7 @@ def main(args):
                     "test_loss":np.mean(test_loss_buffer)
                 })
 
-                
+
 
                     
 
