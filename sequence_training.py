@@ -32,7 +32,7 @@ except ImportError:
     print("cant import register_fsdp_forward_method")
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
 from huggingface_hub import create_repo,HfApi
-from sequence_models import BasicRNN, BasicTransformer
+from sequence_models import BasicRNN, BasicTransformer,BasicCNN
 from data_loaders import SequenceDatasetFromHF
 
 parser=argparse.ArgumentParser()
@@ -100,6 +100,13 @@ def main(args):
                 args.embedding_dim,
                 args.vocab_size,
                 args.rnn_hidden_size,
+                args.num_layers,
+                len(args.metadata_keys)
+            )
+        elif model_type=="cnn":
+            model= BasicCNN(
+                args.embedding_dim,
+                args.vocab_size,
                 args.num_layers,
                 len(args.metadata_keys)
             )
