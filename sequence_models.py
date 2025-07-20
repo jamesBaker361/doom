@@ -110,3 +110,25 @@ class BasicTransformer(torch.nn.Module):
             "n_meta":self.n_meta,
             "nhead":self.nhead
         }
+    
+class BasicCNN(torch.nn.Module):
+    def __init__(self,embedding_dim,vocab_size,num_layers,n_meta):
+        super().__init__()
+        self.positional_encoding=PositionalEncoding(embedding_dim)
+        self.embedding=nn.Embedding(vocab_size,embedding_dim)
+        self.num_layers=num_layers
+        self.n_meta=n_meta
+        meta_layer_list=[]
+        dim=embedding_dim
+        for _ in range(num_layers):
+            meta_layer_list+=[nn.Conv1d(dim,dim//2,4,2),LayerNorm(dim//2),LeakyReLU()]
+            dim=dim//2
+
+        meta_layer_list.append(nn.Flatten())
+        meta_layer_list.append(nn.Linear(dim,n_meta))
+
+        self.meta_network=nn.Sequential(*meta_layer_list)
+
+    def __call__(self, input_batch,*args,**kwargs):
+        return self.meta_network(input_batch)
+    
