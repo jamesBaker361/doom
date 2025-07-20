@@ -1,3 +1,4 @@
 for model_type in ["cnn","rnn","transformer"]:
     command=f"sbatch -J seq --err=slurm/seq/{model_type}.err --out=slurm/seq/{model_type}.out runpymain.sh "
     command+=f" sequence_training.py --model_type {model_type} "
+    print(command)
