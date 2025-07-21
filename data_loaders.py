@@ -114,7 +114,7 @@ class MovieImageFolderFromHF(MovieImageFolder):
 
         for f,row in enumerate(self.data):
             if f == 0:
-                posterior=row["posterioir_list"]
+                posterior=row["posterior_list"]
                 try:
                     posterior = torch.zeros(DiagonalGaussianDistribution(posterior).sample().size()).squeeze(0)
                 except TypeError:
