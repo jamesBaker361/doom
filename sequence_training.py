@@ -130,7 +130,7 @@ def main(args):
         parameters=[p for p in model.parameters()]
         optimizer=torch.optim.AdamW(parameters)
 
-        model,optimizer,train_loader,test_loader=accelerate.prepare(model,optimizer,train_loader,test_loader)
+        model,optimizer,train_loader,test_loader=accelerator.prepare(model,optimizer,train_loader,test_loader)
 
         start_epoch=1
         for e in range(start_epoch,args.epochs+1):
