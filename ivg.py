@@ -230,7 +230,7 @@ def main(args):
                         target = noise[:, - (C - 4):, :, :] 
                     elif scheduler.config.prediction_type == "v_prediction":
                         target = scheduler.get_velocity(noised_latent[:, - (C - 4):, :, :] , noise[:, - (C - 4):, :, :] , last_timestep)
-                    encoder_hidden_states=action_embedding(action).reshape(B,2 -1)
+                    encoder_hidden_states=action_embedding(action).reshape(B,2 ,-1)
                     if b==0 and e==1:
                         print('noised_latent.size()',noised_latent.size())
                         print('noised_latent[:, - (C - 4):, :, :].size()',noised_latent[:, - (C - 4):, :, :].size())
