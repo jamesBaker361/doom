@@ -110,7 +110,7 @@ class MovieImageFolderFromHF(MovieImageFolder):
         self.data=load_dataset(hf_path,split="train")
         self.output_dict_list=[]
         self.posterior_list=self.data["posterior_list"]
-        self.data = self.data.remove_columns("posterior_list")
+        #self.data = self.data.remove_columns("posterior_list")
 
         for f,row in enumerate(self.data):
             if f == 0:
@@ -139,7 +139,8 @@ class MovieImageFolderFromHF(MovieImageFolder):
                 "skip_num": skip_num
             }
             for key,value in row.items():
-                output_dict[key]=value
+                if key!="posterior_list":
+                    output_dict[key]=value
 
             self.output_dict_list.append(output_dict)
 
