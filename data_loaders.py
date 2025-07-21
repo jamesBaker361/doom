@@ -113,8 +113,7 @@ class MovieImageFolderFromHF(MovieImageFolder):
 
         for f,row in enumerate(self.data):
             output_dict={}
-            for key,value in row.items():
-                output_dict[key]=value
+            
             episode = row["episode"]
             start = f- self.lookback
             posterior_indices = []
@@ -131,6 +130,8 @@ class MovieImageFolderFromHF(MovieImageFolder):
                 "posterior_indices": posterior_indices,
                 "skip_num": skip_num
             }
+            for key,value in row.items():
+                output_dict[key]=value
 
             self.output_dict_list.append(output_dict)
 
