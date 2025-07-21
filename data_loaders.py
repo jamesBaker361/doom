@@ -116,9 +116,9 @@ class MovieImageFolderFromHF(MovieImageFolder):
             if f == 0:
                 posterior=row["posterior_list"]
                 try:
-                    posterior = torch.zeros(DiagonalGaussianDistribution(posterior).sample().size()).squeeze(0)
+                    self.zero_posterior = torch.zeros(DiagonalGaussianDistribution(posterior).sample().size()).squeeze(0)
                 except TypeError:
-                    posterior = torch.zeros(DiagonalGaussianDistribution(torch.tensor(posterior)).sample().size()).squeeze(0)
+                    self.zero_posterior = torch.zeros(DiagonalGaussianDistribution(torch.tensor(posterior)).sample().size()).squeeze(0)
                 print("zero posterior",self.zero_posterior.size())
             output_dict={}
             
