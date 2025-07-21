@@ -91,6 +91,7 @@ class MovieImageFolder(Dataset):
         output_dict= self.output_dict_list[index]
         posterior_indices=output_dict["posterior_indices"]
         tiny_posterior_list=[]
+        print("posterior_indices",posterior_indices)
         for i in posterior_indices:
             if i==-1:
                 tiny_posterior_list.append(self.zero_posterior)
@@ -112,6 +113,13 @@ class MovieImageFolderFromHF(MovieImageFolder):
         self.data = self.data.remove_columns("posterior_list")
 
         for f,row in enumerate(self.data):
+            if f == 0:
+                posterior=row["posterioir_list"]
+                try:
+                    posterior = torch.zeros(DiagonalGaussianDistribution(posterior).sample().size()).squeeze(0)
+                except TypeError:
+                    posterior = torch.zeros(DiagonalGaussianDistribution(torch.tensor(posterior)).sample().size()).squeeze(0)
+                print("zero posterior",self.zero_posterior.size())
             output_dict={}
             
             episode = row["episode"]
