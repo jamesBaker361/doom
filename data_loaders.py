@@ -108,6 +108,7 @@ class MovieImageFolderFromHF(MovieImageFolder):
     def __init__(self, hf_path, lookback):
         self.lookback=lookback
         self.data=load_dataset(hf_path,split="train")
+        print("column names ",self.data.column_names)
         self.output_dict_list=[]
         self.posterior_list=self.data["posterior_list"]
         #self.data = self.data.remove_columns("posterior_list")
@@ -149,12 +150,12 @@ class SequenceDatasetFromHF(Dataset):
         super().__init__()
         self.lookback=lookback
         self.data=load_dataset(hf_path,split="train")
+        print("column names ",self.data.column_names)
         self.output_dict_list=[]
 
         for f,row in enumerate(self.data):
             output_dict={}
-            for key,value in row.items():
-                output_dict[key]=value
+            
             episode = row["episode"]
             start = f- self.lookback
             action_sequence = []
@@ -171,6 +172,9 @@ class SequenceDatasetFromHF(Dataset):
                 "action_sequence": action_sequence,
                 "skip_num": skip_num
             }
+
+            for key,value in row.items():
+                output_dict[key]=value
 
             self.output_dict_list.append(output_dict)
 
