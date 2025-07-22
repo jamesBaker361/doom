@@ -39,7 +39,9 @@ from diffusers.image_processor import VaeImageProcessor
 
 data=load_dataset("jlbaker361/sonic_emerald_100000",split="train")
 
-for row in data:
+for i,row in enumerate(data):
     posterior=data["posterior_list"]
     posterior=np.array(posterior)
     print(posterior.shape)
+    if i >20:
+        break
