@@ -118,7 +118,7 @@ class BasicCNN(torch.nn.Module):
         self.embedding=nn.Embedding(vocab_size,embedding_dim)
         self.num_layers=num_layers
         self.n_meta=n_meta
-        meta_layer_list=[]
+        meta_layer_list=[self.embedding]
         dim=embedding_dim
         for _ in range(num_layers):
             meta_layer_list+=[nn.Conv1d(dim,dim//2,4,2),LayerNorm(dim//2),LeakyReLU()]
