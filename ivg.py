@@ -252,6 +252,7 @@ def main(args):
                         print("class labels",class_labels)
                         print("noise[:, - 4:, :, :] ",noise[:, - 4:, :, :] .sum())
                         print("noise sum", noise.sum())
+                        print("drop",drop)
 
                     
                     model_pred=unet(noised_latent,last_timestep,encoder_hidden_states=encoder_hidden_states,
