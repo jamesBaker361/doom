@@ -111,6 +111,8 @@ def main(args):
                 len(args.metadata_keys)
             )
 
+        model=model.to(accelerator.device)
+
         data=SequenceDatasetFromHF(args.sequence_dataset,args.lookback)
 
         if args.limit!=-1:
