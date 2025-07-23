@@ -131,7 +131,7 @@ def main(args):
         print("params",len(params))
         dataset=MovieImageFolderFromHF(args.hf_training_data,args.lookback)
         loader=DataLoader(dataset,args.batch_size,shuffle=True)
-        action_embedding=torch.nn.Embedding(args.n_actions,768*args.n_action_tokens)
+        action_embedding=torch.nn.Embedding(args.n_actions,768*args.n_action_tokens,device=accelerator.device)
         accelerator.print(f" each embedding = 768 * {args.n_action_tokens} ={768*args.n_action_tokens} ")
         params+=[p for p in action_embedding.parameters()]
 
@@ -142,7 +142,7 @@ def main(args):
 
         optimizer=torch.optim.AdamW(params,args.lr)
 
-        optimizer,unet,loader=accelerator.prepare(optimizer,unet,loader)
+        optimizer,unet,loader,action_embedding=accelerator.prepare(optimizer,unet,loader,action_embedding)
 
         '''@torch.no_grad()
         def logging(unet,loader):'''
