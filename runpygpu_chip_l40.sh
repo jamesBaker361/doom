@@ -61,7 +61,7 @@ echo "Allocated GPUs:"
 nvidia-smi
 echo "version"
 nvcc --version
-srun --contstraint=L40S python   $@
+srun --constraint=L40S python   $@
 echo "Running on: $(hostname)"
 echo "Allocated GPUs:"
 nvidia-smi
