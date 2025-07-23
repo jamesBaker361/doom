@@ -127,6 +127,7 @@ def main(args):
 
             unet.add_adapter(unet_lora_config)
         unet.conv_in.requires_grad_(True)
+        unet.class_embedding=torch.nn.Embedding(10,unet.time_embedding.linear_2.out_features,device=accelerator.device)
         params=[p for p in unet.parameters() if p.requires_grad]
         print("params",len(params))
         dataset=MovieImageFolderFromHF(args.hf_training_data,args.lookback)
@@ -169,8 +170,11 @@ def main(args):
                     # - one value for each chunk except the last → shape (B, num_chunks - 1)
                     # - one value for the last chunk only → shape (B,)
                     main_timesteps = torch.randint(
-                        0, scheduler.config.num_train_timesteps, (B,), device=latent.device
+                        0, int(scheduler.config.num_train_timesteps * 0.7), (B,), device=latent.device
                     )
+
+                    with torch.no_grad():
+                        class_labels=main_timesteps//100
                     last_timestep = torch.randint(
                         0, scheduler.config.num_train_timesteps, (B,), device=latent.device
                     )
@@ -233,8 +237,11 @@ def main(args):
                         print('noised_latent[:,  - 4:, :, :].size()',noised_latent[:,  - 4:, :, :].size())
                         print('noise[:, - 4:, :, :].size()',noise[:, - 4:, :, :].size())
                         print("encodr hiden states",encoder_hidden_states.size())
+                        print("class labels",class_labels)
                     
-                    model_pred=unet(noised_latent,last_timestep,encoder_hidden_states=encoder_hidden_states,return_dict=False)[0] #somehow condiiton on main_timesteps ???
+                    model_pred=unet(noised_latent,last_timestep,encoder_hidden_states=encoder_hidden_states,
+                                    class_labels=class_labels,
+                                    return_dict=False)[0] #somehow condiiton on main_timesteps ???
                     if b==0 and e==1:
                         print("model pred size",model_pred.size())
                         print("target size",target.size())
