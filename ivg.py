@@ -237,6 +237,7 @@ def main(args):
                     model_pred=unet(noised_latent,last_timestep,encoder_hidden_states=encoder_hidden_states,return_dict=False)[0] #somehow condiiton on main_timesteps ???
                     if b==0 and e==1:
                         print("model pred size",model_pred.size())
+                        print("target size",target.size())
 
                     loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
 
