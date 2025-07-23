@@ -224,14 +224,14 @@ def main(args):
                     noise=noise_blocks.view(B,C,H,W)'''
 
                     if scheduler.config.prediction_type == "epsilon":
-                        target = noise[:, - (C - 4):, :, :] 
+                        target = noise[:, - 4:, :, :] 
                     elif scheduler.config.prediction_type == "v_prediction":
-                        target = scheduler.get_velocity(noised_latent[:, - (C - 4):, :, :] , noise[:, - (C - 4):, :, :] , last_timestep)
+                        target = scheduler.get_velocity(noised_latent[:,  - 4:, :, :] , noise[:, - 4:, :, :] , last_timestep)
                     encoder_hidden_states=action_embedding(action).reshape(B,2 ,-1)
                     if b==0 and e==1:
                         print('noised_latent.size()',noised_latent.size())
-                        print('noised_latent[:, - (C - 4):, :, :].size()',noised_latent[:, - (C - 4):, :, :].size())
-                        print('noise[:, - (C - 4):, :, :].size()',noise[:, - (C - 4):, :, :].size())
+                        print('noised_latent[:,  - 4:, :, :].size()',noised_latent[:,  - 4:, :, :].size())
+                        print('noise[:, - 4:, :, :].size()',noise[:, - 4:, :, :].size())
                         print("encodr hiden states",encoder_hidden_states.size())
                     
                     model_pred=unet(noised_latent,last_timestep,encoder_hidden_states=encoder_hidden_states,return_dict=False)[0] #somehow condiiton on main_timesteps ???
