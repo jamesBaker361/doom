@@ -141,10 +141,13 @@ def main(args):
                     optimizer.zero_grad()
                     action=batch["action_sequence"]
 
-                    target= torch.cat([batch[k] for k in args.metadata_keys],dim=1) #turn b x 1 or into b x n
-                    if e==start_epoch and b==0:
-                        print('target.size()',target.size())
+                    target= torch.cat([batch[k] for k in args.metadata_keys],dim=-1) #turn b x 1 or into b x n
+                    
                     predicted=model(action)
+
+                    if e==start_epoch and b==0:
+                        accelerator.print('target.size()',target.size())
+                        accelerator.print("predicted size",predicted.size())
 
                     loss=F.mse_loss(predicted.float(),target.float(),reduction="mean")
 
