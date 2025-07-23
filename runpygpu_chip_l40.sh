@@ -20,8 +20,6 @@
 
 #SBATCH --error=slurm_chip/generic/%j.err   # STDERR output file (optional)
 
-#SBATCH -–constraint=L40S
-
 
 day=$(date +'%m/%d/%Y %R')
 echo "gpu"  ${day} $SLURM_JOBID "node_list" $SLURM_NODELIST $@  "\n" >> jobs.txt
@@ -63,7 +61,7 @@ echo "Allocated GPUs:"
 nvidia-smi
 echo "version"
 nvcc --version
-srun python   $@
+srun –constraint=L40S python   $@
 echo "Running on: $(hostname)"
 echo "Allocated GPUs:"
 nvidia-smi
