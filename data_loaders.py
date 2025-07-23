@@ -91,7 +91,6 @@ class MovieImageFolder(Dataset):
         output_dict= self.output_dict_list[index]
         posterior_indices=output_dict["posterior_indices"]
         tiny_posterior_list=[]
-        print("posterior_indices",posterior_indices)
         for i in posterior_indices:
             if i==-1:
                 tiny_posterior_list.append(self.zero_posterior)
