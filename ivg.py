@@ -47,7 +47,7 @@ parser.add_argument("--name",type=str,default="jlbaker361/model",help="name on h
 parser.add_argument("--hf_training_data",type=str,default="jlbaker361/sonic_100")
 parser.add_argument("--lr",type=float,default=0.0001)
 parser.add_argument("--folder",type=str,default="sonic_videos_10/SonicTheHedgehog2-Genesis/EmeraldHillZone.Act1/gelly-religiousness-brazos/")
-parser.add_argument("--batch_size",type=int,default=4)
+parser.add_argument("--batch_size",type=int,default=1)
 parser.add_argument("--epochs",type=int,default=4)
 parser.add_argument("--lookback",type=int,default=4)
 parser.add_argument("--info_keys",nargs="*")
