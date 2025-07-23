@@ -97,9 +97,6 @@ class MovieImageFolder(Dataset):
                 tiny_posterior_list.append(self.zero_posterior)
             else:
                 tiny_posterior_list.append(DiagonalGaussianDistribution(torch.tensor(self.posterior_list[i])).sample().squeeze(0))
-                print("torch.tensor(self.posterior_list[i]))", torch.tensor(self.posterior_list[i]).size())
-                print("DiagonalGaussianDistribution(torch.tensor(self.posterior_list[i])).sample()", DiagonalGaussianDistribution(torch.tensor(self.posterior_list[i])).sample().size())
-            print(" tiny_posterior_list[-1] size? ",tiny_posterior_list[-1].size())
         output_dict["posterior"]=torch.cat(tiny_posterior_list)
         return output_dict
     
