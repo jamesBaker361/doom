@@ -60,6 +60,7 @@ parser.add_argument(
     )
 parser.add_argument("--n_actions",type=int,default=35,help="number of action embeddings that can be learned ")
 parser.add_argument("--n_action_tokens",type=int,default=2,help="amount of text tokens to be learned for each action")
+parser.add_argument("--drop_context_frames_probability",type=float,default=0.1)
 
 
 def main(args):
@@ -169,9 +170,17 @@ def main(args):
                     # Generate timesteps:
                     # - one value for each chunk except the last → shape (B, num_chunks - 1)
                     # - one value for the last chunk only → shape (B,)
-                    main_timesteps = torch.randint(
-                        0, int(scheduler.config.num_train_timesteps * 0.7), (B,), device=latent.device
-                    )
+                    if random.random()<args.drop_context_frames_probability:
+                        drop=True
+                    else:
+                        drop=False
+
+                    if drop:
+                        main_timesteps=torch.zeros((B,), device=latent.device)
+                    else:
+                        main_timesteps = torch.randint(
+                            0, int(scheduler.config.num_train_timesteps * 0.7), (B,), device=latent.device
+                        )
 
                     with torch.no_grad():
                         class_labels=main_timesteps//100
@@ -191,7 +200,10 @@ def main(args):
                         else:
                             t_i = main_timesteps      # (B,)
 
-                        noised_i = scheduler.add_noise(latent_i, noise_i, t_i)  # (B, 4, H, W)
+                        if drop and i != num_chunks-1:
+                            noised_i=torch.zeros(noise_i.size())
+                        else:
+                            noised_i = scheduler.add_noise(latent_i, noise_i, t_i)  # (B, 4, H, W)
                         noised_latent_chunks.append(noised_i)
 
                     # Reassemble
@@ -238,6 +250,9 @@ def main(args):
                         print('noise[:, - 4:, :, :].size()',noise[:, - 4:, :, :].size())
                         print("encodr hiden states",encoder_hidden_states.size())
                         print("class labels",class_labels)
+                        print("noise[:, - 4:, :, :] ",noise[:, - 4:, :, :] .sum())
+                        print("noise sum", noise.sum())
+
                     
                     model_pred=unet(noised_latent,last_timestep,encoder_hidden_states=encoder_hidden_states,
                                     class_labels=class_labels,
