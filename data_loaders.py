@@ -160,10 +160,10 @@ class SequenceDatasetFromHF(Dataset):
 
             for i in range(start, f):
                 if i < 0 or self.data[i]["episode"] != episode:
-                    action_sequence.append(torch.Tensor(-1))
+                    action_sequence.append(torch.Tensor([-1]))
                     skip_num += 1
                 else:
-                    action_sequence.append(torch.Tensor(i))
+                    action_sequence.append(torch.Tensor([i]))
 
             output_dict = {
                 "action_sequence": action_sequence,
