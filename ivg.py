@@ -184,6 +184,7 @@ def main(args):
 
                     with torch.no_grad():
                         class_labels=main_timesteps//100
+                        class_labels=class_labels.int()
                     last_timestep = torch.randint(
                         0, scheduler.config.num_train_timesteps, (B,), device=latent.device
                     )
