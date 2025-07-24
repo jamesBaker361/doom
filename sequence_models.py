@@ -66,8 +66,9 @@ class PositionalEncoding(torch.nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         """
         Arguments:
-            x: Tensor, shape ``[seq_len, batch_size, embedding_dim]``
+            x: Tensor, shape ``[, batch_size, seq_len, embedding_dim]``
         """
+        x=x.view((x.size(1),x.size(0),-1))
         x = x + self.pe[:x.size(0)]
         return self.dropout(x)
     
