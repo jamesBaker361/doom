@@ -163,10 +163,10 @@ class SequenceDatasetFromHF(Dataset):
                     action_sequence.append(torch.Tensor([NULL_ACTION]))
                     skip_num += 1
                 else:
-                    print(self.data[i]["action"],self.data[i]["frame_in_episode"])
+                    #print(self.data[i]["action"],self.data[i]["frame_in_episode"])
                     action_sequence.append(torch.Tensor([self.data[i]["action"]]))
 
-            print(action_sequence)
+            #print(action_sequence)
             output_dict = {
                 "action_sequence": torch.stack(action_sequence).int(),
                 "skip_num": skip_num
