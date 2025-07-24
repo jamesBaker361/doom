@@ -90,7 +90,7 @@ def main(args):
         if model_type=="transformer":
             model=BasicTransformer(
                 args.embedding_dim,
-                args.vocab_size,
+                args.vocab_size+1,
                 args.nhead,
                 args.num_layers,
                 len(args.metadata_keys)
@@ -98,7 +98,7 @@ def main(args):
         elif model_type=="rnn":
             model=BasicRNN(
                 args.embedding_dim,
-                args.vocab_size,
+                args.vocab_size+1,
                 args.rnn_hidden_size,
                 args.num_layers,
                 len(args.metadata_keys)
@@ -106,7 +106,7 @@ def main(args):
         elif model_type=="cnn":
             model= BasicCNN(
                 args.embedding_dim,
-                args.vocab_size,
+                args.vocab_size+1,
                 args.num_layers,
                 len(args.metadata_keys)
             )
