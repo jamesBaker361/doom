@@ -11,6 +11,8 @@ from gpu_helpers import *
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
 from datasets import load_dataset
 
+NULL_ACTION=36 #this is the "button" pressed for null frames ()
+
 class FlatImageFolder(Dataset):
     def __init__(self, folder, transform=None,skip_frac=0):
         paths = [os.path.join(folder, f) for f in os.listdir(folder)
@@ -64,7 +66,7 @@ class MovieImageFolder(Dataset):
 
             for i in range(start, index):
                 if i < 0 or self.data[i]["episode"] != episode:
-                    posterior_indices.append(-1)
+                    posterior_indices.append(NULL_ACTION)
                     skip_num += 1
                 else:
                     posterior_indices.append(i)
@@ -92,7 +94,7 @@ class MovieImageFolder(Dataset):
         posterior_indices=output_dict["posterior_indices"]
         tiny_posterior_list=[]
         for i in posterior_indices:
-            if i==-1:
+            if i==NULL_ACTION:
                 tiny_posterior_list.append(self.zero_posterior)
             else:
                 tiny_posterior_list.append(DiagonalGaussianDistribution(torch.tensor(self.posterior_list[i])).sample().squeeze(0))
@@ -126,7 +128,7 @@ class MovieImageFolderFromHF(MovieImageFolder):
 
             for i in range(start, f):
                 if i < 0 or self.data[i]["episode"] != episode:
-                    posterior_indices.append(-1)
+                    posterior_indices.append(NULL_ACTION)
                     skip_num += 1
                 else:
                     posterior_indices.append(i)
@@ -159,7 +161,7 @@ class SequenceDatasetFromHF(Dataset):
 
             for i in range(start, f):
                 if i < 0 or self.data[i]["episode"] != episode:
-                    action_sequence.append(torch.Tensor([-1]))
+                    action_sequence.append(torch.Tensor([NULL_ACTION]))
                     skip_num += 1
                 else:
                     action_sequence.append(torch.Tensor([i]))
