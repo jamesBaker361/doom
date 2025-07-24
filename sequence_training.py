@@ -143,12 +143,19 @@ def main(args):
                     optimizer.zero_grad()
                     action=batch["action_sequence"]
                     if e==start_epoch and b==0:
-                        accelerator.print("action",action)
-
-                    target= torch.cat([batch[k] for k in args.metadata_keys],dim=-1) #turn b x 1 or into b x n
-
+                        accelerator.print("action",action.size())
 
                     
+                    batches=[batch[k] for k in args.metadata_keys]
+                    print(batches)
+                    try:
+                        target= torch.cat([batch[k] for k in args.metadata_keys],dim=0) #turn b x 1 or into b x n
+                        print("target 0 cat", target.size())
+                    except:
+                        print("0 didnt work")
+
+
+                    target= torch.cat([batch[k] for k in args.metadata_keys],dim=-1) #turn b x 1 or into b x n
                     predicted=model(action)
 
                     if e==start_epoch and b==0:
