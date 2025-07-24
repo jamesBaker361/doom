@@ -121,7 +121,7 @@ class BasicCNN(torch.nn.Module):
         self.embedding=nn.Embedding(vocab_size+1,embedding_dim)
         self.num_layers=num_layers
         self.n_meta=n_meta
-        meta_layer_list=[self.embedding]
+        meta_layer_list=[]
         dim=embedding_dim
         for _ in range(num_layers):
             meta_layer_list+=[nn.Conv1d(dim,dim//2,4,2),LayerNorm(dim//2),LeakyReLU()]
@@ -133,5 +133,8 @@ class BasicCNN(torch.nn.Module):
         self.meta_network=nn.Sequential(*meta_layer_list)
 
     def __call__(self, input_batch,*args,**kwargs):
+        print("before",input_batch.size())
+        input_batch=self.embedding(input_batch)
+        print("after ",input_batch.size())
         return self.meta_network(input_batch)
     
