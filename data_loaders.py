@@ -95,7 +95,6 @@ class MovieImageFolder(Dataset):
         tiny_posterior_list=[]
         posterior_indices=[int(i.item()) for i in posterior_indices]
         for i in posterior_indices:
-            print('i',i)
             if i==NULL_ACTION:
                 tiny_posterior_list.append(self.zero_posterior)
             else:
