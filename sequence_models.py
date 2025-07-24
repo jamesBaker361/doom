@@ -135,6 +135,8 @@ class BasicCNN(torch.nn.Module):
     def __call__(self, input_batch,*args,**kwargs):
         print("before",input_batch.size())
         input_batch=self.embedding(input_batch)
-        print("after ",input_batch.size())
+        input_batch_size=input_batch.size()
+        B=input_batch_size[0]
+        input_batch=input_batch.view((B, input_batch_size[-1],input_batch_size[-2]))
         return self.meta_network(input_batch)
     
