@@ -71,7 +71,7 @@ class PositionalEncoding(torch.nn.Module):
         x=x.view((x.size(1),x.size(0),-1))
         x = x + self.pe[:x.size(0)]
         x= self.dropout(x)
-        x=x.view((x.size(1),x.size(0),-1))
+        #x=x.view((x.size(1),x.size(0),-1))
         return x
     
 
