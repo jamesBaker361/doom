@@ -11,7 +11,7 @@ from gpu_helpers import *
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
 from datasets import load_dataset
 
-NULL_ACTION=36 #this is the "button" pressed for null frames ()
+NULL_ACTION=35 #this is the "button" pressed for null frames ()
 
 class FlatImageFolder(Dataset):
     def __init__(self, folder, transform=None,skip_frac=0):
