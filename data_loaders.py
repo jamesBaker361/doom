@@ -170,7 +170,7 @@ class SequenceDatasetFromHF(Dataset):
 
             #print(action_sequence)
             output_dict = {
-                "action_sequence": torch.stack(action_sequence).int(),
+                "action_sequence": torch.stack(action_sequence).int().squeeze(-1),
                 "skip_num": skip_num
             }
 
