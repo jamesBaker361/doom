@@ -202,7 +202,7 @@ def main(args):
                             t_i = main_timesteps      # (B,)
 
                         if drop and i != num_chunks-1:
-                            noised_i=torch.zeros(noise_i.size())
+                            noised_i=torch.zeros(noise_i.size(),device=device)
                         else:
                             noised_i = scheduler.add_noise(latent_i, noise_i, t_i)  # (B, 4, H, W)
                         noised_latent_chunks.append(noised_i)
