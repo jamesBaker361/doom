@@ -146,22 +146,8 @@ def main(args):
                         accelerator.print("action",action.size())
 
                     
-                    batches=[batch[k] for k in args.metadata_keys]
-                    print(batches)
-                    try:
-                        target= torch.cat([batch[k] for k in args.metadata_keys],dim=0) #turn b x 1 or into b x n
-                        print("target 0 cat", target.size())
-                    except:
-                        print("0 didnt work")
+                    target= torch.stack([batch[k] for k in args.metadata_keys],dim=1) #turn b x 1 or into b x n
 
-                    try:
-                        target= torch.stack([batch[k] for k in args.metadata_keys],dim=1) #turn b x 1 or into b x n
-                        print("target 1 stack", target.size())
-                    except:
-                        print("1 stack didnt work")
-
-
-                    target= torch.cat([batch[k] for k in args.metadata_keys],dim=-1) #turn b x 1 or into b x n
                     predicted=model(action)
 
                     if e==start_epoch and b==0:
