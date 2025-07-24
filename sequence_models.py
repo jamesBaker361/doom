@@ -138,5 +138,11 @@ class BasicCNN(torch.nn.Module):
         input_batch_size=input_batch.size()
         B=input_batch_size[0]
         input_batch=input_batch.view((B, input_batch_size[-1],input_batch_size[-2]))
-        return self.meta_network(input_batch)
+        print("after",input_batch.size())
+        input_batch= self.meta_network(input_batch)
+        input_batch_size=input_batch.size()
+        B=input_batch_size[0]
+        input_batch=input_batch.view((B, input_batch_size[-1],input_batch_size[-2]))
+        print("after",input_batch.size())
+        return input_batch
     
