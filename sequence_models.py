@@ -16,7 +16,7 @@ class BasicRNN(torch.nn.Module):
         #self.num_layers_meta=num_layers_meta
         self.n_meta=n_meta
 
-        self.embedding=nn.Embedding(vocab_size,embedding_dim)
+        self.embedding=nn.Embedding(vocab_size+1,embedding_dim)
         self.sequence_rnn=RNN(embedding_dim,hidden_size,num_layers,batch_first=True)
         self.meta_network=torch.nn.Sequential(
             *[Linear(hidden_size,hidden_size//2),
@@ -80,7 +80,7 @@ class BasicTransformer(torch.nn.Module):
     def __init__(self, embedding_dim,vocab_size,nhead,num_layers,n_meta):
         super().__init__()
         self.positional_encoding=PositionalEncoding(embedding_dim)
-        self.embedding=nn.Embedding(vocab_size,embedding_dim)
+        self.embedding=nn.Embedding(vocab_size+1,embedding_dim)
         encoder_layer=nn.TransformerEncoderLayer(d_model=embedding_dim,nhead=nhead)
         self.encoder=nn.TransformerEncoder(encoder_layer,num_layers)
         self.nhead=nhead
@@ -119,7 +119,7 @@ class BasicCNN(torch.nn.Module):
     def __init__(self,embedding_dim,vocab_size,num_layers,n_meta):
         super().__init__()
         self.positional_encoding=PositionalEncoding(embedding_dim)
-        self.embedding=nn.Embedding(vocab_size,embedding_dim)
+        self.embedding=nn.Embedding(vocab_size+1,embedding_dim)
         self.num_layers=num_layers
         self.n_meta=n_meta
         meta_layer_list=[self.embedding]
