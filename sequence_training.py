@@ -154,6 +154,12 @@ def main(args):
                     except:
                         print("0 didnt work")
 
+                    try:
+                        target= torch.stack([batch[k] for k in args.metadata_keys],dim=1) #turn b x 1 or into b x n
+                        print("target 1 stack", target.size())
+                    except:
+                        print("1 stack didnt work")
+
 
                     target= torch.cat([batch[k] for k in args.metadata_keys],dim=-1) #turn b x 1 or into b x n
                     predicted=model(action)
