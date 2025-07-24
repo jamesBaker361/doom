@@ -1,4 +1,4 @@
-from torch.nn import RNN,Linear,LayerNorm,LeakyReLU
+from torch.nn import RNN,Linear,LayerNorm,LeakyReLU,BatchNorm1d
 from torch import nn,Tensor
 import torch
 import math
@@ -20,10 +20,10 @@ class BasicRNN(torch.nn.Module):
         self.sequence_rnn=RNN(embedding_dim,hidden_size,num_layers,batch_first=True)
         self.meta_network=torch.nn.Sequential(
             *[Linear(hidden_size,hidden_size//2),
-              LayerNorm(hidden_size//2),
+              BatchNorm1d(hidden_size//2),
               LeakyReLU(),
               Linear(hidden_size//2, n_meta*2),
-              LayerNorm(n_meta*2),
+              BatchNorm1d(n_meta*2),
               LeakyReLU(),
               Linear(n_meta*2,n_meta)
               ]
@@ -88,10 +88,10 @@ class BasicTransformer(torch.nn.Module):
 
         self.meta_network=torch.nn.Sequential(
             *[Linear(embedding_dim,embedding_dim//2),
-              LayerNorm(embedding_dim//2),
+              BatchNorm1d(embedding_dim//2),
               LeakyReLU(),
               Linear(embedding_dim//2, n_meta*2),
-              LayerNorm(n_meta*2),
+              BatchNorm1d(n_meta*2),
               LeakyReLU(),
               Linear(n_meta*2,n_meta)
               ]
@@ -124,7 +124,7 @@ class BasicCNN(torch.nn.Module):
         meta_layer_list=[]
         dim=embedding_dim
         for _ in range(num_layers):
-            meta_layer_list+=[nn.Conv1d(dim,dim//2,4,2),LayerNorm(dim//2),LeakyReLU()]
+            meta_layer_list+=[nn.Conv1d(dim,dim//2,4,2),BatchNorm1d(dim//2),LeakyReLU()]
             dim=dim//2
 
         meta_layer_list.append(nn.Flatten())
