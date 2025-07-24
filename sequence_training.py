@@ -175,7 +175,7 @@ def main(args):
                     for b,batch in enumerate(test_loader):
                         action=batch["action_sequence"]
 
-                        target= torch.cat([batch[k] for k in args.metadata_keys],dim=1) #turn b x 1 or into b x n
+                        target= torch.stack([batch[k] for k in args.metadata_keys],dim=1) #turn b x 1 or into b x n
                         predicted=model(action)
 
                         test_loss=F.mse_loss(predicted.float(),target.float(),reduction="mean")
