@@ -166,6 +166,7 @@ class SequenceDatasetFromHF(Dataset):
                 else:
                     action_sequence.append(torch.Tensor(row["action"]))
 
+            print(action_sequence)
             output_dict = {
                 "action_sequence": torch.stack(action_sequence).int(),
                 "skip_num": skip_num
