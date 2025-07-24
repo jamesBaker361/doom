@@ -158,12 +158,13 @@ class SequenceDatasetFromHF(Dataset):
             start = f- self.lookback
             action_sequence = []
             skip_num = 0
-
-            for i in range(start, f):
+            print(row)
+            for i in range(start, f+1):
                 if i < 0 or self.data[i]["episode"] != episode:
                     action_sequence.append(torch.Tensor([NULL_ACTION]))
                     skip_num += 1
                 else:
+                    print(row["action"])
                     action_sequence.append(torch.Tensor(row["action"]))
 
             print(action_sequence)
