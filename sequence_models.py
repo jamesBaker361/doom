@@ -33,6 +33,7 @@ class BasicRNN(torch.nn.Module):
     def forward(self,input_batch,*args,**kwargs):
         #input_batch (B,L)
         embedded_batch=self.embedding(input_batch)
+        print("embedeed batch",embedded_batch.size())
         rnn_output,rnn_h=self.sequence_rnn(embedded_batch) #(B,L,H_in) #(num_layers, B,hidden_size)
 
         hidden=rnn_h[0].squeeze(0) #(B, hidden_size)
@@ -70,7 +71,9 @@ class PositionalEncoding(torch.nn.Module):
         """
         x=x.view((x.size(1),x.size(0),-1))
         x = x + self.pe[:x.size(0)]
-        return self.dropout(x)
+        x= self.dropout(x)
+        x=x.view((x.size(1),x.size(0),-1))
+        return x
     
 
 class BasicTransformer(torch.nn.Module):
