@@ -69,7 +69,7 @@ class MovieImageFolder(Dataset):
                     posterior_indices.append(NULL_ACTION)
                     skip_num += 1
                 else:
-                    posterior_indices.append(torch.Tensor(self.data[i]["action"]))
+                    posterior_indices.append(torch.Tensor([self.data[i]["action"]]))
 
             output_dict = {
                 "posterior_indices": posterior_indices,
@@ -131,7 +131,7 @@ class MovieImageFolderFromHF(MovieImageFolder):
                     posterior_indices.append(NULL_ACTION)
                     skip_num += 1
                 else:
-                    posterior_indices.append(torch.Tensor(self.data[i]["action"]))
+                    posterior_indices.append(torch.Tensor([self.data[i]["action"]]))
 
             output_dict = {
                 "posterior_indices": posterior_indices,
