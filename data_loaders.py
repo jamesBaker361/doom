@@ -95,7 +95,7 @@ class MovieImageFolder(Dataset):
         tiny_posterior_list=[]
         posterior_indices=[int(i.item()) for i in posterior_indices]
         for i in posterior_indices:
-            print(i)
+            print('i',i)
             if i==NULL_ACTION:
                 tiny_posterior_list.append(self.zero_posterior)
             else:
@@ -130,7 +130,7 @@ class MovieImageFolderFromHF(MovieImageFolder):
 
             for i in range(start, f):
                 if i < 0 or self.data[i]["episode"] != episode:
-                    posterior_indices.append(NULL_ACTION)
+                    posterior_indices.append(torch.Tensor([NULL_ACTION]))
                     skip_num += 1
                 else:
                     posterior_indices.append(torch.Tensor([self.data[i]["action"]]))
