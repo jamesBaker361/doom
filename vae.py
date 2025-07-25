@@ -23,7 +23,7 @@ from diffusers import LCMScheduler,DiffusionPipeline,DEISMultistepScheduler,DDIM
 from diffusers.models.attention_processor import IPAdapterAttnProcessor2_0
 from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
-from data_loaders import FlatImageFolder
+from data_loaders import FlatImageFolder,MovieImageFolderFromHF
 from torch.utils.data import ConcatDataset, DataLoader
 from diffusers import AutoencoderKL
 from transformers import AutoProcessor, CLIPModel
@@ -48,6 +48,7 @@ parser.add_argument("--epochs",type=int,default=100)
 parser.add_argument("--limit",type=int,default=-1)
 parser.add_argument("--image_interval",type=int,default=10)
 parser.add_argument("--skip_frac",type=float,default=1.0)
+parser.add_argument("--use_hf_training_data",action="store_true")
 
 def concat_images_horizontally(images)-> Image.Image:
     """
