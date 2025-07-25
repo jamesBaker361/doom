@@ -10,6 +10,7 @@ import csv
 from gpu_helpers import *
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
 from datasets import load_dataset
+from constants import *
 
 NULL_ACTION=35 #this is the "button" pressed for null frames ()
 
@@ -120,7 +121,7 @@ class MovieImageFolder(Dataset):
     
 
 class MovieImageFolderFromHF(MovieImageFolder):
-    def __init__(self, hf_path, lookback):
+    def __init__(self, hf_path, lookback,prior=False):
         self.lookback=lookback
         self.data=load_dataset(hf_path,split="train")
         print("column names ",self.data.column_names)
@@ -157,6 +158,11 @@ class MovieImageFolderFromHF(MovieImageFolder):
             for key,value in row.items():
                 if key!="posterior_list":
                     output_dict[key]=value
+
+            if prior and len(self.output_dict_list)>0:
+                prior_output_dict=self.output_dict_list[-1]
+                for key,value in prior_output_dict.items():
+                    output_dict[PRIOR_PREFIX+key]=value
 
             self.output_dict_list.append(output_dict)
 
