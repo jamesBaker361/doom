@@ -31,6 +31,8 @@ module load boost/1.71.0-gc563
 module load openjdk/1.8.0_362
 eval "$(conda shell.bash hook)"
 conda activate deepdoom
+export CXX=/projects/community/gcc/10.3.0/pgarias/bin/g++  
+export CC=/projects/community/gcc/10.3.0/pgarias/bin/gcc 
 export TRANSFORMERS_CACHE="/scratch/jlb638/trans_cache"
 export HF_HOME="/scratch/jlb638/trans_cache"
 export HF_HUB_CACHE="/scratch/jlb638/trans_cache"

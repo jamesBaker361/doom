@@ -38,6 +38,8 @@ conda activate deepdoom
 export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:64
 export TORCH_USE_CUDA_DSA="1"
 export CUDA_LAUNCH_BLOCKING="1"
+export CXX=/projects/community/gcc/10.3.0/pgarias/bin/g++  
+export CC=/projects/community/gcc/10.3.0/pgarias/bin/gcc 
 export TRANSFORMERS_CACHE="/scratch/jlb638/trans_cache"
 export HF_HOME="/scratch/jlb638/trans_cache"
 export HF_HUB_CACHE="/scratch/jlb638/trans_cache"
