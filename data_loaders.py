@@ -198,11 +198,16 @@ class SequenceDatasetFromHF(Dataset):
             for key,value in row.items():
                 output_dict[key]=value
 
-            if prior and len(self.output_dict_list)>0:
-                prior_output_dict=self.output_dict_list[-1]
-                for key,value in prior_output_dict.items():
-                    if key.find(PRIOR_PREFIX)==-1:
-                        output_dict[PRIOR_PREFIX+key]=value
+            if prior:
+                if len(self.output_dict_list)>0:
+                    prior_output_dict=self.output_dict_list[-1]
+                    for key,value in prior_output_dict.items():
+                        if key.find(PRIOR_PREFIX)==-1:
+                            output_dict[PRIOR_PREFIX+key]=value
+                else:
+                    keys=[k for k in output_dict.keys()]
+                    for k in keys:
+                        output_dict[PRIOR_PREFIX+k]=output_dict[k]
 
             self.output_dict_list.append(output_dict)
 
