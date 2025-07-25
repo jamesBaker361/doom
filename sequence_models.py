@@ -85,7 +85,7 @@ class ConcatRNN(torch.nn.Module):
         meta=hidden
         for layer in self.meta_network:
             if type(layer)==Linear:
-                meta=torch.stack([meta,prior_values],dim=1)
+                meta=torch.cat([meta,prior_values],dim=1)
             meta=layer(meta)
 
         return meta
