@@ -201,7 +201,8 @@ class SequenceDatasetFromHF(Dataset):
             if prior and len(self.output_dict_list)>0:
                 prior_output_dict=self.output_dict_list[-1]
                 for key,value in prior_output_dict.items():
-                    output_dict[PRIOR_PREFIX+key]=value
+                    if key.find(PRIOR_PREFIX)==-1:
+                        output_dict[PRIOR_PREFIX+key]=value
 
             self.output_dict_list.append(output_dict)
 
