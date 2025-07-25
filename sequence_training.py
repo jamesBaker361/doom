@@ -140,7 +140,7 @@ def main(args):
 
         model=model.to(accelerator.device)
 
-        data=SequenceDatasetFromHF(args.sequence_dataset,args.lookback,args.prior)
+        data=SequenceDatasetFromHF(args.sequence_dataset,args.lookback,args.use_prior)
 
         if args.limit!=-1:
             indices = list(range(len(data)))
