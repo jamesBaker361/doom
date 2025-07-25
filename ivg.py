@@ -61,6 +61,7 @@ parser.add_argument(
 parser.add_argument("--n_actions",type=int,default=35,help="number of action embeddings that can be learned ")
 parser.add_argument("--n_action_tokens",type=int,default=2,help="amount of text tokens to be learned for each action")
 parser.add_argument("--drop_context_frames_probability",type=float,default=0.1)
+parser.add_argument("--use_prior",action="store_true")
 
 
 def main(args):
@@ -132,7 +133,7 @@ def main(args):
         unet.class_embedding=torch.nn.Embedding(10,unet.time_embedding.linear_2.out_features,device=accelerator.device)
         params=[p for p in unet.parameters() if p.requires_grad]
         print("params",len(params))
-        dataset=MovieImageFolderFromHF(args.hf_training_data,args.lookback)
+        dataset=MovieImageFolderFromHF(args.hf_training_data,args.lookback,args.use_prior)
         loader=DataLoader(dataset,args.batch_size,shuffle=True)
         action_embedding=torch.nn.Embedding(args.n_actions,768*args.n_action_tokens,device=accelerator.device)
         accelerator.print(f" each embedding = 768 * {args.n_action_tokens} ={768*args.n_action_tokens} ")

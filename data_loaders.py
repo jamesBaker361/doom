@@ -167,7 +167,7 @@ class MovieImageFolderFromHF(MovieImageFolder):
             self.output_dict_list.append(output_dict)
 
 class SequenceDatasetFromHF(Dataset):
-    def __init__(self,hf_path,lookback):
+    def __init__(self,hf_path,lookback,prior=False):
         super().__init__()
         self.lookback=lookback
         self.data=load_dataset(hf_path,split="train")
@@ -197,6 +197,11 @@ class SequenceDatasetFromHF(Dataset):
 
             for key,value in row.items():
                 output_dict[key]=value
+
+            if prior and len(self.output_dict_list)>0:
+                prior_output_dict=self.output_dict_list[-1]
+                for key,value in prior_output_dict.items():
+                    output_dict[PRIOR_PREFIX+key]=value
 
             self.output_dict_list.append(output_dict)
 
