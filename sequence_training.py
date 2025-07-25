@@ -32,8 +32,9 @@ except ImportError:
     print("cant import register_fsdp_forward_method")
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
 from huggingface_hub import create_repo,HfApi
-from sequence_models import BasicRNN, BasicTransformer,BasicCNN,BasicGRU,BasicLSTM
+from sequence_models import BasicRNN, BasicTransformer,BasicCNN,BasicGRU,BasicLSTM,ConcatRNN
 from data_loaders import SequenceDatasetFromHF
+from constants import *
 
 parser=argparse.ArgumentParser()
 parser.add_argument("--mixed_precision",type=str,default="fp16")
@@ -56,6 +57,7 @@ parser.add_argument("--train_fraction",type=float,default=0.9)
 parser.add_argument("--batch_size",type=int,default=16)
 parser.add_argument("--test_interval",type=int,default=10)
 parser.add_argument("--limit",type=int,default=-1)
+parser.add_argument("--use_prior",action="store_true")
 
 def main(args):
     args.metadata_keys=sorted(args.metadata_keys)
@@ -104,6 +106,14 @@ def main(args):
                 args.num_layers,
                 len(args.metadata_keys)
             )
+        elif model_type=="concatrnn":
+            model=ConcatRNN(
+                args.embedding_dim,
+                args.vocab_size,
+                args.rnn_hidden_size,
+                args.num_layers,
+                len(args.metadata_keys)
+            )
         elif model_type=="cnn":
             model= BasicCNN(
                 args.embedding_dim,
@@ -130,7 +140,7 @@ def main(args):
 
         model=model.to(accelerator.device)
 
-        data=SequenceDatasetFromHF(args.sequence_dataset,args.lookback)
+        data=SequenceDatasetFromHF(args.sequence_dataset,args.lookback,args.prior)
 
         if args.limit!=-1:
             indices = list(range(len(data)))
@@ -164,8 +174,11 @@ def main(args):
 
                     
                     target= torch.stack([batch[k] for k in args.metadata_keys],dim=1) #turn b x 1 or into b x n
-
-                    predicted=model(action)
+                    if args.use_prior:
+                        prior_values=torch.stack([batch[PRIOR_PREFIX+ k] for k in args.metadata_keys],dim=1) #turn b x 1 or into b x n
+                        predicted=model(action,prior_values)
+                    else:
+                        predicted=model(action)
 
                     if e==start_epoch and b==0:
                         accelerator.print('target.size()',target.size())
