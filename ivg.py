@@ -50,7 +50,7 @@ parser.add_argument("--folder",type=str,default="sonic_videos_10/SonicTheHedgeho
 parser.add_argument("--batch_size",type=int,default=1)
 parser.add_argument("--epochs",type=int,default=4)
 parser.add_argument("--lookback",type=int,default=4)
-parser.add_argument("--info_keys",nargs="*")
+parser.add_argument("--metadata_keys",nargs="*")
 parser.add_argument("--use_lora",action="store_true")
 parser.add_argument(
         "--rank",
@@ -64,6 +64,7 @@ parser.add_argument("--drop_context_frames_probability",type=float,default=0.1)
 
 
 def main(args):
+    args.metadata_keys=sorted(args.metadata_keys)
     accelerator=Accelerator(log_with="wandb",mixed_precision=args.mixed_precision,gradient_accumulation_steps=args.gradient_accumulation_steps)
     print("accelerator device",accelerator.device)
     device=accelerator.device

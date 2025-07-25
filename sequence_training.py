@@ -58,6 +58,7 @@ parser.add_argument("--test_interval",type=int,default=10)
 parser.add_argument("--limit",type=int,default=-1)
 
 def main(args):
+    args.metadata_keys=sorted(args.metadata_keys)
     accelerator=Accelerator(log_with="wandb",mixed_precision=args.mixed_precision,gradient_accumulation_steps=args.gradient_accumulation_steps)
     print("accelerator device",accelerator.device)
     device=accelerator.device
