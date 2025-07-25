@@ -47,6 +47,7 @@ parser.add_argument("--use_timelimit",action="store_true")
 parser.add_argument("--max_episode_steps",type=int,default=50)
 parser.add_argument("--image_saving",action="store_false")
 
+
 CSV_NAME="actions.csv"
 MODEL_SAVE_DIR="saved_rl_models"
 
