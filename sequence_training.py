@@ -206,7 +206,11 @@ def main(args):
                         action=batch["action_sequence"]
 
                         target= torch.stack([batch[k] for k in args.metadata_keys],dim=1) #turn b x 1 or into b x n
-                        predicted=model(action)
+                        if args.use_prior:
+                            prior_values=torch.stack([batch[PRIOR_PREFIX+ k] for k in args.metadata_keys],dim=1) #turn b x 1 or into b x n
+                            predicted=model(action,prior_values)
+                        else:
+                            predicted=model(action)
 
                         test_loss=F.mse_loss(predicted.float(),target.float(),reduction="mean")
 
