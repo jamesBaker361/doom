@@ -32,7 +32,7 @@ except ImportError:
     print("cant import register_fsdp_forward_method")
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
 from huggingface_hub import create_repo,HfApi
-from sequence_models import BasicRNN, BasicTransformer,BasicCNN,BasicGRU,BasicLSTM,ConcatRNN
+from sequence_models import BasicRNN, BasicTransformer,BasicCNN,BasicGRU,BasicLSTM,ConcatRNN,ConcatTransformer,ConcatGRU,ConcatLSTM
 from data_loaders import SequenceDatasetFromHF
 from constants import *
 
@@ -98,6 +98,14 @@ def main(args):
                 args.num_layers,
                 len(args.metadata_keys)
             )
+        elif model_type=="concattransformer":
+            model=ConcatTransformer(
+                args.embedding_dim,
+                args.vocab_size,
+                args.nhead,
+                args.num_layers,
+                len(args.metadata_keys)
+            )
         elif model_type=="rnn":
             model=BasicRNN(
                 args.embedding_dim,
@@ -129,8 +137,24 @@ def main(args):
                 args.num_layers,
                 len(args.metadata_keys)
             )
+        elif model_type=="concatgru":
+            model=ConcatGRU(
+                args.embedding_dim,
+                args.vocab_size,
+                args.rnn_hidden_size,
+                args.num_layers,
+                len(args.metadata_keys)
+            )
         elif model_type=="lstm":
             model=BasicLSTM(
+                args.embedding_dim,
+                args.vocab_size,
+                args.rnn_hidden_size,
+                args.num_layers,
+                len(args.metadata_keys)
+            )
+        elif model_type=="concatlstm":
+            model=ConcatLSTM(
                 args.embedding_dim,
                 args.vocab_size,
                 args.rnn_hidden_size,

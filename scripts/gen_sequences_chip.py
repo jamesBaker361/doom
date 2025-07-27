@@ -1,4 +1,4 @@
-for model_type in ["cnn","rnn","transformer","lstm","gru","concatrnn"]:
+for model_type in ["concattransformer","concatlstm","concatgru","concatrnn"]:
     command=f"sbatch -J seq --err=slurm_chip/seq/{model_type}.err --out=slurm_chip/seq/{model_type}.out runpygpu_chip.sh "
     command+=f" sequence_training.py --model_type {model_type} --metadata_keys x y --sequence_dataset  jlbaker361/sonic_sequence_100 "
     print(command)

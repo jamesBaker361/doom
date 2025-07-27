@@ -358,6 +358,51 @@ class BasicTransformer(torch.nn.Module):
             "nhead":self.nhead
         }
     
+class ConcatTransformer(torch.nn.Module):
+    def __init__(self, embedding_dim,vocab_size,nhead,num_layers,n_meta):
+        super().__init__()
+        self.positional_encoding=PositionalEncoding(embedding_dim)
+        self.embedding=nn.Embedding(vocab_size+1,embedding_dim)
+        encoder_layer=nn.TransformerEncoderLayer(d_model=embedding_dim,nhead=nhead)
+        self.encoder=nn.TransformerEncoder(encoder_layer,num_layers)
+        self.nhead=nhead
+        self.num_layers=num_layers
+        self.n_meta=n_meta
+
+        self.meta_network=torch.nn.ModuleList(
+            [Linear(embedding_dim+ n_meta,embedding_dim//2),
+              BatchNorm1d(embedding_dim//2),
+              LeakyReLU(),
+              Linear(embedding_dim//2 + n_meta, n_meta*2),
+              BatchNorm1d(n_meta*2),
+              LeakyReLU(),
+              Linear(n_meta*2 +n_meta,n_meta)
+              ]
+        )
+
+    def forward(self,input_batch,prior_values,*args,**kwargs):
+        embedded_batch=self.embedding(input_batch)
+        embedded_batch=self.positional_encoding(embedded_batch)
+        encoded=self.encoder(embedded_batch)[0]
+        meta=encoded
+        for layer in self.meta_network:
+            if type(layer)==Linear:
+                meta=torch.cat([meta,prior_values],dim=1)
+            meta=layer(meta)
+
+        return meta
+
+        return meta
+
+    def to_config(self):
+        return {
+            "embedding_dim":self.embedding.embedding_dim,
+            "vocab_size":self.embedding.num_embeddings,
+            "num_layers":self.num_layers,
+            "n_meta":self.n_meta,
+            "nhead":self.nhead
+        }
+    
 class BasicCNN(torch.nn.Module):
     def __init__(self,embedding_dim,vocab_size,num_layers,n_meta):
         super().__init__()
