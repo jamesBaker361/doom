@@ -1,6 +1,6 @@
-for model_type in ["cnn","rnn","transformer","lstm","gru","concatrnn"]:
+for model_type in ["concattransformer","concatlstm","concatgru","concatrnn"]:
     command=f"sbatch -J seq --err=slurm/seq/{model_type}.err --out=slurm/seq/{model_type}.out runpymain.sh "
     command+=f" sequence_training.py --model_type {model_type} --metadata_keys x y  --sequence_dataset  jlbaker361/sonic_sequence_100 "
-    if model_type in ["concatrnn"]:
+    if model_type.find("concat")!=-1:
         command+=" --use_prior  "
     print(command)
