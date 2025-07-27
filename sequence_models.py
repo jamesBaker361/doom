@@ -146,6 +146,56 @@ class BasicLSTM(torch.nn.Module):
             "n_meta":self.n_meta
         }
     
+class ConcatLSTM(torch.nn.Module):
+    def __init__(self, embedding_dim:int,
+                 vocab_size:int,
+                 hidden_size:int,
+                 num_layers:int,
+                 n_meta:int):
+        super().__init__()
+        self.embedding_dim=embedding_dim
+        self.hidden_size=hidden_size
+        self.num_layers=num_layers
+        #self.num_layers_meta=num_layers_meta
+        self.n_meta=n_meta
+
+        self.embedding=nn.Embedding(vocab_size+1,embedding_dim)
+        self.sequence_lstm=LSTM(embedding_dim,hidden_size,num_layers,batch_first=True)
+        self.meta_network=torch.nn.ModuleList(
+            [Linear(hidden_size+ n_meta,hidden_size//2),
+              BatchNorm1d(hidden_size//2),
+              LeakyReLU(),
+              Linear(hidden_size//2 + n_meta, n_meta*2),
+              BatchNorm1d(n_meta*2),
+              LeakyReLU(),
+              Linear(n_meta*2 +n_meta,n_meta)
+              ]
+        )
+
+
+    def forward(self,input_batch,prior_values,*args,**kwargs):
+        #input_batch (B,L)
+        embedded_batch=self.embedding(input_batch)
+        lstm_output,(lstm_h,lstm_c)=self.sequence_lstm(embedded_batch) #(B,L,H_in) #(num_layers, B,hidden_size)
+
+        hidden=lstm_h[0].squeeze(0) #(B, hidden_size)
+        meta=hidden
+        for layer in self.meta_network:
+            if type(layer)==Linear:
+                meta=torch.cat([meta,prior_values],dim=1)
+            meta=layer(meta)
+
+        return meta
+    
+    def to_config(self):
+        return {
+            "embedding_dim":self.embedding_dim,
+            "vocab_size":self.embedding.num_embeddings,
+            "hidden_size":self.hidden_size,
+            "num_layers":self.num_layers,
+            "n_meta":self.n_meta
+        }
+    
 class BasicGRU(torch.nn.Module):
     def __init__(self, embedding_dim:int,
                  vocab_size:int,
@@ -180,6 +230,57 @@ class BasicGRU(torch.nn.Module):
 
         hidden=gru_h[0].squeeze(0) #(B, hidden_size)
         meta=self.meta_network(hidden)
+
+        return meta
+    
+    def to_config(self):
+        return {
+            "embedding_dim":self.embedding_dim,
+            "vocab_size":self.embedding.num_embeddings,
+            "hidden_size":self.hidden_size,
+            "num_layers":self.num_layers,
+            "n_meta":self.n_meta
+        }
+        
+
+class ConcatGRU(torch.nn.Module):
+    def __init__(self, embedding_dim:int,
+                 vocab_size:int,
+                 hidden_size:int,
+                 num_layers:int,
+                 n_meta:int):
+        super().__init__()
+        self.embedding_dim=embedding_dim
+        self.hidden_size=hidden_size
+        self.num_layers=num_layers
+        #self.num_layers_meta=num_layers_meta
+        self.n_meta=n_meta
+
+        self.embedding=nn.Embedding(vocab_size+1,embedding_dim)
+        self.sequence_gru=GRU(embedding_dim,hidden_size,num_layers,batch_first=True)
+        self.meta_network=torch.nn.ModuleList(
+            [Linear(hidden_size+ n_meta,hidden_size//2),
+              BatchNorm1d(hidden_size//2),
+              LeakyReLU(),
+              Linear(hidden_size//2 + n_meta, n_meta*2),
+              BatchNorm1d(n_meta*2),
+              LeakyReLU(),
+              Linear(n_meta*2 +n_meta,n_meta)
+              ]
+        )
+
+
+    def forward(self,input_batch,prior_values,*args,**kwargs):
+        #input_batch (B,L)
+        embedded_batch=self.embedding(input_batch)
+        gru_output,gru_h=self.sequence_gru(embedded_batch) #(B,L,H_in) #(num_layers, B,hidden_size)
+
+        hidden=gru_h[0].squeeze(0) #(B, hidden_size)
+        meta=hidden
+        for layer in self.meta_network:
+            if type(layer)==Linear:
+                meta=torch.cat([meta,prior_values],dim=1)
+            meta=layer(meta)
 
         return meta
     
