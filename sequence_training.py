@@ -192,14 +192,14 @@ def main(args):
             with accelerator.accumulate(parameters):
                 for b, batch in enumerate(train_loader):
                     optimizer.zero_grad()
-                    action=batch["action_sequence"]
+                    action=batch["action_sequence"].to(device)
                     if e==start_epoch and b==0:
                         accelerator.print("action",action.size())
 
                     
                     target= torch.stack([batch[k] for k in args.metadata_keys],dim=1) #turn b x 1 or into b x n
                     if args.use_prior:
-                        prior_values=torch.stack([batch[PRIOR_PREFIX+ k] for k in args.metadata_keys],dim=1) #turn b x 1 or into b x n
+                        prior_values=torch.stack([batch[PRIOR_PREFIX+ k] for k in args.metadata_keys],dim=1).to(device) #turn b x 1 or into b x n
                         predicted=model(action,prior_values)
                     else:
                         predicted=model(action)
@@ -227,9 +227,9 @@ def main(args):
                 test_loss_buffer=[]
                 with torch.no_grad():
                     for b,batch in enumerate(test_loader):
-                        action=batch["action_sequence"]
+                        action=batch["action_sequence"].to(device)
 
-                        target= torch.stack([batch[k] for k in args.metadata_keys],dim=1) #turn b x 1 or into b x n
+                        target= torch.stack([batch[k] for k in args.metadata_keys],dim=1).to(device) #turn b x 1 or into b x n
                         if args.use_prior:
                             prior_values=torch.stack([batch[PRIOR_PREFIX+ k] for k in args.metadata_keys],dim=1) #turn b x 1 or into b x n
                             predicted=model(action,prior_values)
