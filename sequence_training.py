@@ -195,6 +195,8 @@ def main(args):
                     action=batch["action_sequence"].to(device)
                     if e==start_epoch and b==0:
                         accelerator.print("action",action.size())
+                        accelerator.print("device",action.device)
+                        accelerator.print("dtype",action.dtype)
 
                     
                     target= torch.stack([batch[k] for k in args.metadata_keys],dim=1) #turn b x 1 or into b x n
