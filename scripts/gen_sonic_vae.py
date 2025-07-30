@@ -24,5 +24,5 @@ for gpus in [2]:
         command+=f" vae.py --image_folder_paths "
         command+=f" {base_path}{zone} "
         command+=f" --batch_size 2 --gradient_accumulation_steps 16  --limit -1 --epochs 100 --image_interval 5 --name jlbaker361/sonic-vae{gpus}-{zone_name} "
-        command+=" --project_name vae --skip_frac 0.9 --project_name sonic-vae "
+        command+=" --project_name vae --skip_frac 0.975 --project_name sonic-vae "
         print(command)
