@@ -1,6 +1,6 @@
 port=29650
 
-base_path="sonic_videos_100000/SonicTheHedgehog2-Genesis/"
+base_path="sonic_videos_2500000/SonicTheHedgehog2-Genesis/"
 image_folder_path_list=[base_path+expanded_path for expanded_path in [
    # "AquaticRuinZone.Act1/constitution-ketoacidosis-nystan",
    # "CasinoNightZone.Act1/underbrush-constitution-plebeian",
