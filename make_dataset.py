@@ -45,12 +45,12 @@ if args.no_image !=True:
 
     for file in output_dict["file"]:
         pil_image = Image.open(os.path.join(args.folder, file))
-        pt_image = image_processor.preprocess(pil_image)
-        posterior = vae.encode(pt_image.to(vae.device)).latent_dist.parameters.cpu().detach()
+        #pt_image = image_processor.preprocess(pil_image)
+        #posterior = vae.encode(pt_image.to(vae.device)).latent_dist.parameters.cpu().detach()
         
-        posterior_list.append(posterior)
+        #posterior_list.append(posterior)
         image_list.append(pil_image)
-    output_dict["posterior_list"]=posterior_list
+    #output_dict["posterior_list"]=posterior_list
     output_dict["image"]=image_list
 
 Dataset.from_dict(output_dict).push_to_hub(args.upload_path)
