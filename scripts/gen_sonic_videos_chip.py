@@ -1,4 +1,4 @@
-for timesteps in [2_500_000]:
+for timesteps in [1_000]:
   for num in [1]:
     for state in ["AquaticRuinZone.Act1",
                       "CasinoNightZone.Act1",
