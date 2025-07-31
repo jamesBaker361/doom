@@ -10,7 +10,7 @@ image_folder_path_list=[base_path+expanded_path for expanded_path in [
    # "MetropolisZone.Act1/clasp-beeper-injuriousness"
 ]]
 for gpus in [2]:
-    for zone in ["MetropolisZone.Act1/buttock-foramen-mariehamn",
+    for zone in ["MetropolisZone.Act11/buttock-foramen-mariehamn",
                  "CasinoNightZone.Act11/scrapheap-carping-antivert",
                  "AquaticRuinZone.Act11/bogbean-spermatozoid-hercules",
                  "ChemicalPlantZone.Act11/computing-chinookan-foglamp",
