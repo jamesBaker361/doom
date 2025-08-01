@@ -3,13 +3,24 @@ for n in [50000]:
     for [name,path] in [
     # ["sonic_emerald_100000_pretrained","EmeraldHillZone.Act1/aminoaciduria-popery-clozapine","jlbaker361/sonic-vae2-EmeraldHillZone.Act1"],
     #  ["sonic_hilltop_100000_pretrained","HillTopZone.Act1/quamassia-cervus-plateful","jlbaker361/sonic-vae2-HillTopZone.Act1"],
-        ["sonic_metro_2.5M","MetropolisZone.Act1/buttock-foramen-mariehamn"],
-        ["sonic_casino_2.5M","CasinoNightZone.Act11/scrapheap-carping-antivert"],
-        ["sonic_aqua_2.5M","AquaticRuinZone.Act11/bogbean-spermatozoid-hercules"],
-        ["sonic_chemical_2.5M","ChemicalPlantZone.Act11/computing-chinookan-foglamp"],
-        ["sonic_hilltop_2.5M","HillTopZone.Act11/cumfrey-scabbard-workbasket"],
-        ["sonic_emerald_2.5M","EmeraldHillZone.Act11/chasuble-solicitor-ins"]
+        [f"sonic_metro_{n}","MetropolisZone.Act11/uzbekistan-goldilocks-solicitor"],
+        [f"sonic_casino_{n}","CasinoNightZone.Act11/complexness-kanarese-oleander"],
+        [f"sonic_aqua_{n}","AquaticRuinZone.Act11/cetrimide-bovidae-schooldays"],
+        [f"sonic_chemical_{n}","ChemicalPlantZone.Act11/bowdlerisation-mishegoss-uncial"],
+        [f"sonic_hilltop_{n}","HillTopZone.Act11/acanthocytosis-gasterophilus-patrioteer"],
+        [f"sonic_emerald_{n}","EmeraldHillZone.Act11/constrictor-lorazepam-sphaerocarpales"]
     ]:
-        command=f"sbatch -J data --err=slurm_chip/data/{n}_{name}.err --out=slurm_chip/data/{n}_{name}.out runpygpu_chip.sh make_dataset.py "
-        command+=f" --upload_path jlbaker361/{n}_{name} --folder {base_path}{path}  "
+        command=f"sbatch -J data  --nodelist=g20-02,g20-03,g20-04,g20-05,g20-09,g20-12 --err=slurm_chip/data/{name}.err --out=slurm_chip/data/{name}.out runpygpu_chip.sh make_dataset.py "
+        command+=f" --upload_path jlbaker361/{name} --folder {base_path}{path}  "
         print(command)
+
+
+'''
+
+for zone in ["MetropolisZone.Act11/uzbekistan-goldilocks-solicitor",
+                  "CasinoNightZone.Act11/complexness-kanarese-oleander",
+                  "AquaticRuinZone.Act11/cetrimide-bovidae-schooldays",
+                  "ChemicalPlantZone.Act11/bowdlerisation-mishegoss-uncial ",
+                  "HillTopZone.Act11/acanthocytosis-gasterophilus-patrioteer",
+                  "EmeraldHillZone.Act11/constrictor-lorazepam-sphaerocarpales"]:
+'''
