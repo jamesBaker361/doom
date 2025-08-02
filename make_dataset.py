@@ -39,9 +39,8 @@ with torch.no_grad():
 
         pretrained_weights_path=api.hf_hub_download(args.vae_checkpoint,"diffusion_pytorch_model.safetensors",force_download=True)
 
-        autoencoder=AutoencoderKL.from_pretrained("digiplay/DreamShaper_7",subfolder="vae")
 
-        autoencoder.load_state_dict(torch.load(pretrained_weights_path,weights_only=True),strict=False)
+        vae.load_state_dict(torch.load(pretrained_weights_path,weights_only=True),strict=False)
 
     csv_file = os.path.join(args.folder, "actions.csv")
     df=pd.read_csv(csv_file)
