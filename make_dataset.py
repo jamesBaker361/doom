@@ -14,9 +14,11 @@ from diffusers.image_processor import VaeImageProcessor
 import os
 import pandas as pd
 from PIL import Image
+from huggingface_hub import create_repo,HfApi
+import torch
 
 parser=argparse.ArgumentParser()
-parser.add_argument("--vae_checkpoint",type=str,default="SimianLuo/LCM_Dreamshaper_v7")
+parser.add_argument("--vae_checkpoint",type=str,default="")
 parser.add_argument("--folder",type=str,default="sonic_videos_10/SonicTheHedgehog2-Genesis/EmeraldHillZone.Act1/gelly-religiousness-brazos/")
 parser.add_argument("--upload_path",type=str,default="jlbaker361/sonic10")
 parser.add_argument("--no_image",action="store_true")
@@ -26,11 +28,17 @@ args=parser.parse_args()
 print(args)
 
 accelerator=Accelerator()
-try:
-    vae=AutoencoderKL.from_pretrained(args.vae_checkpoint).to(accelerator.device)
-except:
-    vae=AutoencoderKL.from_pretrained(args.vae_checkpoint,subfolder="vae").to(accelerator.device)
+vae=AutoencoderKL.from_pretrained("digiplay/DreamShaper_7",subfolder="vae").to(accelerator.device)
 image_processor=VaeImageProcessor(vae_scale_factor=8)
+
+if len(args.vae_checkpoint)>0:
+    api=HfApi()
+
+    pretrained_weights_path=api.hf_hub_download(args.vae_checkpoint,"diffusion_pytorch_model.safetensors",force_download=True)
+
+    autoencoder=AutoencoderKL.from_pretrained("digiplay/DreamShaper_7",subfolder="vae")
+
+    autoencoder.load_state_dict(torch.load(pretrained_weights_path,weights_only=True),strict=False)
 
 csv_file = os.path.join(args.folder, "actions.csv")
 df=pd.read_csv(csv_file)
@@ -43,7 +51,7 @@ if args.no_image !=True:
     posterior_list = []
     image_list=[]
 
-    for file in output_dict["file"]:
+    for n,file in enumerate(output_dict["file"]):
         with Image.open(os.path.join(args.folder, file)) as pil_image:
             #pt_image = image_processor.preprocess(pil_image)
             #posterior = vae.encode(pt_image.to(vae.device)).latent_dist.parameters.cpu().detach()
@@ -51,8 +59,10 @@ if args.no_image !=True:
             #posterior_list.append(posterior)
             image_list.append(pil_image)
     #output_dict["posterior_list"]=posterior_list
-    output_dict["image"]=image_list
+        output_dict["image"]=image_list
 
-Dataset.from_dict(output_dict).push_to_hub(args.upload_path)
+        if n%100==1:
+            Dataset.from_dict(output_dict).push_to_hub(args.upload_path)
+            print(n)
 
 accelerator.print("all done :) ")
