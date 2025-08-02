@@ -28,6 +28,7 @@ from torch.utils.data import ConcatDataset, DataLoader
 from diffusers import AutoencoderKL
 from transformers import AutoProcessor, CLIPModel
 from diffusers.image_processor import VaeImageProcessor
+from torch.utils.data import random_split, DataLoader
 try:
     from torch.distributed.fsdp import register_fsdp_forward_method
 except ImportError:
@@ -49,6 +50,8 @@ parser.add_argument("--limit",type=int,default=-1)
 parser.add_argument("--image_interval",type=int,default=10)
 parser.add_argument("--skip_frac",type=float,default=1.0)
 parser.add_argument("--use_hf_training_data",action="store_true")
+parser.add_argument("--hf_data_path",type=str,default="")
+parser.add_argument("--save_dir",type=str,default="sonic_vae_saved")
 
 def concat_images_horizontally(images)-> Image.Image:
     """
@@ -129,24 +132,52 @@ def main(args):
 
         combined_dataset = ConcatDataset(dataset_list)
 
-        loader = DataLoader(combined_dataset, batch_size=args.batch_size, shuffle=True)
+        test_size=8
+        train_size=len(combined_dataset)-test_size
+
+        
+        # Set seed for reproducibility
+        generator = torch.Generator().manual_seed(42)
+
+        # Split the dataset
+        train_dataset, test_dataset = random_split(combined_dataset, [train_size, test_size], generator=generator)
+
+
+        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
 
         autoencoder=AutoencoderKL.from_pretrained("digiplay/DreamShaper_7",subfolder="vae").to(device)
         params=[p for p in autoencoder.parameters()]
 
         optimizer=torch.optim.AdamW(params,args.lr)
 
-        loader,autoencoder,optimizer=accelerator.prepare(loader,autoencoder,optimizer)
+        train_loader,autoencoder,optimizer=accelerator.prepare(train_loader,autoencoder,optimizer)
 
         image_processor=VaeImageProcessor()
 
-        for initial_batch in loader:
+        for initial_batch in train_loader:
             break
+
+        save_subdir=os.path.join(args.save_dir,args.name)
+        os.makedirs(save_subdir,exist_ok=True)
+        WEIGHTS_NAME="diffusion_pytorch_model.safetensors"
+        save_path=os.path.join(save_subdir,WEIGHTS_NAME)
+        def save():
+            state_dict=autoencoder.state_dict()
+            print("state dict len",len(state_dict))
+            torch.save(state_dict,save_path)
+            try:
+                api.upload_file(path_or_fileobj=save_path,
+                                path_in_repo=WEIGHTS_NAME,
+                                repo_id=args.name)
+                accelerator.print(f"uploaded {args.name} to hub")
+            except:
+                accelerator.print("failed to upload")
 
         for e in range(1,args.epochs+1):
             start=time.time()
             loss_buffer=[]
-            for b,batch in enumerate(loader):
+            for b,batch in enumerate(train_loader):
                 if b==args.limit:
                     break
                 with accelerator.accumulate(params):
@@ -166,7 +197,7 @@ def main(args):
                     "loss_mean":np.mean(loss_buffer),
                     "loss_std":np.std(loss_buffer),
                 })
-            autoencoder.push_to_hub(args.name)
+            save()
             if e%args.image_interval==1:
                 with torch.no_grad():
                     predicted_batch=autoencoder(initial_batch).sample
@@ -181,17 +212,21 @@ def main(args):
                         })
 
         with torch.no_grad():
-            predicted_batch=autoencoder(initial_batch).sample
-            batch_size=predicted_batch.size()[0]
-            predicted_images=image_processor.postprocess(predicted_batch,do_denormalize= [True]*batch_size)
-            initial_images=image_processor.postprocess(initial_batch,do_denormalize= [True]*batch_size)
-            for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
-                concatenated_image=concat_images_horizontally([real,reconstructed])
-                accelerator.log({
-                    f"image_{k}":wandb.Image(concatenated_image)
-                })
+            save()
+            n=0
+            for initial_batch in test_loader:
+                predicted_batch=autoencoder(initial_batch).sample
+                batch_size=predicted_batch.size()[0]
+                predicted_images=image_processor.postprocess(predicted_batch,do_denormalize= [True]*batch_size)
+                initial_images=image_processor.postprocess(initial_batch,do_denormalize= [True]*batch_size)
+                for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
+                    concatenated_image=concat_images_horizontally([real,reconstructed])
+                    accelerator.log({
+                        f"test_image_{n}":wandb.Image(concatenated_image)
+                    })
+                    n+=1
 
-        autoencoder.push_to_hub(args.name)
+        
 
 
 
