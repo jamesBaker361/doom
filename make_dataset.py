@@ -16,6 +16,7 @@ import pandas as pd
 from PIL import Image
 from huggingface_hub import create_repo,HfApi
 import torch
+import datetime
 
 parser=argparse.ArgumentParser()
 parser.add_argument("--vae_checkpoint",type=str,default="")
@@ -63,6 +64,6 @@ if args.no_image !=True:
 
         if n%100==1:
             Dataset.from_dict(output_dict).push_to_hub(args.upload_path)
-            print(n)
+            print(n, datetime.datetime.now())
 
 accelerator.print("all done :) ")
