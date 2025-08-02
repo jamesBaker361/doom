@@ -166,7 +166,7 @@ def main(args):
                     "loss_mean":np.mean(loss_buffer),
                     "loss_std":np.std(loss_buffer),
                 })
-            
+            autoencoder.push_to_hub(args.name)
             if e%args.image_interval==1:
                 with torch.no_grad():
                     predicted_batch=autoencoder(initial_batch).sample
