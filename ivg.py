@@ -66,6 +66,7 @@ parser.add_argument("--save_dir",type=str,default="ivg_models")
 parser.add_argument("--load",action="store_true")
 
 WEIGHTS_NAME="diffusion_pytorch_model.safetensors"
+CONFIG_NAME="config.json"
 
 def main(args):
     save_dir=os.path.join(args.save_dir,args.name[1:])
@@ -75,6 +76,7 @@ def main(args):
     os.makedirs(os.path.join(save_dir,"unet"),exist_ok=True)
     action_embedding_save_path=os.path.join(save_dir,"action_embedding",WEIGHTS_NAME)
     os.makedirs(os.path.join(save_dir,"action_embedding"),exist_ok=True)
+    config_path=os.path.join(save_dir,CONFIG_NAME)
     args.metadata_keys=sorted(args.metadata_keys)
     accelerator=Accelerator(log_with="wandb",mixed_precision=args.mixed_precision,gradient_accumulation_steps=args.gradient_accumulation_steps)
     print("accelerator device",accelerator.device)
@@ -139,16 +141,37 @@ def main(args):
             target_modules=["to_k", "to_q", "to_v", "to_out.0"],)
 
             unet.add_adapter(unet_lora_config)
-        unet.conv_in.requires_grad_(True)
+        
         unet.class_embedding=torch.nn.Embedding(10,unet.time_embedding.linear_2.out_features,device=accelerator.device)
-        params=[p for p in unet.parameters() if p.requires_grad]
+        unet.class_embedding.requires_grad_(True)
+        
         print("params",len(params))
         dataset=MovieImageFolderFromHF(args.hf_training_data,args.lookback,args.use_prior)
         loader=DataLoader(dataset,args.batch_size,shuffle=True)
         action_embedding=torch.nn.Embedding(args.n_actions,768*args.n_action_tokens,device=accelerator.device)
         accelerator.print(f" each embedding = 768 * {args.n_action_tokens} ={768*args.n_action_tokens} ")
-        params+=[p for p in action_embedding.parameters()]
+        
 
+        start_epoch=1
+        if args.load:
+            past_unet_state_dict=torch.load(unet_save_path, weights_only=True)
+            past_action_embedding_state_dict=torch.load(action_embedding_save_path,weights_only=True)
+            unet.load_state_dict(past_unet_state_dict)
+            action_embedding.load_state_dict(past_action_embedding_state_dict)
+            with open(config_path,"r") as f:
+                data=json.load(f)
+                start_epoch=data["start_epoch"]
+
+
+        unet.requires_grad_(False)
+        for name, module in unet.attn_processors.items():
+            for param in module.parameters():
+                param.requires_grad = True
+        unet.conv_in.requires_grad_(True)
+        unet.class_embedding.requires_grad_(True)
+        action_embedding.requires_grad_(True)
+        params=[p for p in unet.parameters() if p.requires_grad]
+        params+=[p for p in action_embedding.parameters()]
         for batch in loader:
             break
 
@@ -164,7 +187,7 @@ def main(args):
         
 
 
-        for e in range(1,args.epochs+1):
+        for e in range(start_epoch,args.epochs+1):
             start=time.time()
             loss_buffer=[]
             for b,batch in enumerate(loader):
@@ -295,6 +318,11 @@ def main(args):
             action_embedding_state_dict=action_embedding.state_dict()
             print("state dict len",len(action_embedding_state_dict))
             torch.save(action_embedding_state_dict,action_embedding_save_path)
+            config={
+                "start_epoch":e+1
+            }
+            with open(config_path,"w+") as config_file:
+                json.dump(config,config_file, indent=4)
 
 
     
