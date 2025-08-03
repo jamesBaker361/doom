@@ -62,9 +62,13 @@ with torch.no_grad():
                 image_list.append(pil_image)
         #output_dict["posterior_list"]=posterior_list
             output_dict["image"]=image_list
+            output_dict["posterior"]=posterior_list
 
             if n%100==1:
-                Dataset.from_dict(output_dict).push_to_hub(args.upload_path)
+                truncated_output_dict={
+                    key:value[:n] for key,value in output_dict.items()
+                }
+                Dataset.from_dict(truncated_output_dict).push_to_hub(args.upload_path)
                 print(n, datetime.datetime.now())
 
     accelerator.print("all done :) ")
