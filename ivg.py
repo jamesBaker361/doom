@@ -77,7 +77,8 @@ def main(args):
     action_embedding_save_path=os.path.join(save_dir,"action_embedding",WEIGHTS_NAME)
     os.makedirs(os.path.join(save_dir,"action_embedding"),exist_ok=True)
     config_path=os.path.join(save_dir,CONFIG_NAME)
-    args.metadata_keys=sorted(args.metadata_keys)
+    if args.metadata_keys is not None:
+        args.metadata_keys=sorted(args.metadata_keys)
     accelerator=Accelerator(log_with="wandb",mixed_precision=args.mixed_precision,gradient_accumulation_steps=args.gradient_accumulation_steps)
     print("accelerator device",accelerator.device)
     device=accelerator.device
