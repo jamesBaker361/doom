@@ -62,9 +62,19 @@ parser.add_argument("--n_actions",type=int,default=35,help="number of action emb
 parser.add_argument("--n_action_tokens",type=int,default=2,help="amount of text tokens to be learned for each action")
 parser.add_argument("--drop_context_frames_probability",type=float,default=0.1)
 parser.add_argument("--use_prior",action="store_true")
+parser.add_argument("--save_dir",type=str,default="ivg_models")
+parser.add_argument("--load",action="store_true")
 
+WEIGHTS_NAME="diffusion_pytorch_model.safetensors"
 
 def main(args):
+    save_dir=os.path.join(args.save_dir,args.name[1:])
+    print("save dir",save_dir)
+    os.makedirs(save_dir,exist_ok=True)
+    unet_save_path=os.path.join(save_dir,"unet",WEIGHTS_NAME)
+    os.makedirs(os.path.join(save_dir,"unet"),exist_ok=True)
+    action_embedding_save_path=os.path.join(save_dir,"action_embedding",WEIGHTS_NAME)
+    os.makedirs(os.path.join(save_dir,"action_embedding"),exist_ok=True)
     args.metadata_keys=sorted(args.metadata_keys)
     accelerator=Accelerator(log_with="wandb",mixed_precision=args.mixed_precision,gradient_accumulation_steps=args.gradient_accumulation_steps)
     print("accelerator device",accelerator.device)
@@ -278,6 +288,14 @@ def main(args):
                 "loss_mean":np.mean(loss_buffer),
                 "loss_std":np.std(loss_buffer),
             })
+
+            unet_state_dict={name: param for name, param in unet.named_parameters() if param.requires_grad}
+            print("state dict len",len(unet_state_dict))
+            torch.save(unet_state_dict,unet_save_path)
+            action_embedding_state_dict=action_embedding.state_dict()
+            print("state dict len",len(action_embedding_state_dict))
+            torch.save(action_embedding_state_dict,action_embedding_save_path)
+
 
     
 
