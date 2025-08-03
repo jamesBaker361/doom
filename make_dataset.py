@@ -64,7 +64,7 @@ with torch.no_grad():
             output_dict["image"]=image_list
             output_dict["posterior"]=posterior_list
 
-            if n%100==1:
+            if n%1000==1:
                 truncated_output_dict={
                     key:value[:n] for key,value in output_dict.items()
                 }
