@@ -146,7 +146,7 @@ def main(args):
         unet.class_embedding=torch.nn.Embedding(10,unet.time_embedding.linear_2.out_features,device=accelerator.device)
         unet.class_embedding.requires_grad_(True)
         
-        print("params",len(params))
+        
         dataset=MovieImageFolderFromHF(args.hf_training_data,args.lookback,args.use_prior)
         loader=DataLoader(dataset,args.batch_size,shuffle=True)
         action_embedding=torch.nn.Embedding(args.n_actions,768*args.n_action_tokens,device=accelerator.device)
@@ -175,7 +175,7 @@ def main(args):
         params+=[p for p in action_embedding.parameters()]
         for batch in loader:
             break
-
+        print("params",len(params))
         print("posertior size",batch["posterior"].size())
 
         optimizer=torch.optim.AdamW(params,args.lr)
