@@ -126,12 +126,12 @@ class MovieImageFolderFromHF(MovieImageFolder):
         self.data=load_dataset(hf_path,split="train")
         print("column names ",self.data.column_names)
         self.output_dict_list=[]
-        self.posterior_list=self.data["posterior_list"]
+        self.posterior_list=self.data["posterior"]
         #self.data = self.data.remove_columns("posterior_list")
 
         for f,row in enumerate(self.data):
             if f == 0:
-                posterior=row["posterior_list"]
+                posterior=row["posterior"]
                 try:
                     self.zero_posterior = torch.zeros(DiagonalGaussianDistribution(posterior).sample().size()).squeeze(0)
                 except TypeError:
