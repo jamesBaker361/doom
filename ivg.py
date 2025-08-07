@@ -164,10 +164,10 @@ def main(args):
                 start_epoch=data["start_epoch"]
 
 
-        unet.requires_grad_(False)
-        for name, module in unet.attn_processors.items():
-            for param in module.parameters():
-                param.requires_grad = True
+        
+        '''for name, module in unet.attn_processors.items():
+            for param in module.attn.parameters():
+                param.requires_grad = True'''
         unet.conv_in.requires_grad_(True)
         unet.class_embedding.requires_grad_(True)
         action_embedding.requires_grad_(True)
