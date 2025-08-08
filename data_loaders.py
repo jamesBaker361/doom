@@ -11,6 +11,7 @@ from gpu_helpers import *
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
 from datasets import load_dataset
 from constants import *
+import numpy as np
 
 NULL_ACTION=35 #this is the "button" pressed for null frames ()
 
@@ -157,7 +158,10 @@ class MovieImageFolderFromHF(MovieImageFolder):
             }
             for key,value in row.items():
                 if key!="posterior_list":
+                    if key =="image":
+                        value=np.array(value)
                     output_dict[key]=value
+                    
 
             if prior and len(self.output_dict_list)>0:
                 prior_output_dict=self.output_dict_list[-1]
