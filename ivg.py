@@ -109,7 +109,7 @@ def concat_images_horizontally(images):
     return new_img
 
 def main(args):
-    save_dir=os.path.join(args.save_dir,args.name[1:])
+    save_dir=os.path.join(args.save_dir,args.name.split("/")[1])
     print("save dir",save_dir)
     os.makedirs(save_dir,exist_ok=True)
     unet_save_path=os.path.join(save_dir,"unet",WEIGHTS_NAME)
