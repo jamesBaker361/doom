@@ -345,6 +345,8 @@ def main(args):
                 start=time.time()
                 with torch.no_grad():
                     for b,batch in enumerate(val_loader):
+                        if b==args.limit:
+                            break
                         latent=batch["posterior"].to(device)
                         action=batch["action"]
                         skip_num=batch["skip_num"]
@@ -422,6 +424,11 @@ def main(args):
                     end=time.time()
                     elapsed=end-start
                     accelerator.print(f"\t validation epoch {e} elapsed {elapsed}")
+                    accelerator.log({
+                        "val_loss_mean":np.mean(val_loss_buffer),
+                        "val_loss_std":np.std(val_loss_buffer),
+                    })
+
 
 
             unet_state_dict={name: param for name, param in unet.named_parameters() if param.requires_grad}
