@@ -342,6 +342,7 @@ def main(args):
             })
             val_loss_buffer=[]
             if e % args.validation_interval ==0:
+                start=time.time()
                 with torch.no_grad():
                     for b,batch in enumerate(val_loader):
                         latent=batch["posterior"].to(device)
@@ -418,6 +419,9 @@ def main(args):
                             accelerator.log({
                                 f"{b}_{i}_validation":wandb.Image(concat)
                             })
+                    end=time.time()
+                    elapsed=end-start
+                    accelerator.print(f"\t validation epoch {e} elapsed {elapsed}")
 
 
             unet_state_dict={name: param for name, param in unet.named_parameters() if param.requires_grad}
