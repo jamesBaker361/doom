@@ -67,9 +67,46 @@ parser.add_argument("--save_dir",type=str,default="ivg_models")
 parser.add_argument("--load",action="store_true")
 parser.add_argument("--train_frac",type=float,default=0.8)
 parser.add_argument("--val_frac",type=float,default=0.1)
+parser.add_argument("--validation_interval",type=int,default=10)
+parser.add_argument("--limit",type=int,default=-1)
 
 WEIGHTS_NAME="diffusion_pytorch_model.safetensors"
 CONFIG_NAME="config.json"
+
+def concat_images_horizontally(images):
+    """
+    Concatenate a list of PIL.Image objects horizontally.
+
+    Args:
+        images (List[PIL.Image]): List of PIL images.
+
+    Returns:
+        PIL.Image: A new image composed of the input images concatenated side-by-side.
+    """
+    # Resize all images to the same height (optional)
+    heights = [img.height for img in images]
+    min_height = min(heights)
+    resized_images = [
+        img if img.height == min_height else img.resize(
+            (int(img.width * min_height / img.height), min_height),
+            Image.LANCZOS
+        ) for img in images
+    ]
+
+    # Compute total width and max height
+    total_width = sum(img.width for img in resized_images)
+    height = min_height
+
+    # Create new blank image
+    new_img = Image.new('RGB', (total_width, height))
+
+    # Paste images side by side
+    x_offset = 0
+    for img in resized_images:
+        new_img.paste(img, (x_offset, 0))
+        x_offset += img.width
+
+    return new_img
 
 def main(args):
     save_dir=os.path.join(args.save_dir,args.name[1:])
@@ -148,12 +185,14 @@ def main(args):
         
         unet.class_embedding=torch.nn.Embedding(10,unet.time_embedding.linear_2.out_features,device=accelerator.device)
         unet.class_embedding.requires_grad_(True)
+        #the class embedding says which of the 10 discrete noise levels we apply to the past data
         
         
         dataset=MovieImageFolderFromHF(args.hf_training_data,args.lookback,args.use_prior)
         train_frac=int(args.train_frac*len(dataset))
         val_frac=int(args.val_frac * len(dataset))
         test_frac=len(dataset)-(train_frac+val_frac)
+        print("train, val, test",[train_frac,val_frac,test_frac])
         dataset,val_dataset,test_dataset=random_split(dataset,[train_frac,val_frac,test_frac])
         loader=DataLoader(dataset,args.batch_size,shuffle=True)
         val_loader=DataLoader(val_dataset,args.batch_size)
@@ -202,6 +241,8 @@ def main(args):
             start=time.time()
             loss_buffer=[]
             for b,batch in enumerate(loader):
+                if b==args.limit:
+                    break
                 with accelerator.accumulate(params):
                     latent=batch["posterior"].to(device)
                     action=batch["action"]
@@ -257,40 +298,12 @@ def main(args):
                     noised_latent_chunks = torch.stack(noised_latent_chunks, dim=1)           # (B, num_chunks, 4, H, W)
                     noised_latent = noised_latent_chunks.view(B, C, H, W)              # (B, C, H, W)
                     noise=noise_chunks.view(B,C,H,W)
-                    # Reshape to blocks of 4 channels
-                    '''latent_blocks = latent.view(B, C // 4, 4, H, W)
-
-                    # Sample noise and timesteps
-                    noise_blocks = torch.randn_like(latent_blocks)
-                    timesteps = torch.randint(
-                        0, scheduler.config.num_train_timesteps, 
-                        (B, C // 4), 
-                        device=device
-                    )
-
-                    # Apply add_noise to each 4-channel block individually
-                    noised_latent_blocks = []
-                    for i in range(C // 4):
-                        latent_i = latent_blocks[:, i]         # (B, 4, H, W)
-                        noise_i = noise_blocks[:, i]
-                        t_i = timesteps[:, i]                  # (B,)
-
-                        # scheduler.add_noise expects (B, C, H, W) and (B,)
-                        noised_i = scheduler.add_noise(latent_i, noise_i, t_i)
-                        noised_latent_blocks.append(noised_i)
-
-                    # Stack along channel block dimension → (B, C//4, 4, H, W)
-                    noised_latent_blocks = torch.stack(noised_latent_blocks, dim=1)
-
-                    # Reshape back to (B, C, H, W)
-                    noised_latent = noised_latent_blocks.view(B, C, H, W)
-                    noise=noise_blocks.view(B,C,H,W)'''
 
                     if scheduler.config.prediction_type == "epsilon":
                         target = noise[:, - 4:, :, :] 
                     elif scheduler.config.prediction_type == "v_prediction":
                         target = scheduler.get_velocity(noised_latent[:,  - 4:, :, :] , noise[:, - 4:, :, :] , last_timestep)
-                    encoder_hidden_states=action_embedding(action).reshape(B,2 ,-1)
+                    encoder_hidden_states=action_embedding(action).reshape(B,args.n_action_tokens ,-1)
                     if b==0 and e==start_epoch:
                         print('noised_latent.size()',noised_latent.size())
                         print('noised_latent[:,  - 4:, :, :].size()',noised_latent[:,  - 4:, :, :].size())
@@ -322,6 +335,85 @@ def main(args):
                 "loss_mean":np.mean(loss_buffer),
                 "loss_std":np.std(loss_buffer),
             })
+            val_loss_buffer=[]
+            if e % args.validation_interval ==0:
+                with torch.no_grad():
+                    for b,batch in enumerate(val_loader):
+                        latent=batch["posterior"].to(device)
+                        action=batch["action"]
+                        skip_num=batch["skip_num"]
+                        (B,C,H,W)=latent.size()
+                        num_chunks=C//4
+                        latent_chunks = latent.view(B, num_chunks, 4, H, W)
+                        noise_chunks = torch.randn_like(latent_chunks)
+                    
+                        if random.random()<args.drop_context_frames_probability:
+                            drop=True
+                        else:
+                            drop=False
+
+                        if drop:
+                            main_timesteps=torch.zeros((B,), device=latent.device)
+                        else:
+                            main_timesteps = torch.randint(
+                                0, int(scheduler.config.num_train_timesteps * 0.7), (B,), device=latent.device
+                            )
+
+                        class_labels=main_timesteps//100
+                        class_labels=class_labels.int()
+
+                        last_timestep = torch.randint(
+                            0, scheduler.config.num_train_timesteps, (B,), device=latent.device
+                        )
+
+                        # Run per chunk
+                        noised_latent_chunks = []
+
+                        for i in range(num_chunks):
+                            latent_i = latent_chunks[:, i]      # (B, 4, H, W)
+                            noise_i = noise_chunks[:, i]
+
+                            if i == num_chunks - 1:
+                                t_i = last_timestep             # (B,)
+                            else:
+                                t_i = main_timesteps      # (B,)
+
+                            if drop and i != num_chunks-1:
+                                noised_i=torch.zeros(noise_i.size(),device=device)
+                            else:
+                                noised_i = scheduler.add_noise(latent_i, noise_i, t_i)  # (B, 4, H, W)
+                            noised_latent_chunks.append(noised_i)
+
+                        # Reassemble
+                        noised_latent_chunks = torch.stack(noised_latent_chunks, dim=1)           # (B, num_chunks, 4, H, W)
+                        noised_latent = noised_latent_chunks.view(B, C, H, W)              # (B, C, H, W)
+                        noise=noise_chunks.view(B,C,H,W)
+
+                        if scheduler.config.prediction_type == "epsilon":
+                            target = noise[:, - 4:, :, :] 
+                        elif scheduler.config.prediction_type == "v_prediction":
+                            target = scheduler.get_velocity(noised_latent[:,  - 4:, :, :] , noise[:, - 4:, :, :] , last_timestep)
+                        encoder_hidden_states=action_embedding(action).reshape(B,args.n_action_tokens ,-1)
+
+                        model_pred=unet(noised_latent,last_timestep,encoder_hidden_states=encoder_hidden_states,
+                                    class_labels=class_labels,
+                                    return_dict=False)[0] #somehow condiiton on main_timesteps ???
+
+                        loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+                        val_loss_buffer.append(loss.cpu().detach().item())
+
+                        decoded_target=vae.decode(target)
+                        decoded_pred=vae.decode(model_pred)
+                        do_denormalize=B*[True]
+                        decoded_target_pil=image_processor.postprocess(decoded_target,do_denormalize=do_denormalize)
+                        decoded_pred_pil=image_processor.postprocess(decoded_pred,do_denormalize=do_denormalize)
+
+                        for i, (real,fake) in enumerate(zip(decoded_target_pil,decoded_pred_pil)):
+                            concat=concat_images_horizontally([real,fake])
+                            accelerator.log({
+                                f"{b}_{i}_validation":wandb.Image(concat)
+                            })
+
 
             unet_state_dict={name: param for name, param in unet.named_parameters() if param.requires_grad}
             print("state dict len",len(unet_state_dict))
