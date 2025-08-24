@@ -24,6 +24,7 @@ from diffusers.models.attention_processor import IPAdapterAttnProcessor2_0
 from diffusers.schedulers.scheduling_lcm import LCMScheduler
 from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
+from torch.utils.data import DataLoader, random_split, TensorDataset
 
 from transformers import AutoProcessor, CLIPModel
 try:
@@ -64,6 +65,8 @@ parser.add_argument("--drop_context_frames_probability",type=float,default=0.1)
 parser.add_argument("--use_prior",action="store_true")
 parser.add_argument("--save_dir",type=str,default="ivg_models")
 parser.add_argument("--load",action="store_true")
+parser.add_argument("--train_frac",type=float,default=0.8)
+parser.add_argument("--val_frac",type=float,default=0.1)
 
 WEIGHTS_NAME="diffusion_pytorch_model.safetensors"
 CONFIG_NAME="config.json"
@@ -148,7 +151,13 @@ def main(args):
         
         
         dataset=MovieImageFolderFromHF(args.hf_training_data,args.lookback,args.use_prior)
+        train_frac=int(args.train_frac*len(dataset))
+        val_frac=int(args.val_frac * len(dataset))
+        test_frac=len(dataset)-(train_frac+val_frac)
+        dataset,val_dataset,test_dataset=random_split(dataset,[train_frac,val_frac,test_frac])
         loader=DataLoader(dataset,args.batch_size,shuffle=True)
+        val_loader=DataLoader(val_dataset,args.batch_size)
+        test_loader=DataLoader(test_dataset,args.batch_size)
         action_embedding=torch.nn.Embedding(args.n_actions,768*args.n_action_tokens,device=accelerator.device)
         accelerator.print(f" each embedding = 768 * {args.n_action_tokens} ={768*args.n_action_tokens} ")
         
@@ -162,6 +171,7 @@ def main(args):
             with open(config_path,"r") as f:
                 data=json.load(f)
                 start_epoch=data["start_epoch"]
+            print("loaded from local checkpoint")
 
 
         
@@ -281,7 +291,7 @@ def main(args):
                     elif scheduler.config.prediction_type == "v_prediction":
                         target = scheduler.get_velocity(noised_latent[:,  - 4:, :, :] , noise[:, - 4:, :, :] , last_timestep)
                     encoder_hidden_states=action_embedding(action).reshape(B,2 ,-1)
-                    if b==0 and e==1:
+                    if b==0 and e==start_epoch:
                         print('noised_latent.size()',noised_latent.size())
                         print('noised_latent[:,  - 4:, :, :].size()',noised_latent[:,  - 4:, :, :].size())
                         print('noise[:, - 4:, :, :].size()',noise[:, - 4:, :, :].size())
