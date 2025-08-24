@@ -46,6 +46,8 @@ parser.add_argument("--gradient_accumulation_steps",type=int,default=4)
 parser.add_argument("--name",type=str,default="jlbaker361/test-ivg",help="name on hf")
 #parser.add_argument("--use_hf_training_data",action="store_true")
 parser.add_argument("--hf_training_data",type=str,default="jlbaker361/sonic_chemical_50000_encoded") #replace chemical with hilltop, aqua, casino, emerald, hilltop
+parser.add_argument("--vae_checkpoint",type=str,default="jlbaker361/sonic-vae50000-ChemicalPlantZone.Act11") 
+#replace ChemicalPlantZone.Act11 with MetropolisZone.Act11, CasinoNightZone.Act11, AquaticRuinZone.Act11, ChemicalPlantZone.Act11, HillTopZone.Act11, EmeraldHillZone.Act11
 parser.add_argument("--lr",type=float,default=0.0001)
 parser.add_argument("--folder",type=str,default="sonic_videos_10/SonicTheHedgehog2-Genesis/EmeraldHillZone.Act1/gelly-religiousness-brazos/")
 parser.add_argument("--batch_size",type=int,default=1)
@@ -156,6 +158,9 @@ def main(args):
         vae loading path?
         '''
         vae=AutoencoderKL.from_pretrained("SimianLuo/LCM_Dreamshaper_v7",subfolder="vae")
+
+        pretrained_weights_path=api.hf_hub_download(args.vae_checkpoint,"diffusion_pytorch_model.safetensors",force_download=True)
+        vae.load_state_dict(torch.load(pretrained_weights_path,weights_only=True),strict=False)
         vae.requires_grad_(False)
         accelerator.print('vae')
         image_processor=VaeImageProcessor(vae_scale_factor=8)
