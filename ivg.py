@@ -25,6 +25,7 @@ from diffusers.schedulers.scheduling_lcm import LCMScheduler
 from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
 from torch.utils.data import DataLoader, random_split, TensorDataset
+from torcheval.metrics import PeakSignalNoiseRatio
 
 from transformers import AutoProcessor, CLIPModel
 try:
@@ -37,6 +38,7 @@ from data_loaders import MovieImageFolder,MovieImageFolderFromHF
 from torch.utils.data import DataLoader
 from peft import LoraConfig
 from diffusers.image_processor import VaeImageProcessor
+from lpips import LPIPS
 
 
 parser=argparse.ArgumentParser()
@@ -245,13 +247,13 @@ def main(args):
         for e in range(start_epoch,args.epochs+1):
             start=time.time()
             loss_buffer=[]
-            for b,batch in enumerate(loader):
-                if b==args.limit:
+            for _b,batch in enumerate(loader):
+                if _b==args.limit:
                     break
                 with accelerator.accumulate(params):
                     latent=batch["posterior"].to(device)
                     action=batch["action"]
-                    if e==1 and b==0:
+                    if e==1 and _b==0:
                         accelerator.print("latent",latent.size())
                     skip_num=batch["skip_num"]
                     (B,C,H,W)=latent.size()
@@ -309,7 +311,7 @@ def main(args):
                     elif scheduler.config.prediction_type == "v_prediction":
                         target = scheduler.get_velocity(noised_latent[:,  - 4:, :, :] , noise[:, - 4:, :, :] , last_timestep)
                     encoder_hidden_states=action_embedding(action).reshape(B,args.n_action_tokens ,-1)
-                    if b==0 and e==start_epoch:
+                    if _b==0 and e==start_epoch:
                         print('noised_latent.size()',noised_latent.size())
                         print('noised_latent[:,  - 4:, :, :].size()',noised_latent[:,  - 4:, :, :].size())
                         print('noise[:, - 4:, :, :].size()',noise[:, - 4:, :, :].size())
@@ -323,7 +325,7 @@ def main(args):
                     model_pred=unet(noised_latent,last_timestep,encoder_hidden_states=encoder_hidden_states,
                                     class_labels=class_labels,
                                     return_dict=False)[0] #somehow condiiton on main_timesteps ???
-                    if b==0 and e==1:
+                    if _b==0 and e==1:
                         print("model pred size",model_pred.size())
                         print("target size",target.size())
 
@@ -344,8 +346,8 @@ def main(args):
             if e % args.validation_interval ==0:
                 start=time.time()
                 with torch.no_grad():
-                    for b,batch in enumerate(val_loader):
-                        if b==args.limit:
+                    for _b,batch in enumerate(val_loader):
+                        if _b==args.limit:
                             break
                         latent=batch["posterior"].to(device)
                         action=batch["action"]
@@ -419,7 +421,7 @@ def main(args):
                         for i, (real,fake) in enumerate(zip(decoded_target_pil,decoded_pred_pil)):
                             concat=concat_images_horizontally([real,fake])
                             accelerator.log({
-                                f"{b}_{i}_validation":wandb.Image(concat)
+                                f"{_b}_{i}_validation":wandb.Image(concat)
                             })
                     end=time.time()
                     elapsed=end-start
@@ -428,6 +430,103 @@ def main(args):
                         "val_loss_mean":np.mean(val_loss_buffer),
                         "val_loss_std":np.std(val_loss_buffer),
                     })
+
+        with torch.no_grad():
+            test_loss_buffer=[]
+            psnr_buffer=[]
+            psnr_metric=PeakSignalNoiseRatio()
+            lpips_buffer=[]
+            loss_fn_alex = LPIPS(net='alex') # best forward scores
+            for _b, batch in enumerate(test_loader):
+                if _b==args.limit:
+                    break
+                latent=batch["posterior"].to(device)
+                action=batch["action"]
+                skip_num=batch["skip_num"]
+                (B,C,H,W)=latent.size()
+                num_chunks=C//4
+                latent_chunks = latent.view(B, num_chunks, 4, H, W)
+                noise_chunks = torch.randn_like(latent_chunks)
+
+                main_timesteps=torch.zeros((B,), device=latent.device)
+
+
+                class_labels=main_timesteps//100
+                class_labels=class_labels.int()
+
+                last_timestep = torch.randint(
+                    0, scheduler.config.num_train_timesteps, (B,), device=latent.device
+                )
+
+                # Run per chunk
+                noised_latent_chunks = []
+
+                for i in range(num_chunks):
+                    latent_i = latent_chunks[:, i]   # (B, 4, H, W)
+                    noise_i = noise_chunks[:, i]
+
+                    if i == num_chunks - 1:
+                        t_i = last_timestep    # (B,)
+                    else:
+                        t_i = main_timesteps    # (B,)
+
+                    if drop and i != num_chunks-1:
+                        noised_i=torch.zeros(noise_i.size(),device=device)
+                    else:
+                        noised_i = scheduler.add_noise(latent_i, noise_i, t_i)  # (B, 4, H, W)
+                    noised_latent_chunks.append(noised_i)
+
+                # Reassemble
+                noised_latent_chunks = torch.stack(noised_latent_chunks, dim=1)           # (B, num_chunks, 4, H, W)
+                noised_latent = noised_latent_chunks.view(B, C, H, W)              # (B, C, H, W)
+                noise=noise_chunks.view(B,C,H,W)
+
+                if scheduler.config.prediction_type == "epsilon":
+                    target = noise[:, - 4:, :, :] 
+                elif scheduler.config.prediction_type == "v_prediction":
+                    target = scheduler.get_velocity(noised_latent[:,  - 4:, :, :] , noise[:, - 4:, :, :] , last_timestep)
+                encoder_hidden_states=action_embedding(action).reshape(B,args.n_action_tokens ,-1)
+
+                model_pred=unet(noised_latent,last_timestep,encoder_hidden_states=encoder_hidden_states,
+                            class_labels=class_labels,
+                            return_dict=False)[0] #somehow condiiton on main_timesteps ???
+
+                loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+
+                test_loss_buffer.append(loss.cpu().detach().item())
+
+                decoded_target=vae.decode(target)
+                decoded_pred=vae.decode(model_pred)
+                do_denormalize=B*[True]
+                decoded_target_pil=image_processor.postprocess(decoded_target,do_denormalize=do_denormalize)
+                decoded_pred_pil=image_processor.postprocess(decoded_pred,do_denormalize=do_denormalize)
+
+                for i, (real,fake) in enumerate(zip(decoded_target_pil,decoded_pred_pil)):
+                    concat=concat_images_horizontally([real,fake])
+                    accelerator.log({
+                        f"{_b}_{i}_test":wandb.Image(concat)
+                    })
+
+                for real_tensor,fake_tensor in zip(decoded_target,decoded_pred):
+                    psnr_metric.update(fake_tensor,real_tensor)
+                    psnr=psnr_metric.compute().cpu().item()
+                    psnr_buffer.append(psnr)
+
+                lpips_loss=loss_fn_alex(real_tensor,fake_tensor)
+                lpips_loss=lpips_loss.squeeze(1).squeeze(1).squeeze(1).cpu().detach().numpy().tolist()
+                lpips_buffer=lpips_buffer+lpips_loss
+
+            test_metrics={
+                    "test_loss_mean":np.mean(test_loss_buffer),
+                    "test_loss_std":np.std(test_loss_buffer),
+                    "psnr_mean":np.mean(psnr_buffer),
+                    "psnr_std":np.std(psnr_buffer),
+                }
+            accelerator.log(test_metrics)
+            
+
+                
+
 
 
 
