@@ -521,7 +521,10 @@ def main(args):
                     "test_loss_std":np.std(test_loss_buffer),
                     "psnr_mean":np.mean(psnr_buffer),
                     "psnr_std":np.std(psnr_buffer),
+                    "lpips_mean":np.mean(lpips_buffer),
+                    "lpips_std":np.std(lpips_buffer)
                 }
+            accelerator.print(test_metrics)
             accelerator.log(test_metrics)
             
 
