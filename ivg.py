@@ -270,7 +270,7 @@ def main(args):
                         drop=False
 
                     if drop:
-                        main_timesteps=torch.zeros((B,), device=latent.device)
+                        main_timesteps=torch.zeros((B,), device=latent.device).int()
                     else:
                         main_timesteps = torch.randint(
                             0, int(scheduler.config.num_train_timesteps * 0.7), (B,), device=latent.device
@@ -363,7 +363,7 @@ def main(args):
                             drop=False
 
                         if drop:
-                            main_timesteps=torch.zeros((B,), device=latent.device)
+                            main_timesteps=torch.zeros((B,), device=latent.device).int()
                         else:
                             main_timesteps = torch.randint(
                                 0, int(scheduler.config.num_train_timesteps * 0.7), (B,), device=latent.device
@@ -448,7 +448,7 @@ def main(args):
                 latent_chunks = latent.view(B, num_chunks, 4, H, W)
                 noise_chunks = torch.randn_like(latent_chunks)
 
-                main_timesteps=torch.zeros((B,), device=latent.device)
+                main_timesteps=torch.zeros((B,), device=latent.device).int()
 
 
                 class_labels=main_timesteps//100
