@@ -413,8 +413,8 @@ def main(args):
                         loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
                         val_loss_buffer.append(loss.cpu().detach().item())
 
-                        decoded_target=vae.decode(target)
-                        decoded_pred=vae.decode(model_pred)
+                        decoded_target=vae.decode(target).sample
+                        decoded_pred=vae.decode(model_pred).sample
                         do_denormalize=B*[True]
                         decoded_target_pil=image_processor.postprocess(decoded_target,do_denormalize=do_denormalize)
                         decoded_pred_pil=image_processor.postprocess(decoded_pred,do_denormalize=do_denormalize)
@@ -498,8 +498,8 @@ def main(args):
 
                 test_loss_buffer.append(loss.cpu().detach().item())
 
-                decoded_target=vae.decode(target)
-                decoded_pred=vae.decode(model_pred)
+                decoded_target=vae.decode(target).sample
+                decoded_pred=vae.decode(model_pred).sample
                 do_denormalize=B*[True]
                 decoded_target_pil=image_processor.postprocess(decoded_target,do_denormalize=do_denormalize)
                 decoded_pred_pil=image_processor.postprocess(decoded_pred,do_denormalize=do_denormalize)
