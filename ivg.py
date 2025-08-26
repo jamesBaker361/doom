@@ -418,8 +418,9 @@ def main(args):
                         do_denormalize=B*[True]
                         decoded_target_pil=image_processor.postprocess(decoded_target,do_denormalize=do_denormalize)
                         decoded_pred_pil=image_processor.postprocess(decoded_pred,do_denormalize=do_denormalize)
+                        real_image_list=batch["image"]
 
-                        for i, (real,fake) in enumerate(zip(decoded_target_pil,decoded_pred_pil)):
+                        for i, (real,fake) in enumerate(zip(decoded_target_pil,decoded_pred_pil,real_image_list)):
                             concat=concat_images_horizontally([real,fake])
                             accelerator.log({
                                 f"{_b}_{i}_validation":wandb.Image(concat)
@@ -517,6 +518,12 @@ def main(args):
                 lpips_loss=lpips_loss.squeeze(1).squeeze(1).squeeze(1).cpu().detach().numpy().tolist()
                 lpips_buffer=lpips_buffer+lpips_loss
 
+                #make videos
+                # given action and past frames, keep predicting the next frame   
+                action_list=batch["posterior_indices"][skip_num:]
+                nonzero_latent=latent[skip_num:]
+
+
             test_metrics={
                     "test_loss_mean":np.mean(test_loss_buffer),
                     "test_loss_std":np.std(test_loss_buffer),
@@ -525,11 +532,12 @@ def main(args):
                     "lpips_mean":np.mean(lpips_buffer),
                     "lpips_std":np.std(lpips_buffer)
                 }
-            accelerator.print(test_metrics)
-            accelerator.log(test_metrics)
+            accelerator.print(test_metrics) #prints to console
+            accelerator.log(test_metrics) #logs to wandb
             
 
-                
+            
+            
 
 
 
