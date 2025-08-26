@@ -439,6 +439,7 @@ def main(args):
             psnr_metric=PeakSignalNoiseRatio()
             lpips_buffer=[]
             loss_fn_alex = LPIPS(net='alex') # best forward scores
+            vae=vae.to(device,torch_dtype)
             for _b, batch in enumerate(test_loader):
                 if _b==args.limit:
                     break
