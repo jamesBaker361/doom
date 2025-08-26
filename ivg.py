@@ -351,7 +351,7 @@ def main(args):
                         if _b==args.limit:
                             break
                         latent=batch["posterior"].to(device)
-                        action=batch["action"]
+                        action=batch["action"].to(device)
                         skip_num=batch["skip_num"]
                         (B,C,H,W)=latent.size()
                         num_chunks=C//4
@@ -442,7 +442,7 @@ def main(args):
                 if _b==args.limit:
                     break
                 latent=batch["posterior"].to(device)
-                action=batch["action"]
+                action=batch["action"].to(device)
                 skip_num=batch["skip_num"]
                 (B,C,H,W)=latent.size()
                 num_chunks=C//4
