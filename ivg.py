@@ -253,7 +253,8 @@ def main(args):
                 with accelerator.accumulate(params):
                     latent=batch["posterior"].to(device)
                     action=batch["action"]
-                    if e==1 and _b==0:
+                    if e==start_epoch and _b==0:
+                        accelerator.print("actions",action.size(),action.device)
                         accelerator.print("latent",latent.size())
                     skip_num=batch["skip_num"]
                     (B,C,H,W)=latent.size()
