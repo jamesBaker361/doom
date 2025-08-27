@@ -515,7 +515,7 @@ def main(args):
                     psnr=psnr_metric.compute().cpu().item()
                     psnr_buffer.append(psnr)
 
-                lpips_loss=loss_fn_alex(real_tensor,fake_tensor)
+                lpips_loss=loss_fn_alex(real_tensor.cpu(),fake_tensor.cpu())
                 lpips_loss=lpips_loss.squeeze(1).squeeze(1).squeeze(1).cpu().detach().numpy().tolist()
                 lpips_buffer=lpips_buffer+lpips_loss
 
