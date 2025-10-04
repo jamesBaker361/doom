@@ -286,7 +286,8 @@ class FrameActionPerEpisodeLogger(BaseCallback):
             self.output_dict["action"].append(action)
 
             for key,value in self.locals["infos"][0].items():
-                self.output_dict[key].append(value)
+                if key in self.output_dict:
+                    self.output_dict[key].append(value)
 
             self.frame_idx += 1
         dones = self.locals["dones"]
