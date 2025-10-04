@@ -335,24 +335,11 @@ if __name__=="__main__":
     if args.use_timelimit:
         env=gym.wrappers.TimeLimit(env,args.max_episode_steps)
 
-    FOLDER_NAME=os.path.join(args.save_dir,args.game,args.scenario)
-    os.makedirs(FOLDER_NAME,exist_ok=True)
-
-    random_noun_list=[]
-    with open("random_nouns.txt","r") as file:
-        for line in file:
-            random_noun_list.append(line.strip())
-
-
-
-    frame_dir="-".join(random.sample(random_noun_list, 3))
-    print("frame dir",frame_dir)
+    
 
 
     callback = FrameActionPerEpisodeLogger(
         save_freq=1,           # Save every frame; increase if needed
-        save_dir=FOLDER_NAME,
-        frame_dir=frame_dir,
         info_keys=info_keys,
         image_saving=args.image_saving
     )
