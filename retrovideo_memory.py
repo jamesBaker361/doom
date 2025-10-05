@@ -249,7 +249,7 @@ class SNESDiscretizer(gym.ActionWrapper):
         return self._actions[a].copy()
 
 class FrameActionPerEpisodeLogger(BaseCallback):
-    def __init__(self, save_freq: int,info_keys:list,accelerator:accelerate.Accelerator,verbose: int = 0,image_saving:bool=True):
+    def __init__(self, save_freq: int,info_keys:list,accelerator:accelerate.Accelerator,dest_dataset:str,verbose: int = 0,image_saving:bool=True):
         super().__init__(verbose)
         self.save_freq = save_freq
         '''self.save_dir = save_dir
@@ -264,6 +264,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
             key:[] for key in ["episode", "frame_in_episode", "action","image"]+self.info_keys
         }
         self.accelerator=accelerator
+        self.dest_dataset=dest_dataset
         
 
     def _on_step(self) -> bool:
@@ -299,6 +300,8 @@ class FrameActionPerEpisodeLogger(BaseCallback):
             accelerator.log({
                 "reward":self.locals["rewards"][0]
             })
+
+            Dataset.from_dict(self.output_dict).push_to_hub(self.dest_dataset)
             self.episode_idx += 1
             self.frame_idx = 0  # reset per episode
         return True
