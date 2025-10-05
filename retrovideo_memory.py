@@ -347,6 +347,7 @@ if __name__=="__main__":
 
 
     callback = FrameActionPerEpisodeLogger(
+        accelerator=accelerator,
         save_freq=1,           # Save every frame; increase if needed
         info_keys=info_keys,
         image_saving=args.image_saving
