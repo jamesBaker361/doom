@@ -294,6 +294,9 @@ class FrameActionPerEpisodeLogger(BaseCallback):
                     self.output_dict[key].append(value)
 
             self.frame_idx += 1
+
+            if self.frame_idx%100==0:
+                Dataset.from_dict(self.output_dict).push_to_hub(self.dest_dataset)
         dones = self.locals["dones"]
         #print(self.locals["infos"])
         if dones[0]:
