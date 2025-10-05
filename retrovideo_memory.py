@@ -271,12 +271,12 @@ class FrameActionPerEpisodeLogger(BaseCallback):
         
 
         if self.n_calls % self.save_freq == 0:
-            print(self.locals)
             # Save image
             frame = self.training_env.get_images()[0]
             if frame is not None and self.image_saving:
                 image = Image.fromarray(frame)
 
+            
             
 
             # Save action
@@ -296,7 +296,9 @@ class FrameActionPerEpisodeLogger(BaseCallback):
         dones = self.locals["dones"]
         #print(self.locals["infos"])
         if dones[0]:
-            #self.accelerator.log({})
+            accelerator.log({
+                "reward":self.locals["rewards"][0]
+            })
             self.episode_idx += 1
             self.frame_idx = 0  # reset per episode
         return True
