@@ -33,11 +33,13 @@ import csv
 import argparse
 import random
 import struct
-
+import accelerate
+import wandb
 
 
 parser=argparse.ArgumentParser()
 parser.add_argument("--game",type=str,default="SonicTheHedgehog2-Genesis")
+parser.add_argument("--project_name",type=str,default="sonic_data")
 parser.add_argument("--state",default=retro.State.DEFAULT)
 parser.add_argument("--scenario", default="MetropolisZone.Act1")
 parser.add_argument("--timesteps",type=int,default=10)
@@ -247,7 +249,7 @@ class SNESDiscretizer(gym.ActionWrapper):
         return self._actions[a].copy()
 
 class FrameActionPerEpisodeLogger(BaseCallback):
-    def __init__(self, save_freq: int,info_keys:list,verbose: int = 0,image_saving:bool=True):
+    def __init__(self, save_freq: int,info_keys:list,accelerator:accelerate.Accelerator,verbose: int = 0,image_saving:bool=True):
         super().__init__(verbose)
         self.save_freq = save_freq
         '''self.save_dir = save_dir
@@ -261,7 +263,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
         self.output_dict={
             key:[] for key in ["episode", "frame_in_episode", "action","image"]+self.info_keys
         }
-
+        self.accelerator=accelerator
         
 
     def _on_step(self) -> bool:
@@ -269,6 +271,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
         
 
         if self.n_calls % self.save_freq == 0:
+            print(self.locals)
             # Save image
             frame = self.training_env.get_images()[0]
             if frame is not None and self.image_saving:
@@ -293,14 +296,18 @@ class FrameActionPerEpisodeLogger(BaseCallback):
         dones = self.locals["dones"]
         #print(self.locals["infos"])
         if dones[0]:
+            #self.accelerator.log({})
             self.episode_idx += 1
             self.frame_idx = 0  # reset per episode
         return True
 
 
 if __name__=="__main__":
+    
     args=parser.parse_args()
     print(args)
+    accelerator=accelerate.Accelerator(log_with="wandb")
+    accelerator.init_trackers(project_name=args.project_name,config=vars(args))
     gymnasium.register_envs(ale_py)
 
     env = retro.make(
