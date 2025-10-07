@@ -19,7 +19,7 @@ print(unet_big_data)
 
 
 for name in args.dataset_list:
-    data=load_dataset(data,split="train")
+    data=load_dataset(name,split="train")
     vae_data=data.filter(lambda row: row["episode"]%2==0).map(lambda ex: {"episode":name+"-"+ex["episode"]})
     unet_data=data.filter(lambda row: row["episode"]%2==1).map(lambda ex: {"episode":name+"-"+ex["episode"]})
     print(data, len(vae_data["image"]), len(unet_data["image"]))
