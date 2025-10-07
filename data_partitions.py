@@ -22,6 +22,7 @@ for name in args.dataset_list:
     data=load_dataset(data,split="train")
     vae_data=data.filter(lambda row: row["episode"]%2==0).map(lambda ex: {"episode":name+"-"+ex["episode"]})
     unet_data=data.filter(lambda row: row["episode"]%2==1).map(lambda ex: {"episode":name+"-"+ex["episode"]})
+    print(data, len(vae_data["image"]), len(unet_data["image"]))
 
     unet_big_data=concatenate_datasets([unet_big_data,unet_data])
     vae_big_data=concatenate_datasets([vae_big_data,vae_data])
