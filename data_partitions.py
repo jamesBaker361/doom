@@ -8,7 +8,7 @@ parser.add_argument("--dest_dataset_unet",type=str,default="jlbaker361/sonic-une
 
 args=parser.parse_args()
 
-data=load_dataset(args.dataset_list,split="train")
+data=load_dataset(args.dataset_list[0],split="train")
 for row in data:
     break
 
