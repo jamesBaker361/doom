@@ -22,10 +22,10 @@ for name in args.dataset_list:
     data=load_dataset(name,split="train")
     vae_data=data.filter(lambda row: row["episode"]%2==0).map(lambda ex: {"episode":name+"-"+str(ex["episode"])})
     unet_data=data.filter(lambda row: row["episode"]%2==1).map(lambda ex: {"episode":name+"-"+str(ex["episode"])})
-    print(data, len(vae_data["image"]), len(unet_data["image"]))
+    print(name, len(vae_data["image"]), len(unet_data["image"]))
 
     unet_big_data=concatenate_datasets([unet_big_data,unet_data])
     vae_big_data=concatenate_datasets([vae_big_data,vae_data])
 
-Dataset.from_dict(unet_big_data).push_to_hub(args.dest_dataset_unet)
-Dataset.from_dict(vae_big_data).push_to_hub(args.dest_dataset_vae)
+unet_big_data.push_to_hub(args.dest_dataset_unet)
+vae_big_data.push_to_hub(args.dest_dataset_vae)
