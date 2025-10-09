@@ -8,12 +8,30 @@ import torch
 import random
 import csv
 from gpu_helpers import *
+from diffusers.image_processor import VaeImageProcessor
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
 from datasets import load_dataset
 from constants import *
 import numpy as np
 
 NULL_ACTION=35 #this is the "button" pressed for null frames ()
+
+class ImageDatasetHF(Dataset):
+    def __init__(self,src_dataset:str,image_processor:VaeImageProcessor):
+        super().__init__()
+        self.image_list=load_dataset(src_dataset,split="train")["image"]
+        self.image_processor=image_processor
+
+    def __len__(self):
+        return len(self.image_list)
+    
+    def __getitem__(self, index):
+        image=self.image_list[index]
+        image=self.image_processor.preprocess(image)
+        return {
+            "image":image
+        }
+
 
 class FlatImageFolder(Dataset):
     def __init__(self, folder, transform=None,skip_frac=0):

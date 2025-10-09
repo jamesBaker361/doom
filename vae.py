@@ -23,9 +23,9 @@ from diffusers import LCMScheduler,DiffusionPipeline,DEISMultistepScheduler,DDIM
 from diffusers.models.attention_processor import IPAdapterAttnProcessor2_0
 from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
-from data_loaders import FlatImageFolder,MovieImageFolderFromHF
+from data_loaders import FlatImageFolder,MovieImageFolderFromHF,ImageDatasetHF
 from torch.utils.data import ConcatDataset, DataLoader
-from diffusers import AutoencoderKL
+from diffusers import AutoencoderKL,DiffusionPipeline
 from transformers import AutoProcessor, CLIPModel
 from diffusers.image_processor import VaeImageProcessor
 from torch.utils.data import random_split, DataLoader
@@ -52,6 +52,7 @@ parser.add_argument("--skip_frac",type=float,default=1.0)
 parser.add_argument("--use_hf_training_data",action="store_true")
 parser.add_argument("--hf_data_path",type=str,default="")
 parser.add_argument("--save_dir",type=str,default="sonic_vae_saved")
+parser.add_argument("--src_dataset",type=str,default="jlbaker361/sonic-vae")
 
 def concat_images_horizontally(images)-> Image.Image:
     """
@@ -103,12 +104,13 @@ def main(args):
             api=HfApi()
             api.create_repo(args.name,exist_ok=True)
         except HfHubHTTPError:
-            print("hf hub error!")
+            print("init error!")
             time.sleep(random.randint(5,120))
             accelerator.init_trackers(project_name=args.project_name,config=vars(args))
 
             api=HfApi()
             api.create_repo(args.name,exist_ok=True)
+        
 
 
     torch_dtype={
@@ -119,62 +121,84 @@ def main(args):
 
     with accelerator.autocast():
 
-        transform = transforms.Compose([
-        transforms.Resize((args.image_size, args.image_size)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                            std=[0.5, 0.5, 0.5])
-        ])
+        pipe=DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7")
+        image_processor=pipe.image_processor
+        
 
-        dataset_list=[]
-        for path in args.image_folder_paths:
-            dataset_list.append(FlatImageFolder(path,transform=transform,skip_frac=args.skip_frac))
+        autoencoder=pipe.vae.to(device)
+        WEIGHTS_NAME="diffusion_pytorch_model.safetensors"
+        CONFIG_NAME="config.json"
 
-        combined_dataset = ConcatDataset(dataset_list)
+        try:
+            pretrained_weights_path=api.hf_hub_download(args.name,WEIGHTS_NAME,force_download=True)
+            pretrained_config_path=api.hf_hub_download(args.name,CONFIG_NAME,force_download=True)
+            autoencoder.load_state_dict(torch.load(pretrained_weights_path,weights_only=True),strict=False)
+            with open(pretrained_config_path,"r") as f:
+                data=json.load(f)
+            start_epoch=data["start_epoch"]+1
+        except Exception as e:
+            accelerator.print(e)
+            start_epoch=1
 
-        test_size=8
-        train_size=len(combined_dataset)-test_size
+
+        dataset=ImageDatasetHF(args.src_dataset, image_processor)
+
+
+        test_size=16
+        train_size=len(dataset)-test_size
 
         
         # Set seed for reproducibility
         generator = torch.Generator().manual_seed(42)
 
         # Split the dataset
-        train_dataset, test_dataset = random_split(combined_dataset, [train_size, test_size], generator=generator)
+        train_dataset, test_dataset = random_split(dataset, [train_size, test_size], generator=generator)
 
 
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
         test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
 
-        autoencoder=AutoencoderKL.from_pretrained("digiplay/DreamShaper_7",subfolder="vae").to(device)
+        
+
+        
         params=[p for p in autoencoder.parameters()]
 
         optimizer=torch.optim.AdamW(params,args.lr)
 
         train_loader,autoencoder,optimizer=accelerator.prepare(train_loader,autoencoder,optimizer)
 
-        image_processor=VaeImageProcessor()
+        
 
         for initial_batch in train_loader:
             break
 
         save_subdir=os.path.join(args.save_dir,args.name)
         os.makedirs(save_subdir,exist_ok=True)
-        WEIGHTS_NAME="diffusion_pytorch_model.safetensors"
+        
         save_path=os.path.join(save_subdir,WEIGHTS_NAME)
-        def save():
+        config_path=os.path.join(save_subdir,CONFIG_NAME)
+        def save(e:int):
             state_dict=autoencoder.state_dict()
             print("state dict len",len(state_dict))
             torch.save(state_dict,save_path)
+            with open(config_path,"w+") as config_file:
+                data={"start_epoch":e}
+                json.dump(data,config_file, indent=4)
+                pad = " " * 2048  # ~1KB of padding
+                config_file.write(pad)
+            print(f"saved {save_path}")
             try:
                 api.upload_file(path_or_fileobj=save_path,
-                                path_in_repo=WEIGHTS_NAME,
-                                repo_id=args.name)
-                accelerator.print(f"uploaded {args.name} to hub")
+                                        path_in_repo=WEIGHTS_NAME,
+                                        repo_id=args.name)
+                api.upload_file(path_or_fileobj=config_path,path_in_repo=CONFIG_NAME,
+                                        repo_id=args.name)
+                print(f"uploaded {args.name} to hub")
             except:
                 accelerator.print("failed to upload")
+            
 
-        for e in range(1,args.epochs+1):
+        for e in range(start_epoch,args.epochs+1):
             start=time.time()
             loss_buffer=[]
             for b,batch in enumerate(train_loader):
@@ -197,7 +221,7 @@ def main(args):
                     "loss_mean":np.mean(loss_buffer),
                     "loss_std":np.std(loss_buffer),
                 })
-            save()
+            save(e)
             if e%args.image_interval==1:
                 with torch.no_grad():
                     predicted_batch=autoencoder(initial_batch).sample
@@ -212,8 +236,7 @@ def main(args):
                         })
 
         with torch.no_grad():
-            save()
-            n=0
+            save(e)
             for initial_batch in test_loader:
                 predicted_batch=autoencoder(initial_batch).sample
                 batch_size=predicted_batch.size()[0]
@@ -222,9 +245,8 @@ def main(args):
                 for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
                     concatenated_image=concat_images_horizontally([real,reconstructed])
                     accelerator.log({
-                        f"test_image_{n}":wandb.Image(concatenated_image)
+                        f"test_image_{k}":wandb.Image(concatenated_image)
                     })
-                    n+=1
 
         
 
