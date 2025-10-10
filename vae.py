@@ -141,6 +141,9 @@ def main(args):
             start_epoch=1
 
 
+        accelerator.print("start epoch: ",start_epoch)
+
+
         dataset=ImageDatasetHF(args.src_dataset, image_processor)
 
 
@@ -205,6 +208,7 @@ def main(args):
                 if b==args.limit:
                     break
                 with accelerator.accumulate(params):
+                    batch=batch["image"]
                     batch=batch.to(device)
                     predicted=autoencoder(batch).sample
                     loss=F.mse_loss(predicted.float(),batch.float())
