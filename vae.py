@@ -53,6 +53,7 @@ parser.add_argument("--use_hf_training_data",action="store_true")
 parser.add_argument("--hf_data_path",type=str,default="")
 parser.add_argument("--save_dir",type=str,default="sonic_vae_saved")
 parser.add_argument("--src_dataset",type=str,default="jlbaker361/sonic-vae")
+parser.add_argument("--load_hf",action="store_true")
 
 def concat_images_horizontally(images)-> Image.Image:
     """
@@ -129,16 +130,19 @@ def main(args):
         WEIGHTS_NAME="diffusion_pytorch_model.safetensors"
         CONFIG_NAME="config.json"
 
+
+        start_epoch=1
         try:
-            pretrained_weights_path=api.hf_hub_download(args.name,WEIGHTS_NAME,force_download=True)
-            pretrained_config_path=api.hf_hub_download(args.name,CONFIG_NAME,force_download=True)
-            autoencoder.load_state_dict(torch.load(pretrained_weights_path,weights_only=True),strict=False)
-            with open(pretrained_config_path,"r") as f:
-                data=json.load(f)
-            start_epoch=data["start_epoch"]+1
+            if args.load_hf:
+                pretrained_weights_path=api.hf_hub_download(args.name,WEIGHTS_NAME,force_download=True)
+                pretrained_config_path=api.hf_hub_download(args.name,CONFIG_NAME,force_download=True)
+                autoencoder.load_state_dict(torch.load(pretrained_weights_path,weights_only=True),strict=False)
+                with open(pretrained_config_path,"r") as f:
+                    data=json.load(f)
+                start_epoch=data["start_epoch"]+1
         except Exception as e:
             accelerator.print(e)
-            start_epoch=1
+            
 
 
         accelerator.print("start epoch: ",start_epoch)
