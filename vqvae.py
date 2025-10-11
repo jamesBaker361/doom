@@ -1,4 +1,6 @@
 import os
+import sys
+sys.path.append(os.path.dirname(__file__))
 import argparse
 from experiment_helpers.gpu_details import print_details
 from datasets import load_dataset
@@ -23,72 +25,33 @@ from diffusers import LCMScheduler,DiffusionPipeline,DEISMultistepScheduler,DDIM
 from diffusers.models.attention_processor import IPAdapterAttnProcessor2_0
 from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
+
+from transformers import AutoProcessor, CLIPModel
+
+from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
+from diffusers.models.autoencoders.vq_model import VQModel
+from huggingface_hub import create_repo,HfApi
 from data_loaders import FlatImageFolder,MovieImageFolderFromHF,ImageDatasetHF
 from torch.utils.data import ConcatDataset, DataLoader
 from diffusers import AutoencoderKL,DiffusionPipeline
 from transformers import AutoProcessor, CLIPModel
 from diffusers.image_processor import VaeImageProcessor
 from torch.utils.data import random_split, DataLoader
-try:
-    from torch.distributed.fsdp import register_fsdp_forward_method
-except ImportError:
-    print("cant import register_fsdp_forward_method")
-from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
-from huggingface_hub import create_repo,HfApi
+from vae import concat_images_horizontally
 
 parser=argparse.ArgumentParser()
 parser.add_argument("--mixed_precision",type=str,default="fp16")
-parser.add_argument("--project_name",type=str,default="person")
+parser.add_argument("--project_name",type=str,default="vqvae")
 parser.add_argument("--gradient_accumulation_steps",type=int,default=4)
-parser.add_argument("--name",type=str,default="jlbaker361/model",help="name on hf")
+parser.add_argument("--name",type=str,default="jlbaker361/vqvae",help="name on hf")
 parser.add_argument("--lr",type=float,default=0.0001)
-parser.add_argument("--image_size",default=256,type=int)
-parser.add_argument("--image_folder_paths",nargs="+")
+parser.add_argument("--src_dataset",type=str,default="jlbaker361/sonic-vae")
+parser.add_argument("--load_hf",action="store_true")
 parser.add_argument("--batch_size",type=int,default=4)
 parser.add_argument("--epochs",type=int,default=100)
 parser.add_argument("--limit",type=int,default=-1)
+parser.add_argument("--save_dir",type=str,default="sonic_vqvae_saved")
 parser.add_argument("--image_interval",type=int,default=10)
-parser.add_argument("--skip_frac",type=float,default=1.0)
-parser.add_argument("--use_hf_training_data",action="store_true")
-parser.add_argument("--hf_data_path",type=str,default="")
-parser.add_argument("--save_dir",type=str,default="sonic_vae_saved")
-parser.add_argument("--src_dataset",type=str,default="jlbaker361/sonic-vae")
-parser.add_argument("--load_hf",action="store_true")
-
-def concat_images_horizontally(images)-> Image.Image:
-    """
-    Concatenate a list of PIL.Image objects horizontally.
-
-    Args:
-        images (List[PIL.Image]): List of PIL images.
-
-    Returns:
-        PIL.Image: A new image composed of the input images concatenated side-by-side.
-    """
-    # Resize all images to the same height (optional)
-    heights = [img.height for img in images]
-    min_height = min(heights)
-    resized_images = [
-        img if img.height == min_height else img.resize(
-            (int(img.width * min_height / img.height), min_height),
-            Image.LANCZOS
-        ) for img in images
-    ]
-
-    # Compute total width and max height
-    total_width = sum(img.width for img in resized_images)
-    height = min_height
-
-    # Create new blank image
-    new_img = Image.new('RGB', (total_width, height))
-
-    # Paste images side by side
-    x_offset = 0
-    for img in resized_images:
-        new_img.paste(img, (x_offset, 0))
-        x_offset += img.width
-
-    return new_img
 
 def main(args):
     accelerator=Accelerator(log_with="wandb",mixed_precision=args.mixed_precision,gradient_accumulation_steps=args.gradient_accumulation_steps)
@@ -105,13 +68,12 @@ def main(args):
             api=HfApi()
             api.create_repo(args.name,exist_ok=True)
         except HfHubHTTPError:
-            print("init error!")
+            print("hf hub error!")
             time.sleep(random.randint(5,120))
             accelerator.init_trackers(project_name=args.project_name,config=vars(args))
 
             api=HfApi()
             api.create_repo(args.name,exist_ok=True)
-        
 
 
     torch_dtype={
@@ -126,10 +88,9 @@ def main(args):
         image_processor=pipe.image_processor
         
 
-        autoencoder=pipe.vae.to(device)
+        autoencoder=VQModel()
         WEIGHTS_NAME="diffusion_pytorch_model.safetensors"
         CONFIG_NAME="config.json"
-
 
         start_epoch=1
         try:
@@ -214,7 +175,7 @@ def main(args):
                 with accelerator.accumulate(params):
                     batch=batch["image"]
                     batch=batch.to(device)
-                    #accelerator.print("batch size",batch.size())
+                    accelerator.print("batch size",batch.size())
                     predicted=autoencoder(batch).sample
                     loss=F.mse_loss(predicted.float(),batch.float())
                     accelerator.backward(loss)
@@ -260,16 +221,6 @@ def main(args):
                     accelerator.log({
                         f"test_image_{k}":wandb.Image(concatenated_image)
                     })
-
-        
-
-
-
-                
-
-
-
-
 
 
 if __name__=='__main__':
