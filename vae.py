@@ -179,6 +179,8 @@ def main(args):
         for initial_batch in train_loader:
             break
 
+        initial_batch=initial_batch["image"].to(device)
+
         save_subdir=os.path.join(args.save_dir,args.name)
         os.makedirs(save_subdir,exist_ok=True)
         
@@ -233,8 +235,6 @@ def main(args):
             save(e)
             if e%args.image_interval==1:
                 with torch.no_grad():
-                    predicted_batch=predicted_batch["image"]
-                    predicted_batch=predicted_batch.to(device)
                     predicted_batch=autoencoder(initial_batch).sample
                     batch_size=predicted_batch.size()[0]
                     predicted_images=image_processor.postprocess(predicted_batch,do_denormalize= [True]*batch_size)
@@ -249,8 +249,7 @@ def main(args):
         with torch.no_grad():
             save(e)
             for initial_batch in test_loader:
-                predicted_batch=predicted_batch["image"]
-                predicted_batch=predicted_batch.to(device)
+                initial_batch=initial_batch["image"].to(device)
                 predicted_batch=autoencoder(initial_batch).sample
                 batch_size=predicted_batch.size()[0]
                 predicted_images=image_processor.postprocess(predicted_batch,do_denormalize= [True]*batch_size)

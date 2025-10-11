@@ -162,8 +162,9 @@ def main(args):
                 api.upload_file(path_or_fileobj=config_path,path_in_repo=CONFIG_NAME,
                                         repo_id=args.name)
                 print(f"uploaded {args.name} to hub")
-            except:
+            except Exception as e:
                 accelerator.print("failed to upload")
+                accelerator.print(e)
             
 
         for e in range(start_epoch,args.epochs+1):
@@ -194,8 +195,6 @@ def main(args):
             save(e)
             if e%args.image_interval==1:
                 with torch.no_grad():
-                    predicted_batch=predicted_batch["image"]
-                    predicted_batch=predicted_batch.to(device)
                     predicted_batch=autoencoder(initial_batch).sample
                     batch_size=predicted_batch.size()[0]
                     predicted_images=image_processor.postprocess(predicted_batch,do_denormalize= [True]*batch_size)
@@ -210,8 +209,7 @@ def main(args):
         with torch.no_grad():
             save(e)
             for initial_batch in test_loader:
-                predicted_batch=predicted_batch["image"]
-                predicted_batch=predicted_batch.to(device)
+                initial_batch=initial_batch["image"].to(device)
                 predicted_batch=autoencoder(initial_batch).sample
                 batch_size=predicted_batch.size()[0]
                 predicted_images=image_processor.postprocess(predicted_batch,do_denormalize= [True]*batch_size)
