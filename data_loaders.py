@@ -27,7 +27,7 @@ class ImageDatasetHF(Dataset):
     
     def __getitem__(self, index):
         image=self.image_list[index]
-        image=self.image_processor.preprocess(image)
+        image=self.image_processor.preprocess(image)[0]
         return {
             "image":image
         }
