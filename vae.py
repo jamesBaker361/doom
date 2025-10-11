@@ -214,6 +214,7 @@ def main(args):
                 with accelerator.accumulate(params):
                     batch=batch["image"]
                     batch=batch.to(device)
+                    accelerator.print("batch size",batch.size())
                     predicted=autoencoder(batch).sample
                     loss=F.mse_loss(predicted.float(),batch.float())
                     accelerator.backward(loss)
