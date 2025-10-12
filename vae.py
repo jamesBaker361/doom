@@ -14,6 +14,7 @@ from accelerate import PartialState
 import time
 import torch.nn.functional as F
 from PIL import Image
+from diffusers.models.autoencoders.vq_model import VQModel
 import random
 import wandb
 import numpy as np
@@ -54,6 +55,7 @@ parser.add_argument("--hf_data_path",type=str,default="")
 parser.add_argument("--save_dir",type=str,default="sonic_vae_saved")
 parser.add_argument("--src_dataset",type=str,default="jlbaker361/sonic-vae")
 parser.add_argument("--load_hf",action="store_true")
+parser.add_argument("--encoder_type",type=str,default="vae")
 
 def concat_images_horizontally(images)-> Image.Image:
     """
@@ -126,7 +128,10 @@ def main(args):
         image_processor=pipe.image_processor
         
 
-        autoencoder=pipe.vae.to(device)
+        if args.encoder_type=="vae":
+            autoencoder=pipe.vae.to(device)
+        elif args.encoder=="vqvae":
+            autoencoder=VQModel()
         WEIGHTS_NAME="diffusion_pytorch_model.safetensors"
         CONFIG_NAME="config.json"
 

@@ -140,7 +140,7 @@ def main(args):
         for initial_batch in train_loader:
             break
 
-        initial_batch=initial_batch.to(device)
+        initial_batch=initial_batch["image"].to(device)
 
         save_subdir=os.path.join(args.save_dir,args.name)
         os.makedirs(save_subdir,exist_ok=True)
