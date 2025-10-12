@@ -130,7 +130,7 @@ def main(args):
 
         if args.encoder_type=="vae":
             autoencoder=pipe.vae.to(device)
-        elif args.encoder=="vqvae":
+        elif args.encoder_type=="vqvae":
             autoencoder=VQModel()
         WEIGHTS_NAME="diffusion_pytorch_model.safetensors"
         CONFIG_NAME="config.json"
