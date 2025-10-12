@@ -208,8 +208,9 @@ def main(args):
                 api.upload_file(path_or_fileobj=config_path,path_in_repo=CONFIG_NAME,
                                         repo_id=args.name)
                 print(f"uploaded {args.name} to hub")
-            except:
+            except Exception as e:
                 accelerator.print("failed to upload")
+                accelerator.print(e)
             
 
         for e in range(start_epoch,args.epochs+1):
