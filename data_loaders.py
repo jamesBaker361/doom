@@ -13,8 +13,23 @@ from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
 from datasets import load_dataset
 from constants import *
 import numpy as np
+import torch.nn.functional as F
 
 NULL_ACTION=35 #this is the "button" pressed for null frames ()
+
+def find_earliest_less_than(arr, target):
+    left, right = 0, len(arr) - 1
+    result = None
+
+    while left <= right:
+        mid = (left + right) // 2
+        if arr[mid] < target:
+            result = arr[mid]      # candidate found
+            right = mid - 1        # but try to find earlier one
+        else:
+            left = mid + 1
+
+    return result
 
 class ImageDatasetHF(Dataset):
     def __init__(self,src_dataset:str,image_processor:VaeImageProcessor):
@@ -31,6 +46,31 @@ class ImageDatasetHF(Dataset):
         return {
             "image":image
         }
+    
+class WorldModelDatasetHF(Dataset):
+    def __init__(self,src_dataset:str,image_processor:VaeImageProcessor):
+        super().__init__()
+        self.data=load_dataset(src_dataset,split="train")["image"]
+        self.image_processor=image_processor
+        self.start_index_list=[]
+        self.n_actions=len(set(self.data["action"]))
+        episode_set=set()
+        self.data=self.data.map(lambda x :{"image": image_processor.preprocess( x["image"])[0]})
+        self.data=self.data.map(lambda x: {"action":F.one_hot(x["action"],self.n_actions)})
+        for i,row in enumerate(self.data):
+            if row["episode"] not in episode_set:
+                episode_set.add(row["episode"])
+                self.start_index_list.append(i)
+
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, index):
+        #return super().__getitem__(index)
+        end_index=find_earliest_less_than(self.start_index_list,index)
+        output_dict={"image":self.data["image"][index:end_index],
+                     "action":self.data["action"][index:end_index]}
+        return output_dict
 
 
 class FlatImageFolder(Dataset):
