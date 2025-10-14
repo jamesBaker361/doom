@@ -411,7 +411,7 @@ def main(args):
         "bf16":torch.bfloat16
     }[args.mixed_precision]
 
-    if len(args.metadata_key_list)==0:
+    if args.use_metadata and args.metadata_key_list==None:
         args.metadata_key_list=["score","lives","screen_x","screen_y","x","y"]
 
     if not args.use_metadata:
