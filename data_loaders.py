@@ -48,7 +48,7 @@ class ImageDatasetHF(Dataset):
         }
     
 class WorldModelDatasetHF(Dataset):
-    def __init__(self,src_dataset:str,image_processor:VaeImageProcessor):
+    def __init__(self,src_dataset:str,image_processor:VaeImageProcessor,max_sequence_length,metadata_key_list:list=[],):
         super().__init__()
         self.data=load_dataset(src_dataset,split="train")["image"]
         self.image_processor=image_processor
@@ -61,6 +61,11 @@ class WorldModelDatasetHF(Dataset):
             if row["episode"] not in episode_set:
                 episode_set.add(row["episode"])
                 self.start_index_list.append(i)
+        self.start_index_list.append(i)
+        self.metadata_key_list=metadata_key_list
+        self.max_sequence_length=max_sequence_length
+        for key in metadata_key_list:
+            self.data=self.data.map(lambda x: {key:torch.tensor(x[key])})
 
     def __len__(self):
         return len(self.data)
@@ -70,6 +75,13 @@ class WorldModelDatasetHF(Dataset):
         end_index=find_earliest_less_than(self.start_index_list,index)
         output_dict={"image":self.data["image"][index:end_index],
                      "action":self.data["action"][index:end_index]}
+        for key in self.metadata_key_list:
+            output_dict[key]=self.data[key][index:end_index]
+        output_dict["metadata"]=torch.cat([output_dict[key] for key in self.metadata_key_list ])
+        for k,v in output_dict.items():
+            shape=v[0].size()
+            output_dict[k]+=[torch.zeros(shape) for _ in range(self.max_sequence_length)]
+        output_dict["stop"]=end_index-index
         return output_dict
 
 
