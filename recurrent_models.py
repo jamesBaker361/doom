@@ -97,16 +97,24 @@ class DecoderCNN(nn.Module):
     
 
 class DynamicsModel(nn.Module):
-    def __init__(self, hidden_dim: int, action_dim: int, state_dim: int, embedding_dim: int, rnn_layer: int = 1):
+    def __init__(self, hidden_dim: int, action_dim: int, state_dim: int, embedding_dim: int, 
+                 rnn_layer: int = 1,
+                 metadata_embedding_dim:int=0,metadata_dim:int=0):
         super(DynamicsModel, self).__init__()
 
         self.hidden_dim = hidden_dim
+
+        self.use_metadata=False
+        #metadata embedding
+        if metadata_embedding_dim>0:
+            self.metadata_project=nn.Linear(metadata_dim,metadata_embedding_dim)
+            self.use_metadata=True
         
         # Can be any recurrent network
         self.rnn = nn.ModuleList([nn.GRUCell(hidden_dim, hidden_dim) for _ in range(rnn_layer)])
         
         # Projection layer to make efficient use of concatenated inputs
-        self.project_state_action = nn.Linear(action_dim + state_dim, hidden_dim)
+        self.project_state_action = nn.Linear(action_dim + state_dim+metadata_embedding_dim, hidden_dim)
         
         # Return mean and log-variance of the normal distribution
         self.prior = nn.Linear(hidden_dim, state_dim * 2)
@@ -114,14 +122,20 @@ class DynamicsModel(nn.Module):
         
         # Return mean and log-variance of the normal distribution
         self.posterior = nn.Linear(hidden_dim, state_dim * 2)
-        self.project_hidden_obs = nn.Linear(hidden_dim + embedding_dim, hidden_dim)
+        self.project_hidden_obs = nn.Linear(hidden_dim + embedding_dim+metadata_embedding_dim, hidden_dim)
 
         self.state_dim = state_dim
 
         self.act_fn = nn.ReLU()
 
-    def forward(self, prev_hidden: torch.Tensor, prev_state: torch.Tensor, actions: torch.Tensor,
-                obs: torch.Tensor = None, dones: torch.Tensor = None):
+    def forward(self, prev_hidden: torch.Tensor, 
+                prev_state: torch.Tensor, 
+                actions: torch.Tensor,
+                stop:list,
+                obs: torch.Tensor = None, 
+                metadata:torch.Tensor=None,
+                #dones: torch.Tensor = None
+                ):
         """
         Forward pass of the dynamics model for one time step.
         :param prev_hidden: Previous hidden state of the RNN: (batch_size, hidden_dim)
@@ -148,13 +162,17 @@ class DynamicsModel(nn.Module):
 
         for t in range(T - 1):
             ### Combine the state and action ###
+            if self.use_metadata:
+                metadata_t=metadata[:,t,:]
             action_t = actions[:, t, :]
             obs_t = obs[:, t, :] if obs is not None else torch.zeros(B, self.embedding_dim, device=actions.device)
             state_t = posterior_states_list[-1][:, 0, :] if obs is not None else prior_states_list[-1][:, 0, :]
-            state_t = state_t if dones is None else state_t * (1 - dones[:, t, :])
+            #state_t = state_t #if dones is None else state_t * (1 - dones[:, t, :])
             hidden_t = hiddens_list[-1][:, 0, :]
             
             state_action = torch.cat([state_t, action_t], dim=-1)
+            if self.use_metadata:
+                state_action= torch.cat([state_t, action_t,metadata_t], dim=-1)
             state_action = self.act_fn(self.project_state_action(state_action))
 
             ### Update the deterministic hidden state ###
@@ -178,6 +196,8 @@ class DynamicsModel(nn.Module):
                 posterior_logvar = prior_logvar
             else:
                 hidden_obs = torch.cat([hidden_t, obs_t], dim=-1)
+                if self.use_metadata:
+                    hidden_obs = torch.cat([hidden_t, obs_t,metadata_t], dim=-1)
                 hidden_obs = self.act_fn(self.project_hidden_obs(hidden_obs))
                 posterior_params = self.posterior(hidden_obs)
                 posterior_mean, posterior_logvar = torch.chunk(posterior_params, 2, dim=-1)
@@ -207,6 +227,9 @@ class DynamicsModel(nn.Module):
         posterior_means = torch.cat(posterior_means_list, dim=1)
         posterior_logvars = torch.cat(posterior_logvars_list, dim=1)
 
+        print("hiddens size",hiddens.size())
+        print('hidden t size',hiddens.size())
+
         return hiddens, prior_states, posterior_states, prior_means, prior_logvars, posterior_means, posterior_logvars
     
 
@@ -218,8 +241,6 @@ class RSSM:
                  dynamics_model: nn.Module,
                  hidden_dim: int,
                  state_dim: int,
-                 action_dim: int,
-                 embedding_dim: int,
                  device: str = "mps"):
         """
         Recurrent State-Space Model (RSSM) for learning dynamics models.
@@ -245,8 +266,6 @@ class RSSM:
 
         self.hidden_dim = hidden_dim
         self.state_dim = state_dim
-        self.action_dim = action_dim
-        self.embedding_dim = embedding_dim
 
         #shift to device
         self.dynamics.to(device)
@@ -256,7 +275,7 @@ class RSSM:
 
 
     def generate_rollout(self, actions: torch.Tensor, hiddens: torch.Tensor = None, states: torch.Tensor = None,
-                         obs: torch.Tensor = None, dones: torch.Tensor = None):
+                         obs: torch.Tensor = None, stop: list=[],metadata:torch.Tensor=None):
 
         if hiddens is None:
             hiddens = torch.zeros(actions.size(0), self.hidden_dim).to(actions.device)
@@ -264,7 +283,7 @@ class RSSM:
         if states is None:
             states = torch.zeros(actions.size(0), self.state_dim).to(actions.device)
 
-        dynamics_result = self.dynamics(hiddens, states, actions, obs, dones)
+        dynamics_result = self.dynamics(hiddens, states, actions,stop,obs,metadata)
         hiddens, prior_states, posterior_states, prior_means, prior_logvars, posterior_means, posterior_logvars = dynamics_result
 
         return hiddens, prior_states, posterior_states, prior_means, prior_logvars, posterior_means, posterior_logvars
@@ -353,9 +372,16 @@ parser.add_argument("--lr",type=float,default=0.0001)
 parser.add_argument("--src_dataset",type=str,default="jlbaker361/sonic-vae")
 parser.add_argument("--hidden_dim",type=int,default=512)
 parser.add_argument("--state_dim",type=int,default=512)
+parser.add_argument("--action_dim",type=int,default=128)
 parser.add_argument("--embedding_dim",type=int,default=256)
 parser.add_argument("--metadata_key_list",nargs="*")
 parser.add_argument("--use_metadata",action="store_true")
+parser.add_argument("--metadata_embedding_dim",type=int,default=128)
+parser.add_argument("--size",type=int,default=256)
+parser.add_argument("--n_layers",type=int,default=4)
+parser.add_argument("--rnn_layer",type=int,default=2)
+parser.add_argument("--lr",type=float,default=0.001)
+parser.add_argument("--limit",type=int,default=-1)
 
 def main(args):
     accelerator=Accelerator(log_with="wandb",mixed_precision=args.mixed_precision,gradient_accumulation_steps=args.gradient_accumulation_steps)
@@ -389,9 +415,12 @@ def main(args):
     if len(args.metadata_key_list)==0:
         args.metadata_key_list=["score","lives","screen_x","screen_y","x","y"]
 
-    dataset=WorldModelDatasetHF(args.src_dataset,DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7").image_processor)
+    if not args.use_metadata:
+        args.metadata_key_list=[]
 
-    test_size=16
+    dataset=WorldModelDatasetHF(args.src_dataset,DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7").image_processor,args.metadata_key_list)
+
+    test_size=args.batch_size * 2
     train_size=len(dataset)-test_size
 
     
@@ -404,6 +433,34 @@ def main(args):
 
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
+
+    encoder=EncoderCNN(3,args.embedding_dim,(args.size,args.size),args.n_layers)
+    decoder=DecoderCNN(args.hidden_size,args.state_size,args.embedding_dim,output_shape=[3,args.size,args.size],n_layers=args.n_layers)
+    dynamics=DynamicsModel(args.hidden_dim,args.action_dim,args.state_dim,args.embedding_dim,args.rnn_layer,args.metadata_embedding_dim,len(args.metadata_key_list))
+
+    rssm=RSSM(encoder,decoder,dynamics, args.hidden_dim, args.state_dim,device=device)
+
+    optimizer=torch.optim.Adam(rssm.parameters(),args.lr)
+
+    start_epoch=1
+    for e in range(start_epoch,args.epochs+1):
+        for k, batch in enumerate(train_loader):
+            if k==args.limit:
+                break
+            stop_index=max(batch["stop"])
+            metadata=None
+            obs=batch["image"][:stop_index].to(device)
+            stop=batch["stop"]
+            actions=batch["action"][:stop_index].to(device)
+            if args.use_metadata:
+                metadata=batch["metadata"][:stop_index].to(device)
+
+            hiddens, prior_states, posterior_states, prior_means, prior_logvars, posterior_means, posterior_logvars=rssm.generate_rollout(actions=actions,
+                                                                                                                                          stop=stop,obs=obs,metadata=metadata)
+            
+
+
+
 
 
 if __name__=='__main__':
