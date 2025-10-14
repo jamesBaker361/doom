@@ -380,7 +380,6 @@ parser.add_argument("--metadata_embedding_dim",type=int,default=128)
 parser.add_argument("--size",type=int,default=256)
 parser.add_argument("--n_layers",type=int,default=4)
 parser.add_argument("--rnn_layer",type=int,default=2)
-parser.add_argument("--lr",type=float,default=0.001)
 parser.add_argument("--limit",type=int,default=-1)
 
 def main(args):
