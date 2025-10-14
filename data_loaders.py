@@ -50,7 +50,7 @@ class ImageDatasetHF(Dataset):
 class WorldModelDatasetHF(Dataset):
     def __init__(self,src_dataset:str,image_processor:VaeImageProcessor,max_sequence_length,metadata_key_list:list=[],):
         super().__init__()
-        self.data=load_dataset(src_dataset,split="train")["image"]
+        self.data=load_dataset(src_dataset,split="train")
         self.image_processor=image_processor
         self.start_index_list=[]
         self.n_actions=len(set(self.data["action"]))
