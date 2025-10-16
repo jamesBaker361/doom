@@ -9,7 +9,7 @@ n_actions=max(set(data["action"]))+1
 print(set(data["action"]),n_actions)
 episode_set=set()
 #data=data.select([z for z in range(2)])
-#data=data.map(lambda x :{"image": image_processor.preprocess( x["image"])[0]})
+data=data.map(lambda x :{"image": image_processor.preprocess( x["image"])[0]})
 
 def one_hot(x):
     action=int(x["action"])
