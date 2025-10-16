@@ -10,9 +10,13 @@ print(set(data["action"]),n_actions)
 episode_set=set()
 #data=data.select([z for z in range(2)])
 #data=data.map(lambda x :{"image": image_processor.preprocess( x["image"])[0]})
+
+def one_hot(x):
+    action=int(x["action"])
+
 def f(x):
     try:
-        y=F.one_hot(torch.Tensor(x["action"]).long(),n_actions)
+        y=F.one_hot(torch.Tensor(int(x["action"])).long(),n_actions)
     except Exception as e:
         print("error",x["action"],n_actions)
         raise e
