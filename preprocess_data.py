@@ -13,16 +13,19 @@ episode_set=set()
 
 def one_hot(x):
     action=int(x["action"])
+    zeros=[0 for _ in range(n_actions)]
+    zeros[action]=1
+    return torch.tensor(zeros)
 
-def f(x):
+'''def f(x):
     try:
         y=F.one_hot(torch.Tensor(int(x["action"])).long(),n_actions)
     except Exception as e:
         print("error",x["action"],n_actions)
         raise e
-    return {"action":y}
+    return {"action":y}'''
 
-data=data.map(lambda x: f(x))
+data=data.map(lambda x: one_hot(x))
 
 data.push_to_hub("jlbaker361/sonic-vae-preprocessed")
 
