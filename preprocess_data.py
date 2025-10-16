@@ -18,7 +18,7 @@ def f(x):
         raise e
     return {"action":y}
 
-data=data.map(lambda x: {"action":F.one_hot(torch.Tensor(x["action"]).long(),n_actions)})
+data=data.map(lambda x: f(x))
 
 data.push_to_hub("jlbaker361/sonic-vae-preprocessed")
 
