@@ -14,7 +14,7 @@ def f(x):
     try:
         y=F.one_hot(torch.Tensor(x["action"]).long(),n_actions)
     except Exception as e:
-        print("error",x["action"])
+        print("error",x["action"],n_actions)
         raise e
     return {"action":y}
 
