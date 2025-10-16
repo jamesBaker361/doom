@@ -15,7 +15,7 @@ def one_hot(x):
     action=int(x["action"])
     zeros=[0 for _ in range(n_actions)]
     zeros[action]=1
-    return torch.tensor(zeros)
+    return {"action":torch.tensor(zeros)}
 
 '''def f(x):
     try:
