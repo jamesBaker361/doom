@@ -56,6 +56,7 @@ parser.add_argument("--save_dir",type=str,default="sonic_vae_saved")
 parser.add_argument("--src_dataset",type=str,default="jlbaker361/sonic-vae")
 parser.add_argument("--load_hf",action="store_true")
 parser.add_argument("--encoder_type",type=str,default="vae")
+parser.add_argument("--skip_num",type=int,default=10)
 
 def concat_images_horizontally(images)-> Image.Image:
     """
@@ -219,6 +220,9 @@ def main(args):
             for b,batch in enumerate(train_loader):
                 if b==args.limit:
                     break
+                if b%args.skip_num!=0:
+                    continue
+                
                 with accelerator.accumulate(params):
                     batch=batch["image"]
                     batch=batch.to(device)
