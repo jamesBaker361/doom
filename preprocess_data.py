@@ -6,7 +6,7 @@ import torch
 data=load_dataset("jlbaker361/sonic-vae",split="train")
 image_processor=DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7").image_processor
 n_actions=max(set(data["action"]))+1
-print(set(data["action"]))
+print(set(data["action"]),n_actions)
 episode_set=set()
 #data=data.select([z for z in range(2)])
 #data=data.map(lambda x :{"image": image_processor.preprocess( x["image"])[0]})
