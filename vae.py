@@ -57,6 +57,7 @@ parser.add_argument("--src_dataset",type=str,default="jlbaker361/sonic-vae")
 parser.add_argument("--load_hf",action="store_true")
 parser.add_argument("--encoder_type",type=str,default="vae")
 parser.add_argument("--skip_num",type=int,default=10)
+parser.add_argument("--process_data",action="store_true")
 
 def concat_images_horizontally(images)-> Image.Image:
     """
@@ -154,7 +155,7 @@ def main(args):
         accelerator.print("start epoch: ",start_epoch)
 
 
-        dataset=ImageDatasetHF(args.src_dataset, image_processor)
+        dataset=ImageDatasetHF(args.src_dataset, image_processor,args.process_data)
 
 
         test_size=16
@@ -222,7 +223,7 @@ def main(args):
                     break
                 if b%args.skip_num!=0:
                     continue
-                
+
                 with accelerator.accumulate(params):
                     batch=batch["image"]
                     batch=batch.to(device)
