@@ -32,9 +32,10 @@ def find_earliest_less_than(arr, target):
     return result
 
 class ImageDatasetHF(Dataset):
-    def __init__(self,src_dataset:str,image_processor:VaeImageProcessor):
+    def __init__(self,src_dataset:str,image_processor:VaeImageProcessor,process:bool=False):
         super().__init__()
-        self.image_list=load_dataset(src_dataset,split="train")["image"]
+        data=load_dataset(src_dataset,split="train")["image"]
+        self.image_list=[self.image_processor.preprocess(image)[0] for image in data]
         self.image_processor=image_processor
 
     def __len__(self):
@@ -42,13 +43,13 @@ class ImageDatasetHF(Dataset):
     
     def __getitem__(self, index):
         image=self.image_list[index]
-        image=self.image_processor.preprocess(image)[0]
+        
         return {
             "image":image
         }
     
 class WorldModelDatasetHF(Dataset):
-    def __init__(self,src_dataset:str,image_processor:VaeImageProcessor,max_sequence_length,metadata_key_list:list=[]):
+    def __init__(self,src_dataset:str,image_processor:VaeImageProcessor,max_sequence_length,metadata_key_list:list=[],process:bool=False):
         super().__init__()
         self.data=load_dataset(src_dataset,split="train")
         #self.data=self.data.select(range(0,len(self.data),skip_num))
@@ -56,8 +57,9 @@ class WorldModelDatasetHF(Dataset):
         self.start_index_list=[]
         self.n_actions=len(set(self.data["action"]))
         episode_set=set()
-        self.data=self.data.map(lambda x :{"image": image_processor.preprocess( x["image"])[0]})
-        self.data=self.data.map(lambda x: {"action":F.one_hot(x["action"],self.n_actions)})
+        if process:
+            self.data=self.data.map(lambda x :{"image": image_processor.preprocess( x["image"])[0]})
+            self.data=self.data.map(lambda x: {"action":F.one_hot(x["action"],self.n_actions)})
         for i,row in enumerate(self.data):
             if row["episode"] not in episode_set:
                 episode_set.add(row["episode"])
