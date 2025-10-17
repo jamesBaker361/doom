@@ -35,14 +35,17 @@ class ImageDatasetHF(Dataset):
     def __init__(self,src_dataset:str,image_processor:VaeImageProcessor,process:bool=False):
         super().__init__()
         data=load_dataset(src_dataset,split="train")["image"]
-        self.image_list=[self.image_processor.preprocess(image)[0] for image in data]
+        if process:
+            self.image_list=[self.image_processor.preprocess(image)[0] for image in data]
+        else:
+            self.image_list=data
         self.image_processor=image_processor
 
     def __len__(self):
         return len(self.image_list)
     
     def __getitem__(self, index):
-        image=self.image_list[index]
+        image=torch.tensor(self.image_list[index])
         
         return {
             "image":image
