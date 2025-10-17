@@ -53,10 +53,10 @@ parser.add_argument("--skip_frac",type=float,default=1.0)
 parser.add_argument("--use_hf_training_data",action="store_true")
 parser.add_argument("--hf_data_path",type=str,default="")
 parser.add_argument("--save_dir",type=str,default="sonic_vae_saved")
-parser.add_argument("--src_dataset",type=str,default="jlbaker361/sonic-vae")
+parser.add_argument("--src_dataset",type=str,default="jlbaker361/sonic-vae-preprocessed")
 parser.add_argument("--load_hf",action="store_true")
 parser.add_argument("--encoder_type",type=str,default="vae")
-parser.add_argument("--skip_num",type=int,default=10)
+parser.add_argument("--skip_num",type=int,default=100)
 parser.add_argument("--process_data",action="store_true")
 
 def concat_images_horizontally(images)-> Image.Image:
