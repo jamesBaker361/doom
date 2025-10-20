@@ -155,7 +155,8 @@ def main(args):
         accelerator.print("start epoch: ",start_epoch)
 
 
-        dataset=ImageDatasetHF(args.src_dataset, image_processor,args.process_data)
+        dataset=ImageDatasetHF(args.src_dataset, image_processor,args.process_data,args.skip_num)
+        accelerator.print("dataset len",len(dataset))
 
 
         test_size=16
@@ -221,8 +222,8 @@ def main(args):
             for b,batch in enumerate(train_loader):
                 if b==args.limit:
                     break
-                if b%args.skip_num!=0:
-                    continue
+                '''if b%args.skip_num!=0:
+                    continue'''
 
                 with accelerator.accumulate(params):
                     batch=batch["image"]
