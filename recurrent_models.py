@@ -384,6 +384,8 @@ parser.add_argument("--size",type=int,default=256)
 parser.add_argument("--n_layers",type=int,default=4)
 parser.add_argument("--rnn_layer",type=int,default=2)
 parser.add_argument("--limit",type=int,default=-1)
+parser.add_argument("--batch_size",type=int,default=4)
+parser.add_argument("--epochs",type=int,default=10)
 
 def main(args):
     accelerator=Accelerator(log_with="wandb",mixed_precision=args.mixed_precision,gradient_accumulation_steps=args.gradient_accumulation_steps)
