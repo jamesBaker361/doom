@@ -10,6 +10,7 @@ import csv
 from gpu_helpers import *
 from diffusers.image_processor import VaeImageProcessor
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
+from diffusers import AutoencoderKL
 from datasets import load_dataset
 from constants import *
 import numpy as np
@@ -56,7 +57,9 @@ class ImageDatasetHF(Dataset):
         }
     
 class WorldModelDatasetHF(Dataset):
-    def __init__(self,src_dataset:str,image_processor:VaeImageProcessor,max_sequence_length,metadata_key_list:list=[],process:bool=False):
+    def __init__(self,src_dataset:str,image_processor:VaeImageProcessor,max_sequence_length,metadata_key_list:list=[],
+                 process:bool=False,
+                 vae:AutoencoderKL=None):
         super().__init__()
         self.data=load_dataset(src_dataset,split="train")
         #self.data=self.data.select(range(0,len(self.data),skip_num))
@@ -74,6 +77,8 @@ class WorldModelDatasetHF(Dataset):
         self.start_index_list.append(i)
         self.metadata_key_list=metadata_key_list
         self.max_sequence_length=max_sequence_length
+        '''if vae is not None:
+            self.data.map(lambda x:)'''
         for key in metadata_key_list:
             self.data=self.data.map(lambda x: {key:torch.tensor(x[key])})
 
@@ -83,8 +88,8 @@ class WorldModelDatasetHF(Dataset):
     def __getitem__(self, index):
         #return super().__getitem__(index)
         end_index=find_earliest_less_than(self.start_index_list,index)
-        output_dict={"image":self.data["image"][index:end_index],
-                     "action":self.data["action"][index:end_index]}
+        output_dict={"image":torch.tensor(self.data["image"][index:end_index]),
+                     "action":torch.tensor(self.data["action"][index:end_index])}
         for key in self.metadata_key_list:
             output_dict[key]=self.data[key][index:end_index]
         output_dict["metadata"]=torch.cat([output_dict[key] for key in self.metadata_key_list ])
