@@ -1,3 +1,4 @@
+#https://medium.com/@lukasbierling/recurrent-state-space-models-pytorch-implementation-ba5d7e063d11
 from torch import nn
 import torch
 from typing import Tuple
@@ -354,6 +355,8 @@ from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
 from data_loaders import WorldModelDatasetHF
 from torch.utils.data import random_split, DataLoader
+from torch.distributions import Normal
+from torch.distributions.kl import kl_divergence
 
 from transformers import AutoProcessor, CLIPModel
 try:
@@ -439,24 +442,46 @@ def main(args):
 
     rssm=RSSM(encoder,decoder,dynamics, args.hidden_dim, args.state_dim,device=device)
 
-    optimizer=torch.optim.Adam(rssm.parameters(),args.lr)
+    params=[p for p in rssm.parameters()]
+
+    optimizer=torch.optim.Adam(params,args.lr)
 
     start_epoch=1
     for e in range(start_epoch,args.epochs+1):
         for k, batch in enumerate(train_loader):
-            if k==args.limit:
-                break
-            stop_index=max(batch["stop"])
-            metadata=None
-            obs=batch["image"][:stop_index].to(device)
-            stop=batch["stop"]
-            actions=batch["action"][:stop_index].to(device)
-            if args.use_metadata:
-                metadata=batch["metadata"][:stop_index].to(device)
+            with accelerator.accumulate(params):
+                if k==args.limit:
+                    break
+                batch_size=batch["image"].size()[0]
+                stop_index=max(batch["stop"])
+                metadata=None
+                obs=batch["image"][:stop_index].to(device)
+                stop=batch["stop"]
+                actions=batch["action"][:stop_index].to(device)
+                if args.use_metadata:
+                    metadata=batch["metadata"][:stop_index].to(device)
 
-            hiddens, prior_states, posterior_states, prior_means, prior_logvars, posterior_means, posterior_logvars=rssm.generate_rollout(actions=actions,
-                                                                                                                                          stop=stop,obs=obs,metadata=metadata)
-            
+                hiddens, prior_states, posterior_states, prior_means, prior_logvars, posterior_means, posterior_logvars=rssm.generate_rollout(actions=actions,
+                                                                                                                                            stop=stop,obs=obs,metadata=metadata)
+                
+                hiddens_reshaped = hiddens.reshape(batch_size * stop_index, -1)
+                posterior_states_reshaped = posterior_states.reshape(batch_size * stop_index, -1)
+                decoded_obs = rssm.decoder(hiddens_reshaped, posterior_states_reshaped)
+                decoded_obs = decoded_obs.reshape(batch_size, stop_index, *obs.size()[-3:])
+
+                reconstruction_loss =F.mse_loss(obs,decoded_obs)
+                
+                prior_dist = Normal(prior_means, torch.exp(prior_logvars))
+                posterior_dist = Normal(posterior_means, torch.exp(posterior_logvars))
+
+                kl_loss=kl_divergence(posterior_dist, prior_dist).mean()
+
+                loss=kl_loss+reconstruction_loss
+
+                accelerator.backward(loss)
+                optimizer.step()
+                optimizer.zero_grad()
+                
 
 
 
