@@ -439,7 +439,7 @@ def main(args):
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
 
     encoder=EncoderCNN(3,args.embedding_dim,(args.size,args.size),args.n_layers)
-    decoder=DecoderCNN(args.hidden_size,args.state_size,args.embedding_dim,output_shape=[3,args.size,args.size],n_layers=args.n_layers)
+    decoder=DecoderCNN(args.hidden_dim,args.state_size,args.embedding_dim,output_shape=[3,args.size,args.size],n_layers=args.n_layers)
     dynamics=DynamicsModel(args.hidden_dim,args.action_dim,args.state_dim,args.embedding_dim,args.rnn_layer,args.metadata_embedding_dim,len(args.metadata_key_list))
 
     rssm=RSSM(encoder,decoder,dynamics, args.hidden_dim, args.state_dim,device=device)
