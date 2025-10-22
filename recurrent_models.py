@@ -64,6 +64,7 @@ class DecoderCNN(nn.Module):
         dim=channel_list[0]
         self.dim=dim
         self.fc2 = nn.Linear(embedding_size, dim * (output_shape[1] // math.sqrt(dim)) * (output_shape[2] // math.sqrt(dim)))
+        print(embedding_size, dim * (output_shape[1] // math.sqrt(dim)) * (output_shape[2] // math.sqrt(dim)))
 
         self.convt_list=[nn.ConvTranspose2d(channel_list[i],channel_list[i+1],kernel_size=3, stride=2, padding=1, output_padding=1) for i in range(len(channel_list)-1)]
         self.bn_list=[nn.BatchNorm2d(c) for c in channel_list[1:]]
