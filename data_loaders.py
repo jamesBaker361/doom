@@ -90,9 +90,10 @@ class WorldModelDatasetHF(Dataset):
         end_index=find_earliest_less_than(self.start_index_list,index)
         output_dict={"image":torch.tensor(self.data["image"][index:end_index]),
                      "action":torch.tensor(self.data["action"][index:end_index])}
-        for key in self.metadata_key_list:
-            output_dict[key]=self.data[key][index:end_index]
-        output_dict["metadata"]=torch.cat([output_dict[key] for key in self.metadata_key_list ])
+        if len(self.metadata_key_list)>0:
+            for key in self.metadata_key_list:
+                output_dict[key]=self.data[key][index:end_index]
+            output_dict["metadata"]=torch.cat([output_dict[key] for key in self.metadata_key_list ])
         for k,v in output_dict.items():
             shape=v[0].size()
             output_dict[k]+=[torch.zeros(shape) for _ in range(self.max_sequence_length)]
