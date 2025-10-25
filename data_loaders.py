@@ -65,11 +65,14 @@ class WorldModelDatasetHF(Dataset):
         #self.data=self.data.select(range(0,len(self.data),skip_num))
         self.image_processor=image_processor
         self.start_index_list=[]
-        self.n_actions=len(set(self.data["action"]))
+        #self.n_actions=len(set(self.data["action"]))
         episode_set=set()
         if process:
+            self.n_actions=len(set(self.data["action"]))
             self.data=self.data.map(lambda x :{"image": image_processor.preprocess( x["image"])[0]})
             self.data=self.data.map(lambda x: {"action":F.one_hot(x["action"],self.n_actions)})
+        else:
+            self.n_actions=len(self.data["action"][0])
         for i,row in enumerate(self.data):
             if row["episode"] not in episode_set:
                 episode_set.add(row["episode"])
