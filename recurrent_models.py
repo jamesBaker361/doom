@@ -235,6 +235,13 @@ class DynamicsModel(nn.Module):
 
         return hiddens, prior_states, posterior_states, prior_means, prior_logvars, posterior_means, posterior_logvars
     
+class PhysicalDynamicsModel(nn.Module):
+    #given metadata and embedding, predict net forces on sonic using network, 
+    # also have parameters (learnable) to represent g, friction, etc
+    # might need a regularization term too
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+    
 
 class RSSM:
     def __init__(self,
