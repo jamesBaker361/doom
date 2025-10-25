@@ -239,8 +239,20 @@ class PhysicalDynamicsModel(nn.Module):
     #given metadata and embedding, predict net forces on sonic using network, 
     # also have parameters (learnable) to represent g, friction, etc
     # might need a regularization term too
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    # were going to model the world as if the rigid body is 1 kg
+    # so there's internal force (running?) 
+    # normal force (which isnt always a thing)
+    # gravity (always downwards)
+    # coefficient of friction with air (probably 0)
+    # external forces (like from an enemy)
+    # and all this is used to calculate direction of net velocity
+    def __init__(self,hidden_dim: int, action_dim: int, state_dim: int, embedding_dim: int, 
+                 rnn_layer: int = 1,
+                 metadata_embedding_dim:int=0,metadata_dim:int=0, *args, **kwargs):
+        super().__init__()
+        self.hidden_dim=hidden_dim
+        
+        
     
 
 class RSSM:
