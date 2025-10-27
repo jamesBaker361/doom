@@ -97,6 +97,7 @@ class WorldModelDatasetHF(Dataset):
             for key in self.metadata_key_list:
                 output_dict[key]=self.data[key][index:end_index]
             output_dict["metadata"]=torch.cat([output_dict[key] for key in self.metadata_key_list ])
+        print(output_dict)
         for k,v in output_dict.items():
             shape=v[0].size()
             output_dict[k]+=[torch.zeros(shape) for _ in range(self.max_sequence_length)]
