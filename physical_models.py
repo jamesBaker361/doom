@@ -84,13 +84,6 @@ class Newtonian(torch.nn.Module):
         yf=yi+vf_y
         
         return vf_x,vf_y,xf,yf
-        
-        
-        
-        
-        
-    def __call__(self, *args, **kwds):
-        return super().__call__(*args, **kwds)
 
 def main(args):
     accelerator=Accelerator(log_with="wandb",mixed_precision=args.mixed_precision,gradient_accumulation_steps=args.gradient_accumulation_steps)
