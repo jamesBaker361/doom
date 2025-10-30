@@ -468,6 +468,8 @@ def main(args):
     params=[p for p in rssm.parameters()]
 
     optimizer=torch.optim.Adam(params,args.lr)
+    
+    rssm,optimizer,train_loader,test_loader=accelerator.prepare(rssm,optimizer,train_loader,test_loader)
 
     start_epoch=1
     for e in range(start_epoch,args.epochs+1):
