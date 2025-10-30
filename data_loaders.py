@@ -103,6 +103,46 @@ class WorldModelDatasetHF(Dataset):
             output_dict[k]+=[torch.zeros(shape) for _ in range(self.max_sequence_length)]
         output_dict["stop"]=end_index-index
         return output_dict
+    
+    
+class VelocityPositionDatasetHF(Dataset):
+    def __init__(self,src_dataset:str):
+        super().__init__()
+        self.data=load_dataset(src_dataset,split="train")
+        self.start_index_list=[]
+        episode_set=set()
+        self.initial_velocity_x=[]
+        self.initial_velocity_y=[]
+        for i,row in enumerate(self.data):
+            if row["episode"] not in episode_set:
+                episode_set.add(row["episode"])
+                self.start_index_list.append(i)
+                self.initial_velocity_x.append(0)
+                self.initial_velocity_y.append(0)
+            else:
+                prior_row=self.data[i-1]
+                d_x=row["x"]-prior_row["x"]
+                d_y=row["y"]-prior_row["y"]
+                self.initial_velocity_x.append(d_x)
+                self.initial_velocity_y.append(d_y)
+        self.start_index_list.append(i)
+        
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, index)->dict:
+        output= {
+            k:torch.tensor(self.data[k][index]) for k in ["action","image","x","y"]
+        }
+        output["vi_x"]=self.initial_velocity_x[index]
+        output["vi_y"]=self.initial_velocity_y[index]
+        
+        return output
+        
+        
+        
+        
+            
 
 
 class FlatImageFolder(Dataset):

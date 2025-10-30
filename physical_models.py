@@ -23,6 +23,7 @@ from diffusers import LCMScheduler,DiffusionPipeline,DEISMultistepScheduler,DDIM
 from diffusers.models.attention_processor import IPAdapterAttnProcessor2_0
 from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
+from data_loaders import VelocityPositionDatasetHF
 
 
 from transformers import AutoProcessor, CLIPModel
@@ -65,8 +66,8 @@ class Newtonian(torch.nn.Module):
         self.mu_ground=torch.nn.Parameter([1])
         self.mass=1.
         
-    def forward(self,vi_x,vi_y,xi,yi,img_embedding,):
-        predicted=self.layers(img_embedding)
+    def forward(self,vi_x,vi_y,xi,yi,img_embedding,action):
+        predicted=self.layers(torch.concat([img_embedding,action]))
         fx_internal,fy_internal, fx_external,fy_external,theta_f=predicted.chunk(5,dim=1)
 
         mg=self.mass*self.g
@@ -113,6 +114,8 @@ def main(args):
         "fp16":torch.float16,
         "bf16":torch.bfloat16
     }[args.mixed_precision]
+    
+    data_loader=VelocityPositionDatasetHF("jlbaker361/sonic-vae-preprocessed")
 
 
 if __name__=='__main__':
