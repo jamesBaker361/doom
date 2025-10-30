@@ -116,6 +116,9 @@ def main(args):
     }[args.mixed_precision]
     
     data_loader=VelocityPositionDatasetHF("jlbaker361/sonic-vae-preprocessed")
+    
+    for batch in data_loader:
+        break
 
 
 if __name__=='__main__':
