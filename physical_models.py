@@ -115,7 +115,7 @@ def main(args):
         "bf16":torch.bfloat16
     }[args.mixed_precision]
     
-    data_loader=VelocityPositionDatasetHF("jlbaker361/sonic-vae-preprocessed")
+    data_loader=VelocityPositionDatasetHF("jlbaker361/sonic-vae-preprocessed-0.1")
     
     for batch in data_loader:
         break
