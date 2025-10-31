@@ -118,6 +118,11 @@ def main(args):
     
     dataset=VelocityPositionDatasetHF("jlbaker361/sonic-vae-preprocessed-0.1")
     
+    for batch in dataset:
+        break
+    
+    action_dim=batch["action"].size()[-1]
+    
     test_size=int(len(dataset)*0.1)
     train_size=int(len(dataset)-2*test_size)
 
@@ -131,6 +136,8 @@ def main(args):
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
+    
+    model=Newtonian()
     
 
 
