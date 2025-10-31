@@ -24,6 +24,7 @@ from diffusers.models.attention_processor import IPAdapterAttnProcessor2_0
 from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
 from data_loaders import VelocityPositionDatasetHF
+from torch.utils.data import random_split, DataLoader
 
 
 from transformers import AutoProcessor, CLIPModel
@@ -115,12 +116,22 @@ def main(args):
         "bf16":torch.bfloat16
     }[args.mixed_precision]
     
-    data_loader=VelocityPositionDatasetHF("jlbaker361/sonic-vae-preprocessed-0.1")
+    dataset=VelocityPositionDatasetHF("jlbaker361/sonic-vae-preprocessed-0.1")
     
-    for batch in data_loader:
-        break
+    test_size=int(len(dataset)*0.1)
+    train_size=int(len(dataset)-2*test_size)
+
     
-    print(batch)
+    # Set seed for reproducibility
+    generator = torch.Generator().manual_seed(42)
+
+    # Split the dataset
+    train_dataset, test_dataset,val_dataset = random_split(dataset, [train_size, test_size,test_size], generator=generator)
+    
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
+    
 
 
 if __name__=='__main__':
