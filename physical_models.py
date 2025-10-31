@@ -119,6 +119,8 @@ def main(args):
     
     for batch in data_loader:
         break
+    
+    print(batch)
 
 
 if __name__=='__main__':
