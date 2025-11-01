@@ -19,7 +19,7 @@ import wandb
 import numpy as np
 import random
 from gpu_helpers import *
-from diffusers import LCMScheduler,DiffusionPipeline,DEISMultistepScheduler,DDIMScheduler,SCMScheduler,AutoencoderDC
+from diffusers import LCMScheduler,DiffusionPipeline,DEISMultistepScheduler,DDIMScheduler,SCMScheduler,AutoencoderDC,AutoencoderKL
 from diffusers.models.attention_processor import IPAdapterAttnProcessor2_0
 from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
@@ -41,6 +41,9 @@ parser.add_argument("--project_name",type=str,default="person")
 parser.add_argument("--gradient_accumulation_steps",type=int,default=4)
 parser.add_argument("--name",type=str,default="jlbaker361/model",help="name on hf")
 parser.add_argument("--lr",type=float,default=0.0001)
+parser.add_argument("--batch_size",type=int,default=4)
+parser.add_argument("--image_encoder",type=str,default="one of vae, vqvae, trained")
+parser.add_argument("--n_layers_encoder",type=int,default=4)
 
 class Newtonian(torch.nn.Module):
     #given metadata and embedding , predict net forces on sonic using network, 
@@ -53,21 +56,27 @@ class Newtonian(torch.nn.Module):
     # coefficient of friction with air (probably 0)
     # external forces (like from an enemy)
     # and all this is used to calculate direction of net velocity
-    def __init__(self,hidden_layer_dim_list:list,embedding_dim:int, action_dim:int, *args, **kwargs):
-        super().__init__()
+    def __init__(self,hidden_layer_dim_list:list,embedding_dim:int, action_dim:int,
+                 image_encoder: torch.nn.Module=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         input_dim=embedding_dim+action_dim
         layers=[]
         dim_list=[input_dim]+hidden_layer_dim_list+[5]
         for k,dim in enumerate(dim_list[:-2]):
             layers.append(torch.nn.Linear(dim, dim_list[k+1]))
+            layers.append(torch.nn.LeakyReLU())
             
-        self.layers=torch.nn.ModuleList(layers)
+        self.layers=torch.nn.Sequential(*layers)
+        self.module_list=torch.nn.ModuleList([self.layers])
         self.g=torch.nn.Parameter([1])
         self.mu_air=torch.nn.Parameter([1])
         self.mu_ground=torch.nn.Parameter([1])
         self.mass=1.
+        self.image_encoder=image_encoder
         
-    def forward(self,vi_x,vi_y,xi,yi,img_embedding,action):
+    def forward(self,vi_x,vi_y,xi,yi,img,action):
+        if self.image_encoder is not None:
+            img_embedding=self.image_encoder(img)
         predicted=self.layers(torch.concat([img_embedding,action]))
         fx_internal,fy_internal, fx_external,fy_external,theta_f=predicted.chunk(5,dim=1)
 
@@ -86,6 +95,34 @@ class Newtonian(torch.nn.Module):
         yf=yi+vf_y
         
         return vf_x,vf_y,xf,yf
+    
+class ImageEncoder(torch.nn.Module):
+    def __init__(self,n_layers:int, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        layers=[torch.nn.Conv2d(3,4,4,2),torch.nn.LeakyReLU(),torch.nn.BatchNorm2d(4)]
+        dim=4
+        for _ in range(n_layers):
+            layers+=[torch.nn.Conv2d(dim,2*dim,4,2),torch.nn.LeakyReLU(),torch.nn.BatchNorm2d(2*dim)]
+            dim*=2
+            
+        layers.append(torch.nn.Flatten())
+            
+        self.layers=torch.nn.Sequential(*layers)
+        self.module_list=torch.nn.ModuleList([self.layers])
+        
+    def forward(self,img:torch.Tensor)->torch.Tensor:
+        return self.layers(img)
+    
+class VAEWrapper(torch.nn.Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.vae=DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7").vae
+        self.flatten=torch.nn.Flatten()
+        self.layer_list=torch.nn.ModuleList([self.vae,self.flatten])
+        
+    def forward(self,img:torch.Tensor)->torch.Tensor:
+        latents=self.vae.encode(img).latent_dist.sample() * self.vae.config.scaling_factor
+        return self.flatten(latents)
 
 def main(args):
     accelerator=Accelerator(log_with="wandb",mixed_precision=args.mixed_precision,gradient_accumulation_steps=args.gradient_accumulation_steps)
@@ -123,6 +160,13 @@ def main(args):
     
     action_dim=batch["action"].size()[-1]
     
+    if args.image_encoder=="trained":
+        image_encoder=ImageEncoder(args.n_layers_encoder).to(device)
+    elif args.image_encoder=="vae":
+        image_encoder=VAEWrapper()
+        
+    image_embedding_dim=image_encoder(batch["image"]).size()[-1]
+    
     test_size=int(len(dataset)*0.1)
     train_size=int(len(dataset)-2*test_size)
 
@@ -137,7 +181,36 @@ def main(args):
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
     
-    model=Newtonian()
+    hidden_layer_dim_list=[256,128,64,32]
+    
+    model=Newtonian(hidden_layer_dim_list,image_embedding_dim,action_dim,image_encoder)
+    
+    start_epoch=1
+    for e in range(1, start_epoch+1):
+        for b,batch in enumerate(train_dataset):
+            with accelerator.accumulate():
+                image=batch["image"]
+                action=batch["action"]
+                if e==start_epoch and b==0:
+                    accelerator.print("image",image.device,image.dtype,image.size())
+                    
+                vf_x,vf_y,xf,yf=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
+                
+                
+                
+                with accelerator.autocast():
+                    vx_loss=F.mse_loss(vf_x.float(),batch["vf_x"].float())
+                    vy_loss=F.mse_loss(vf_y.float(),batch["vf_y"].float())
+                    x_loss=F.mse_loss(xf.float(),batch["xf"].float())
+                    y_loss=F.mse_loss(yf.float(),batch["yf"].float())
+                
+                    total_loss=vx_loss+vy_loss+x_loss+y_loss
+                    
+            
+            
+                
+            
+                
     
 
 

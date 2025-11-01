@@ -128,7 +128,7 @@ class VelocityPositionDatasetHF(Dataset):
         self.start_index_list.append(i)
         
     def __len__(self):
-        return len(self.data)
+        return len(self.data)-1
     
     def __getitem__(self, index)->dict:
         output= {
@@ -136,6 +136,12 @@ class VelocityPositionDatasetHF(Dataset):
         }
         output["vi_x"]=self.initial_velocity_x[index]
         output["vi_y"]=self.initial_velocity_y[index]
+        
+        output["xf"]=self.data["x"][index+1]
+        output["yf"]=self.data["y"][index+1]
+        
+        output["vf_x"]=self.initial_velocity_x[index+1]
+        output["vf_y"]=self.initial_velocity_y[index+1]
         
         return output
         
