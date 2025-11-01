@@ -127,78 +127,86 @@ class VAEWrapper(torch.nn.Module):
 def main(args):
     accelerator=Accelerator(log_with="wandb",mixed_precision=args.mixed_precision,gradient_accumulation_steps=args.gradient_accumulation_steps)
     print("accelerator device",accelerator.device)
-    device=accelerator.device
-    state = PartialState()
-    print(f"Rank {state.process_index} initialized successfully")
-    if accelerator.is_main_process or state.num_processes==1:
-        accelerator.print(f"main process = {state.process_index}")
-    if accelerator.is_main_process or state.num_processes==1:
-        try:
-            accelerator.init_trackers(project_name=args.project_name,config=vars(args))
+    with accelerator.autocast():
+        device=accelerator.device
+        state = PartialState()
+        print(f"Rank {state.process_index} initialized successfully")
+        if accelerator.is_main_process or state.num_processes==1:
+            accelerator.print(f"main process = {state.process_index}")
+        if accelerator.is_main_process or state.num_processes==1:
+            try:
+                accelerator.init_trackers(project_name=args.project_name,config=vars(args))
 
-            api=HfApi()
-            api.create_repo(args.name,exist_ok=True)
-        except HfHubHTTPError:
-            print("hf hub error!")
-            time.sleep(random.randint(5,120))
-            accelerator.init_trackers(project_name=args.project_name,config=vars(args))
+                api=HfApi()
+                api.create_repo(args.name,exist_ok=True)
+            except HfHubHTTPError:
+                print("hf hub error!")
+                time.sleep(random.randint(5,120))
+                accelerator.init_trackers(project_name=args.project_name,config=vars(args))
 
-            api=HfApi()
-            api.create_repo(args.name,exist_ok=True)
+                api=HfApi()
+                api.create_repo(args.name,exist_ok=True)
 
 
-    torch_dtype={
-        "no":torch.float32,
-        "fp16":torch.float16,
-        "bf16":torch.bfloat16
-    }[args.mixed_precision]
-    
-    dataset=VelocityPositionDatasetHF("jlbaker361/sonic-vae-preprocessed-0.1")
-    
-    for batch in dataset:
-        break
-    
-    action_dim=batch["action"].size()[-1]
-    
-    if args.image_encoder=="trained":
-        image_encoder=ImageEncoder(args.n_layers_encoder).to(device)
-    elif args.image_encoder=="vae":
-        image_encoder=VAEWrapper()
+        torch_dtype={
+            "no":torch.float32,
+            "fp16":torch.float16,
+            "bf16":torch.bfloat16
+        }[args.mixed_precision]
         
-    image_embedding_dim=image_encoder(batch["image"]).size()[-1]
-    
-    test_size=int(len(dataset)*0.1)
-    train_size=int(len(dataset)-2*test_size)
+        dataset=VelocityPositionDatasetHF("jlbaker361/sonic-vae-preprocessed-0.1")
+        
+        for batch in dataset:
+            break
+        
+        action_dim=batch["action"].size()[-1]
+        
+        params=[]
+        
+        if args.image_encoder=="trained":
+            image_encoder=ImageEncoder(args.n_layers_encoder).to(device)
+            params+=[p for p in image_encoder.parameters()]
+            accelerator.print("encoder params len ",len(params))
+        elif args.image_encoder=="vae":
+            image_encoder=VAEWrapper()
+            
+        image_embedding_dim=image_encoder(batch["image"]).size()[-1]
+        
+        test_size=int(len(dataset)//10)
+        train_size=int(len(dataset)-2*test_size)
 
-    
-    # Set seed for reproducibility
-    generator = torch.Generator().manual_seed(42)
+        
+        # Set seed for reproducibility
+        generator = torch.Generator().manual_seed(42)
 
-    # Split the dataset
-    train_dataset, test_dataset,val_dataset = random_split(dataset, [train_size, test_size,test_size], generator=generator)
-    
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
-    
-    hidden_layer_dim_list=[256,128,64,32]
-    
-    model=Newtonian(hidden_layer_dim_list,image_embedding_dim,action_dim,image_encoder)
-    
-    start_epoch=1
-    for e in range(1, start_epoch+1):
-        for b,batch in enumerate(train_dataset):
-            with accelerator.accumulate():
-                image=batch["image"]
-                action=batch["action"]
-                if e==start_epoch and b==0:
-                    accelerator.print("image",image.device,image.dtype,image.size())
+        # Split the dataset
+        train_dataset, test_dataset,val_dataset = random_split(dataset, [train_size, test_size,test_size], generator=generator)
+        
+        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
+        
+        hidden_layer_dim_list=[256,128,64,32]
+        
+        model=Newtonian(hidden_layer_dim_list,image_embedding_dim,action_dim,image_encoder)
+        params+=[p for p in model.parameters()]
+        accelerator.print("model params",len(params))
+        optimizer=torch.optim.AdamW(params,args.lr)
+        
+        
+        start_epoch=1
+        for e in range(1, start_epoch+1):
+            loss_list=[]
+            start=time.time()
+            for b,batch in enumerate(train_loader):
+                with accelerator.accumulate():
+                    image=batch["image"]
+                    action=batch["action"]
+                    if e==start_epoch and b==0:
+                        accelerator.print("image",image.device,image.dtype,image.size())
+                        
+                    vf_x,vf_y,xf,yf=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
                     
-                vf_x,vf_y,xf,yf=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
-                
-                
-                
-                with accelerator.autocast():
                     vx_loss=F.mse_loss(vf_x.float(),batch["vf_x"].float())
                     vy_loss=F.mse_loss(vf_y.float(),batch["vf_y"].float())
                     x_loss=F.mse_loss(xf.float(),batch["xf"].float())
@@ -206,12 +214,22 @@ def main(args):
                 
                     total_loss=vx_loss+vy_loss+x_loss+y_loss
                     
-            
-            
+                    loss_list.append(total_loss.cpu().detach().numpy())
+                    
+                    accelerator.backward(total_loss)
+                    optimizer.step()
+                    optimizer.zero_grad()
+            end=time.time()
+            accelerator.print(f"epoch {e} elapsed {end-start}")
+            accelerator({
+                "loss":np.mean(loss_list)
+            })          
                 
-            
                 
-    
+                    
+                
+                    
+        
 
 
 if __name__=='__main__':
