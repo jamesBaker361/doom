@@ -194,7 +194,7 @@ def main(args):
             break
         
         action_dim=batch["action"].size()[-1]
-        image_shape=batch["image"].size()[1:]
+        image_shape=batch["image"].size()
         accelerator.print("image shape",image_shape)
         
         params=[]
