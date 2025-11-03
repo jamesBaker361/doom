@@ -58,7 +58,7 @@ class Newtonian(torch.nn.Module):
     # coefficient of friction with air (probably 0)
     # external forces (like from an enemy)
     # and all this is used to calculate direction of net velocity
-    def __init__(self,hidden_layer_dim_list:list,embedding_dim:int, action_dim:int,
+    def __init__(self,hidden_layer_dim_list:list,embedding_dim:int, action_dim:int,img_shape:tuple,
                  image_encoder: torch.nn.Module=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         input_dim=embedding_dim+action_dim
@@ -69,12 +69,29 @@ class Newtonian(torch.nn.Module):
             layers.append(torch.nn.LeakyReLU())
             
         self.layers=torch.nn.Sequential(*layers)
-        self.module_list=torch.nn.ModuleList([self.layers])
+        
         self.g=torch.nn.Parameter(torch.randn([1]))
         self.mu_air=torch.nn.Parameter(torch.randn([1]))
         self.mu_ground=torch.nn.Parameter(torch.randn([1]))
         self.mass=1.
         self.image_encoder=image_encoder
+        
+        ground_layers=[torch.nn.Conv2d(3,4,4,2),torch.nn.LeakyReLU(),torch.nn.BatchNorm2d(3)]
+        ground_dims=[4,16,64,256]
+        for k,dim in enumerate(ground_dims[:-2]):
+            ground_layers.append(torch.nn.Conv2d(dim,dim*2,4,2))
+            ground_layers.append(torch.nn.LeakyReLU())
+            ground_layers.append(torch.nn.BatchNorm2d(dim))
+        ground_layers.append(torch.nn.Flatten())
+        img=torch.ones(img_shape)
+        
+        for layer in ground_layers:
+            img=layer(img)
+            
+        ground_dim=img.size()[-1]
+        self.ground_layers=torch.nn.Sequential()
+            
+        self.module_list=torch.nn.ModuleList([self.layers])
         
     def forward(self,vi_x,vi_y,xi,yi,img,action):
         if self.image_encoder is not None:
