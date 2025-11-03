@@ -80,7 +80,7 @@ class Newtonian(torch.nn.Module):
         if self.image_encoder is not None:
             img_embedding=self.image_encoder(img)
         print("img",img_embedding.size(),"action",action.size())
-        predicted=self.layers(torch.concat([img_embedding,action]))
+        predicted=self.layers(torch.concat([img_embedding,action],dim=-1))
         fx_internal,fy_internal, fx_external,fy_external,theta_f=predicted.chunk(5,dim=1)
 
         mg=self.mass*self.g
