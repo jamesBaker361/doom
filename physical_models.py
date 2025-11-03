@@ -123,6 +123,8 @@ class VAEWrapper(torch.nn.Module):
         self.layer_list=torch.nn.ModuleList([self.vae,self.flatten])
         
     def forward(self,img:torch.Tensor)->torch.Tensor:
+        if len(img.size())==3:
+            img=img.unsqueeze(0)
         latents=self.vae.encode(img).latent_dist.sample() * self.vae.config.scaling_factor
         return self.flatten(latents)
 
