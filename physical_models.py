@@ -70,9 +70,9 @@ class Newtonian(torch.nn.Module):
             
         self.layers=torch.nn.Sequential(*layers)
         self.module_list=torch.nn.ModuleList([self.layers])
-        self.g=torch.nn.Parameter([1])
-        self.mu_air=torch.nn.Parameter([1])
-        self.mu_ground=torch.nn.Parameter([1])
+        self.g=torch.nn.Parameter(torch.randn([1]))
+        self.mu_air=torch.nn.Parameter(torch.randn([1]))
+        self.mu_ground=torch.nn.Parameter(torch.randn([1]))
         self.mass=1.
         self.image_encoder=image_encoder
         
