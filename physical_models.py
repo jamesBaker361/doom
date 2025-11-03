@@ -42,7 +42,7 @@ parser.add_argument("--gradient_accumulation_steps",type=int,default=4)
 parser.add_argument("--name",type=str,default="jlbaker361/model",help="name on hf")
 parser.add_argument("--lr",type=float,default=0.0001)
 parser.add_argument("--batch_size",type=int,default=4)
-parser.add_argument("--image_encoder",type=str,default="one of vae, vqvae, trained")
+parser.add_argument("--image_encoder",type=str,help="one of vae, vqvae, trained",default="vae")
 parser.add_argument("--n_layers_encoder",type=int,default=4)
 parser.add_argument("--epochs",type=int,default=100)
 parser.add_argument("--limit",type=int,default=-1)
@@ -157,7 +157,7 @@ def main(args):
             "bf16":torch.bfloat16
         }[args.mixed_precision]
         
-        dataset=VelocityPositionDatasetHF("jlbaker361/sonic-vae-preprocessed-0.1")
+        dataset=VelocityPositionDatasetHF("jlbaker361/sonic-vae-preprocessed-500")
         
         for batch in dataset:
             break
