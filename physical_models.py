@@ -89,13 +89,17 @@ class Newtonian(torch.nn.Module):
             img=layer(img)
             
         ground_dim=img.size()[-1]
-        self.ground_layers=torch.nn.Sequential()
+        
+        ground_layers.append(torch.nn.Linear(ground_dim,1))
+        ground_layers.append(torch.nn.Tanh())
+        self.ground_layers=torch.nn.Sequential(*ground_layers)
             
-        self.module_list=torch.nn.ModuleList([self.layers])
+        self.module_list=torch.nn.ModuleList([self.layers,self.ground_layers])
         
     def forward(self,vi_x,vi_y,xi,yi,img,action):
-        if self.image_encoder is not None:
-            img_embedding=self.image_encoder(img)
+        ground=self.ground_layers(img)
+        img_embedding=self.image_encoder(img)
+        
         print("img",img_embedding.size(),"action",action.size())
         predicted=self.layers(torch.concat([img_embedding,action],dim=-1))
         fx_internal,fy_internal, fx_external,fy_external,theta_f=predicted.chunk(5,dim=1)
@@ -104,13 +108,16 @@ class Newtonian(torch.nn.Module):
         
         
         
-        fx=fx_internal+fx_external+(2*torch.cos(theta_f)*torch.sin(theta_f)-self.mu_ground*(torch.cos(theta_f)**2))*mg
+        fx=fx_internal+fx_external
+        
+        ground_fx=(2*torch.cos(theta_f)*torch.sin(theta_f)-self.mu_ground*(torch.cos(theta_f)**2))*mg
         print('fx_internal',fx_internal.size())
         print('fx_external',fx_external.size())
         print('theta_f',theta_f.size())
         print('self.mu_ground',self.mu_ground.size())
         
-        fy=fy_internal+fy_external+(-1+(torch.cos(theta_f)**2)-(torch.sin(theta_f)**2))*mg
+        fy=fy_internal+fy_external
+        ground_y=(-1+(torch.cos(theta_f)**2)-(torch.sin(theta_f)**2))*mg
         
         vf_x=vi_x+fx
         vf_y=vi_y+fy
