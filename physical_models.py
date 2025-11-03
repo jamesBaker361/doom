@@ -44,8 +44,8 @@ parser.add_argument("--lr",type=float,default=0.0001)
 parser.add_argument("--batch_size",type=int,default=4)
 parser.add_argument("--image_encoder",type=str,help="one of vae, vqvae, trained",default="vae")
 parser.add_argument("--n_layers_encoder",type=int,default=4)
-parser.add_argument("--epochs",type=int,default=100)
-parser.add_argument("--limit",type=int,default=-1)
+parser.add_argument("--epochs",type=int,default=2)
+parser.add_argument("--limit",type=int,default=10)
 
 class Newtonian(torch.nn.Module):
     #given metadata and embedding , predict net forces on sonic using network, 
