@@ -194,7 +194,7 @@ def main(args):
             break
         
         action_dim=batch["action"].size()[-1]
-        size=batch["image"].size()
+        image_shape=batch["image"].size()[1:]
         
         params=[]
         
@@ -223,7 +223,7 @@ def main(args):
         
         hidden_layer_dim_list=[256,128,64,32]
         
-        model=Newtonian(hidden_layer_dim_list,image_embedding_dim,action_dim,image_encoder)
+        model=Newtonian(hidden_layer_dim_list,image_embedding_dim,action_dim,image_shape, image_encoder)
         params+=[p for p in model.parameters()]
         accelerator.print("model params",len(params))
         optimizer=torch.optim.AdamW(params,args.lr)
