@@ -87,9 +87,9 @@ class Newtonian(torch.nn.Module):
         
         
         
-        fx=fx_internal+fx_external+(2*np.cos(theta_f)*np.sin(theta_f)-self.mu_ground*(np.cos(theta_f)**2))*mg
+        fx=fx_internal+fx_external+(2*torch.cos(theta_f)*torch.sin(theta_f)-self.mu_ground*(torch.cos(theta_f)**2))*mg
         
-        fy=fy_internal+fy_external+(-1+(np.cos(theta_f)**2)-(np.sin(theta_f)**2))*mg
+        fy=fy_internal+fy_external+(-1+(torch.cos(theta_f)**2)-(torch.sin(theta_f)**2))*mg
         
         vf_x=vi_x+fx
         vf_y=vi_y+fy
