@@ -64,7 +64,7 @@ class Newtonian(torch.nn.Module):
         input_dim=embedding_dim+action_dim
         layers=[]
         dim_list=[input_dim]+hidden_layer_dim_list+[5]
-        for k,dim in enumerate(dim_list[:-2]):
+        for k,dim in enumerate(dim_list[:-1]):
             layers.append(torch.nn.Linear(dim, dim_list[k+1]))
             layers.append(torch.nn.LeakyReLU())
             
@@ -78,7 +78,7 @@ class Newtonian(torch.nn.Module):
         
         ground_layers=[torch.nn.Conv2d(3,4,4,2),torch.nn.LeakyReLU(),torch.nn.BatchNorm2d(3)]
         ground_dims=[4,16,64,256]
-        for k,dim in enumerate(ground_dims[:-2]):
+        for k,dim in enumerate(ground_dims[:-1]):
             ground_layers.append(torch.nn.Conv2d(dim,dim*2,4,2))
             ground_layers.append(torch.nn.LeakyReLU())
             ground_layers.append(torch.nn.BatchNorm2d(dim))
@@ -194,6 +194,7 @@ def main(args):
             break
         
         action_dim=batch["action"].size()[-1]
+        size=batch["image"].size()
         
         params=[]
         
