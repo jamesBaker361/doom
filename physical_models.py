@@ -79,6 +79,7 @@ class Newtonian(torch.nn.Module):
     def forward(self,vi_x,vi_y,xi,yi,img,action):
         if self.image_encoder is not None:
             img_embedding=self.image_encoder(img)
+        print("img",img_embedding.size(),"action",action.size())
         predicted=self.layers(torch.concat([img_embedding,action]))
         fx_internal,fy_internal, fx_external,fy_external,theta_f=predicted.chunk(5,dim=1)
 
