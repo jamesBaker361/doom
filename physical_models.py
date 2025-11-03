@@ -88,6 +88,10 @@ class Newtonian(torch.nn.Module):
         
         
         fx=fx_internal+fx_external+(2*torch.cos(theta_f)*torch.sin(theta_f)-self.mu_ground*(torch.cos(theta_f)**2))*mg
+        print('fx_internal',fx_internal.size())
+        print('fx_external',fx_external.size())
+        print('theta_f',theta_f.size())
+        print('self.mu_ground',self.mu_ground.size())
         
         fy=fy_internal+fy_external+(-1+(torch.cos(theta_f)**2)-(torch.sin(theta_f)**2))*mg
         
