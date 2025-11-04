@@ -79,9 +79,9 @@ class Newtonian(torch.nn.Module):
         ground_layers=[torch.nn.Conv2d(3,4,4,2),torch.nn.LeakyReLU(),torch.nn.BatchNorm2d(4)]
         ground_dims=[4,16,64,256]
         for k,dim in enumerate(ground_dims[:-1]):
-            ground_layers.append(torch.nn.Conv2d(dim,dim*2,4,2))
+            ground_layers.append(torch.nn.Conv2d(dim,dim*4,4,2))
             ground_layers.append(torch.nn.LeakyReLU())
-            ground_layers.append(torch.nn.BatchNorm2d(2*dim))
+            ground_layers.append(torch.nn.BatchNorm2d(4*dim))
         ground_layers.append(torch.nn.Flatten())
         img=torch.ones(img_shape)
         
