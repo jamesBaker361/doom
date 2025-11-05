@@ -46,6 +46,7 @@ parser.add_argument("--image_encoder",type=str,help="one of vae, vqvae, trained"
 parser.add_argument("--n_layers_encoder",type=int,default=4)
 parser.add_argument("--epochs",type=int,default=2)
 parser.add_argument("--limit",type=int,default=10)
+parser.add_argument("--val_interval",type=int,default=10)
 
 class Newtonian(torch.nn.Module):
     #given metadata and embedding , predict net forces on sonic using network, 
@@ -266,7 +267,59 @@ def main(args):
             accelerator.print(f"epoch {e} elapsed {end-start}")
             accelerator.log({
                 "loss":np.mean(loss_list)
-            })          
+            })    
+            with torch.no_grad():
+                loss_list=[]
+                if e%args.val_interval==0:
+                    loss_list=[]
+                    start=time.time()
+                    for b,batch in enumerate(val_loader):
+                        if b==args.limit:
+                            break
+                        with accelerator.accumulate():
+                            image=batch["image"]
+                            action=batch["action"]
+                                
+                            vf_x,vf_y,xf,yf=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
+                            
+                            vx_loss=F.mse_loss(vf_x.float(),batch["vf_x"].float())
+                            vy_loss=F.mse_loss(vf_y.float(),batch["vf_y"].float())
+                            x_loss=F.mse_loss(xf.float(),batch["xf"].float())
+                            y_loss=F.mse_loss(yf.float(),batch["yf"].float())
+                        
+                            total_loss=vx_loss+vy_loss+x_loss+y_loss
+                            
+                            loss_list.append(total_loss.cpu().detach().numpy())
+                    accelerator.print(f"val epoch {e} elapsed {end-start}")
+                    accelerator.log({
+                        "val_loss":np.mean(loss_list)
+                    })
+        with torch.no_grad():
+            loss_list=[]
+            start=time.time()
+            for b,batch in enumerate(test_loader):
+                if b==args.limit:
+                    break
+                with accelerator.accumulate():
+                    image=batch["image"]
+                    action=batch["action"]
+                        
+                    vf_x,vf_y,xf,yf=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
+                    
+                    vx_loss=F.mse_loss(vf_x.float(),batch["vf_x"].float())
+                    vy_loss=F.mse_loss(vf_y.float(),batch["vf_y"].float())
+                    x_loss=F.mse_loss(xf.float(),batch["xf"].float())
+                    y_loss=F.mse_loss(yf.float(),batch["yf"].float())
+                
+                    total_loss=vx_loss+vy_loss+x_loss+y_loss
+                    
+                    loss_list.append(total_loss.cpu().detach().numpy())
+            accelerator.print(f"test epoch {e} elapsed {end-start}")
+            accelerator.log({
+                "test_loss":np.mean(loss_list)
+            }) 
+                    
+                  
                 
                 
                     
