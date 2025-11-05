@@ -97,8 +97,11 @@ class Newtonian(torch.nn.Module):
         self.module_list=torch.nn.ModuleList([self.layers,self.ground_layers])
         
     def forward(self,vi_x,vi_y,xi,yi,img,action):
-        ground=self.ground_layers(img)
+        
         img_embedding=self.image_encoder(img)
+        
+        ground=self.ground_layers(img)
+        ground=(ground >0. ).int().to(ground.dtype)
         
         print("img",img_embedding.size(),"action",action.size())
         predicted=self.layers(torch.concat([img_embedding,action],dim=-1))
@@ -106,19 +109,20 @@ class Newtonian(torch.nn.Module):
 
         mg=self.mass*self.g
         
+        ground_fx=ground*(2*torch.cos(theta_f)*torch.sin(theta_f)-self.mu_ground*(torch.cos(theta_f)**2))*mg
+        
+        fx=fx_internal+fx_external+ground_fx
         
         
-        fx=fx_internal+fx_external
-        
-        ground_fx=(2*torch.cos(theta_f)*torch.sin(theta_f)-self.mu_ground*(torch.cos(theta_f)**2))*mg
+        #ground_fx=ground_fx*ground
         print('fx_internal',fx_internal.size())
         print('fx_external',fx_external.size())
         print('theta_f',theta_f.size())
         print('self.mu_ground',self.mu_ground.size())
         print("ground ",ground.size())
         
-        fy=fy_internal+fy_external
-        ground_y=(-1+(torch.cos(theta_f)**2)-(torch.sin(theta_f)**2))*mg
+        ground_y= ground * (-1+(torch.cos(theta_f)**2)-(torch.sin(theta_f)**2))*mg
+        fy=fy_internal+fy_external+ground_y
         
         vf_x=vi_x+fx
         vf_y=vi_y+fy
