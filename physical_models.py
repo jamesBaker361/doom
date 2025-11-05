@@ -264,7 +264,7 @@ def main(args):
                     optimizer.zero_grad()
             end=time.time()
             accelerator.print(f"epoch {e} elapsed {end-start}")
-            accelerator({
+            accelerator.log({
                 "loss":np.mean(loss_list)
             })          
                 
