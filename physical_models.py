@@ -206,13 +206,13 @@ def main(args):
         params=[]
         
         if args.image_encoder=="trained":
-            image_encoder=ImageEncoder(args.n_layers_encoder).to(device)
+            image_encoder=ImageEncoder(args.n_layers_encoder).to(device,batch["image"].dtype)
             params+=[p for p in image_encoder.parameters()]
             accelerator.print("encoder params len ",len(params))
         elif args.image_encoder=="vae":
             image_encoder=VAEWrapper()
             
-        image_embedding_dim=image_encoder(batch["image"]).size()[-1]
+        image_embedding_dim=image_encoder(batch["image"].to(device)).size()[-1]
         
         test_size=int(len(dataset)//10)
         train_size=int(len(dataset)-2*test_size)
