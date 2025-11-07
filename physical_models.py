@@ -104,7 +104,7 @@ class Newtonian(torch.nn.Module):
         ground=self.ground_layers(img)
         ground=(ground >0. ).int().to(ground.dtype)
         
-        print("img",img_embedding.size(),"action",action.size())
+        #print("img",img_embedding.size(),"action",action.size())
         predicted=self.layers(torch.concat([img_embedding,action],dim=-1))
         fx_internal,fy_internal, fx_external,fy_external,theta_f=predicted.chunk(5,dim=1)
 
