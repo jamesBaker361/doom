@@ -195,6 +195,8 @@ def main(args):
         }[args.mixed_precision]
         
         dataset=VelocityPositionDatasetHF("jlbaker361/sonic-vae-preprocessed-500")
+        test_size=int(len(dataset)//10)
+        train_size=int(len(dataset)-2*test_size)
         
         for batch in dataset:
             break
@@ -226,8 +228,7 @@ def main(args):
             
         image_embedding_dim=image_encoder(batch["image"].to(device)).size()[-1]
         
-        test_size=int(len(dataset)//10)
-        train_size=int(len(dataset)-2*test_size)
+        
 
         
         # Set seed for reproducibility
