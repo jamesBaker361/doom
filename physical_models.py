@@ -205,12 +205,24 @@ def main(args):
         
         params=[]
         
+        # Split the dataset
+        train_dataset, test_dataset,val_dataset = random_split(dataset, [train_size, test_size,test_size],)
+        
+        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
+        
+        for batch in train_loader:
+            break
+        
         if args.image_encoder=="trained":
-            image_encoder=ImageEncoder(args.n_layers_encoder).to(device,batch["image"].dtype)
+            image_encoder=ImageEncoder(args.n_layers_encoder).to(device)
             params+=[p for p in image_encoder.parameters()]
             accelerator.print("encoder params len ",len(params))
         elif args.image_encoder=="vae":
             image_encoder=VAEWrapper()
+            
+        image_encoder,train_loader,test_loader,val_loader=accelerator.prepare(image_encoder,train_loader,test_loader,val_loader)
             
         image_embedding_dim=image_encoder(batch["image"].to(device)).size()[-1]
         
@@ -221,12 +233,7 @@ def main(args):
         # Set seed for reproducibility
         generator = torch.Generator().manual_seed(42)
 
-        # Split the dataset
-        train_dataset, test_dataset,val_dataset = random_split(dataset, [train_size, test_size,test_size], generator=generator)
         
-        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
         
         hidden_layer_dim_list=[256,128,64,32]
         
@@ -234,6 +241,8 @@ def main(args):
         params+=[p for p in model.parameters()]
         accelerator.print("model params",len(params))
         optimizer=torch.optim.AdamW(params,args.lr)
+        
+        optimizer,model=accelerator.prepare(optimizer,model)
         
         
         start_epoch=1
@@ -249,6 +258,8 @@ def main(args):
                     if e==start_epoch and b==0:
                         accelerator.print("image",image.device,image.dtype,image.size())
                         
+                        
+                    #with accelerator.autocast():   
                     vf_x,vf_y,xf,yf=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
                     
                     vx_loss=F.mse_loss(vf_x.float(),batch["vf_x"].float())
@@ -258,11 +269,13 @@ def main(args):
                 
                     total_loss=vx_loss+vy_loss+x_loss+y_loss
                     
-                    loss_list.append(total_loss.cpu().detach().numpy())
+                    
                     
                     accelerator.backward(total_loss)
                     optimizer.step()
                     optimizer.zero_grad()
+                    
+                    loss_list.append(total_loss.cpu().detach().numpy())
             end=time.time()
             accelerator.print(f"epoch {e} elapsed {end-start}")
             accelerator.log({
