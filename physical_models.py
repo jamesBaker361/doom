@@ -304,6 +304,7 @@ def main(args):
                             total_loss=vx_loss+vy_loss+x_loss+y_loss
                             
                             loss_list.append(total_loss.cpu().detach().numpy())
+                    end=time.time()
                     accelerator.print(f"val epoch {e} elapsed {end-start}")
                     accelerator.log({
                         "val_loss":np.mean(loss_list)
@@ -328,6 +329,7 @@ def main(args):
                     total_loss=vx_loss+vy_loss+x_loss+y_loss
                     
                     loss_list.append(total_loss.cpu().detach().numpy())
+            end=time.time()
             accelerator.print(f"test epoch {e} elapsed {end-start}")
             accelerator.log({
                 "test_loss":np.mean(loss_list)
