@@ -194,7 +194,7 @@ def main(args):
             "bf16":torch.bfloat16
         }[args.mixed_precision]
         
-        dataset=VelocityPositionDatasetHF("jlbaker361/sonic-vae-preprocessed-500")
+        dataset=VelocityPositionDatasetHF("jlbaker361/sonic-vae-preprocessed-0.1")
         test_size=int(len(dataset)//10)
         train_size=int(len(dataset)-2*test_size)
         
