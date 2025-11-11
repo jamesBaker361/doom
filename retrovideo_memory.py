@@ -159,6 +159,7 @@ class Discretizer(gym.ActionWrapper):
         super().__init__(env)
         assert isinstance(env.action_space, gym.spaces.MultiBinary)
         buttons = env.unwrapped.buttons
+        print('buttons',buttons)
         self._decode_discrete_action = []
         for combo in combos:
             arr = np.array([False] * env.action_space.n)
@@ -216,6 +217,45 @@ if __name__=="__main__":
     }
     d["key"]=[]
     
+    '''for k in range(len(action)):
+        env.reset()
+        d["key"].append(k)
+        act=[0]*len(action)
+        act[k]=1
+        print(act)
+        for z in range(z_range*s):
+            
+            
+            step=env.step(act)
+            if z%s==0:
+                image=Image.fromarray(step[0])
+                d[f"image_{z//s}"].append(image)
+            
+    print(d)
+    Dataset.from_dict(d).push_to_hub("jlbaker361/sonic-buttons")'''
+
+    info_keys=[k for k in step[-1].keys()]
+
+    if args.record:
+        env = gymnasium.wrappers.RecordVideo(
+            env,
+            episode_trigger=lambda num: num % 1 == 0,
+            video_folder="saved-video-folder",
+            name_prefix="video-",
+        )
+
+    console=args.game.split("-")[-1]
+    env=SonicDiscretizer(env)
+    action = env.action_space.sample()
+    action_space_size = env.action_space.n
+    accelerator.print("discretized action ",env.action_space.sample())
+    print("discretized Action space size:", action_space_size)
+    
+    d={
+        f"image_{z}":[] for z in range(z_range)
+    }
+    d["key"]=[]
+    
     for k in range(len(action)):
         env.reset()
         d["key"].append(k)
@@ -231,23 +271,7 @@ if __name__=="__main__":
                 d[f"image_{z//s}"].append(image)
             
     print(d)
-    Dataset.from_dict(d).push_to_hub("jlbaker361/sonic-buttons")
-
-    info_keys=[k for k in step[-1].keys()]
-
-    if args.record:
-        env = gymnasium.wrappers.RecordVideo(
-            env,
-            episode_trigger=lambda num: num % 1 == 0,
-            video_folder="saved-video-folder",
-            name_prefix="video-",
-        )
-
-    console=args.game.split("-")[-1]
-    env=SonicDiscretizer(env)
-    action_space_size = env.action_space.n
-    accelerator.print("discretized action ",env.action_space.sample())
-    print("discretized Action space size:", action_space_size)
+    Dataset.from_dict(d).push_to_hub("jlbaker361/sonic-buttons-2")
 
     if args.use_timelimit:
         env=gym.wrappers.TimeLimit(env,args.max_episode_steps)
