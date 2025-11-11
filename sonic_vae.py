@@ -24,7 +24,7 @@ from diffusers import LCMScheduler,DiffusionPipeline,DEISMultistepScheduler,DDIM
 from diffusers.models.attention_processor import IPAdapterAttnProcessor2_0
 from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
-from data_loaders import FlatImageFolder,MovieImageFolderFromHF,ImageDatasetHF
+from data_loaders import ImageDatasetHF
 from torch.utils.data import ConcatDataset, DataLoader
 from diffusers import AutoencoderKL,DiffusionPipeline
 from transformers import AutoProcessor, CLIPModel
