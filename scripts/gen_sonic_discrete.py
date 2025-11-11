@@ -13,5 +13,5 @@ for timesteps in [10000]:
                         ]:
         scenario=f"{_scenario}{num}"
         command=f"sbatch -J sonic --err=slurm_chip/sonic_sequences_discrete/{scenario}{timesteps}.err --out=slurm_chip/sonic_sequences_discrete/{scenario}{timesteps}.out runpygpu_chip.sh retrovideo_memory.py --scenario {scenario} --timesteps {timesteps} "
-        command+=f" --dest_dataset jlbaker361/discrete_{scenario}{timesteps} --max_episode_steps {timesteps}  "
+        command+=f" --dest_dataset jlbaker361/discrete_{scenario}{timesteps} --max_episode_steps {timesteps} --state {scenario} "
         print(command)
