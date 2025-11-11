@@ -65,10 +65,13 @@ class Newtonian(torch.nn.Module):
         super().__init__(*args, **kwargs)
         input_dim=embedding_dim+action_dim+4
         layers=[]
-        dim_list=[input_dim]+hidden_layer_dim_list+[2]
+        dim_list=[input_dim]+hidden_layer_dim_list+[4]
         for k,dim in enumerate(dim_list[:-1]):
             layers.append(torch.nn.Linear(dim, dim_list[k+1]))
-            layers.append(torch.nn.LeakyReLU())
+            if k==len(dim_list[:-2]):
+                layers.append(torch.nn.Sigmoid())
+            else:
+                layers.append(torch.nn.LeakyReLU())
             
         self.layers=torch.nn.Sequential(*layers)
         
@@ -83,16 +86,28 @@ class Newtonian(torch.nn.Module):
     def forward(self,vi_x,vi_y,xi,yi,img,action):
         
         img_embedding=self.image_encoder(img)
-        misc_f_x,misc_f_y=self.layers(torch.cat(img_embedding,action,vi_x,vi_y,xi,yi))
+        misc_f_x,misc_f_y,theta,ground=self.layers(torch.cat(img_embedding,action,vi_x,vi_y,xi,yi))
         
         drag_y=-1.*self.drag_coefficient*vi_y
         drag_x=-1.*self.drag_coefficient*vi_x
         
-        vf_x=vi_x+misc_f_x+drag_x
-        vf_y=vi_y+misc_f_y+drag_y-self.g
+        ground=(ground > 0.5).float()
+        theta=theta*2* torch.pi
+        
+        normal_x=self.g*torch.cos(theta)*torch.sin(theta)*ground
+        normal_y=self.g*torch.cos(theta)*torch.cos(theta)*ground
+        
+        vf_x=vi_x+misc_f_x+drag_x+normal_x
+        vf_y=vi_y+misc_f_y+drag_y-self.g+normal_y
+        
+        a_x=vf_x-vi_x
+        a_y=vf_y-vi_y
+        
+        x_f=xi+vi_x+a_x
+        y_f=yi+vi_y+a_y
         
         
-        return vf_x,vf_y
+        return x_f,y_f
     
     def parameters(self, recurse = True):
         p= super().parameters(recurse)
@@ -226,10 +241,10 @@ def main(args):
                         
                         
                     #with accelerator.autocast():   
-                    vf_x,vf_y=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
+                    x_f,y_f=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
                     
-                    vx_loss=F.mse_loss(vf_x.float(),batch["vf_x"].float())
-                    vy_loss=F.mse_loss(vf_y.float(),batch["vf_y"].float())
+                    vx_loss=F.mse_loss(vf_x.float(),batch["xf"].float())
+                    vy_loss=F.mse_loss(vf_y.float(),batch["yf"].float())
                 
                     total_loss=vx_loss+vy_loss
                     
