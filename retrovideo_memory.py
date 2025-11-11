@@ -205,9 +205,28 @@ if __name__=="__main__":
     env.reset()
     step= env.step(action)
     print('info',step[-1])
-    print(step)
-    exit()
+    #print(step)
     env.reset()
+    
+    z_range=8
+    
+    d={
+        f"image_{z}":[] for z in range(z_range)
+    }
+    d["key"]=[]
+    
+    for k in range(len(action)):
+        env.reset()
+        d["key"].append(k)
+        act=[0]*len(action)
+        act[k]=1
+        for z in range(z_range):
+            
+            step=env.step(act)
+            image=Image.fromarray(step[0])
+            d[f"image_{z}"].append(image)
+            
+    Dataset.from_dict(d).push_to_hub("jlbaker361/sonic-buttons")
 
     info_keys=[k for k in step[-1].keys()]
 
