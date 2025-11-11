@@ -208,7 +208,7 @@ if __name__=="__main__":
     #print(step)
     env.reset()
     
-    z_range=8
+    z_range=20
     
     d={
         f"image_{z}":[] for z in range(z_range)
