@@ -256,11 +256,10 @@ if __name__=="__main__":
     }
     d["key"]=[]
     
-    for k in range(len(action)):
+    for k in range(action_space_size):
         env.reset()
         d["key"].append(k)
-        act=[0]*len(action)
-        act[k]=1
+        act=k
         print(act)
         for z in range(z_range*s):
             
