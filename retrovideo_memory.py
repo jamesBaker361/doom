@@ -206,6 +206,7 @@ if __name__=="__main__":
     step= env.step(action)
     print('info',step[-1])
     print(step)
+    exit()
     env.reset()
 
     info_keys=[k for k in step[-1].keys()]
