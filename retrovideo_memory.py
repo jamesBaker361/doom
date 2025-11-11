@@ -36,7 +36,7 @@ import struct
 import accelerate
 import wandb
 
-COMBO_LIST=[['LEFT'], ['RIGHT'], ['LEFT', 'DOWN'], ['RIGHT', 'DOWN'], ['DOWN'], ['DOWN', 'B'], ['B']]
+COMBO_LIST=[['LEFT'], ['RIGHT'], ['LEFT', 'B'], ['RIGHT', 'B'], ['DOWN'], ['UP'], ['B']]
 
 parser=argparse.ArgumentParser()
 parser.add_argument("--game",type=str,default="SonicTheHedgehog2-Genesis")
@@ -209,31 +209,7 @@ if __name__=="__main__":
     #print(step)
     env.reset()
     
-    z_range=10
-    s=20
     
-    d={
-        f"image_{z}":[] for z in range(z_range)
-    }
-    d["key"]=[]
-    
-    '''for k in range(len(action)):
-        env.reset()
-        d["key"].append(k)
-        act=[0]*len(action)
-        act[k]=1
-        print(act)
-        for z in range(z_range*s):
-            
-            
-            step=env.step(act)
-            if z%s==0:
-                image=Image.fromarray(step[0])
-                d[f"image_{z//s}"].append(image)
-            
-    print(d)
-    Dataset.from_dict(d).push_to_hub("jlbaker361/sonic-buttons")'''
-
     info_keys=[k for k in step[-1].keys()]
 
     if args.record:
@@ -251,27 +227,7 @@ if __name__=="__main__":
     accelerator.print("discretized action ",env.action_space.sample())
     print("discretized Action space size:", action_space_size)
     
-    d={
-        f"image_{z}":[] for z in range(z_range)
-    }
-    d["key"]=[]
     
-    for k in range(action_space_size):
-        env.reset()
-        d["key"].append(k)
-        act=k
-        print(act)
-        for z in range(z_range*s):
-            
-            
-            step=env.step(act)
-            if z%s==0:
-                image=Image.fromarray(step[0])
-                d[f"image_{z//s}"].append(image)
-            
-    print(d)
-    Dataset.from_dict(d).push_to_hub("jlbaker361/sonic-buttons-2")
-
     if args.use_timelimit:
         env=gym.wrappers.TimeLimit(env,args.max_episode_steps)
 
