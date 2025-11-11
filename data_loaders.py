@@ -73,6 +73,7 @@ class RenderingModelDatasetHF(Dataset):
             self.data=self.data.map(lambda x: {"action":F.one_hot(x["action"],self.n_actions)})
         else:
             self.n_actions=len(self.data["action"][0])
+        
         for i,row in enumerate(self.data):
             if row["episode"] not in episode_set:
                 episode_set.add(row["episode"])
@@ -86,13 +87,13 @@ class RenderingModelDatasetHF(Dataset):
             self.data=self.data.map(lambda x: {key:torch.tensor(x[key])})
 
     def __len__(self):
-        return len(self.data)
+        return len(self.data)-1
     
     def __getitem__(self, index):
-        #return super().__getitem__(index)
+        '''#return super().__getitem__(index)
         end_index=find_earliest_less_than(self.start_index_list,index)
-        output_dict={"image":torch.tensor(self.data["image"][index:end_index]),
-                     "action":torch.tensor(self.data["action"][index:end_index])}
+        output_dict={"image":torch.tensor(self.data["image"][index]),
+                     "action":torch.tensor(self.data["action"][index])}
         if len(self.metadata_key_list)>0:
             for key in self.metadata_key_list:
                 output_dict[key]=self.data[key][index:end_index]
@@ -102,7 +103,22 @@ class RenderingModelDatasetHF(Dataset):
             shape=v[0].size()
             output_dict[k]+=[torch.zeros(shape) for _ in range(self.max_sequence_length)]
         output_dict["stop"]=end_index-index
-        return output_dict
+        return output_dict'''
+        image=torch.tensor(self.data["image"][index])
+        if self.vae is not None:
+            image=self.vae.encode(image).latent_dist.sample()
+            
+        next_image=torch.tensor(self.data["image"][index+1])
+        if self.vae is not None:
+            next_image=self.vae.encode(next_image).latent_dist.sample()
+        output_dict={
+            "image":image,
+            "next_image":next_image
+        }
+        for key in self.metadata_key_list:
+            output_dict[key]=self.data[key][index]
+            
+        return index
     
     
 class VelocityPositionDatasetHF(Dataset):
