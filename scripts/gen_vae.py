@@ -1,5 +1,5 @@
-for encoder_type in ["vae","vqvae"]:
-    for grad in [4,8]:
+for encoder_type in ["vae"]:
+    for grad in [16]:
         for lr in [0.001, 0.0001]:
             name=f"{encoder_type}_{grad}_{lr}"
             command=f" sbatch -J vae --constraint=L40S --err=slurm_chip/encoder/{name}.err --out=slurm_chip/encoder/{name}.out runpygpu_chip_l40.sh vae.py "
