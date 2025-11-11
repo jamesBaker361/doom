@@ -47,6 +47,7 @@ parser.add_argument("--n_layers_encoder",type=int,default=4)
 parser.add_argument("--epochs",type=int,default=2)
 parser.add_argument("--limit",type=int,default=10)
 parser.add_argument("--val_interval",type=int,default=10)
+parser.add_argument("--velocity_dataset",type=str,default="jlbaker361/discrete_AquaticRuinZone.Act110000")
 
 class Newtonian(torch.nn.Module):
     #given metadata and embedding , predict net forces on sonic using network, 
@@ -158,8 +159,8 @@ def main(args):
             "bf16":torch.bfloat16
         }[args.mixed_precision]
         
-        dataset=VelocityPositionDatasetHF("jlbaker361/sonic-vae-preprocessed-0.1")
-        test_size=int(len(dataset)//10)
+        dataset=VelocityPositionDatasetHF(args.velocity_dataset)
+        test_size=int(len(dataset)//4)
         train_size=int(len(dataset)-2*test_size)
         
         for batch in dataset:
