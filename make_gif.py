@@ -12,8 +12,11 @@ duration=40
 for n,row in enumerate(data):
     image=row["image"]
     draw=ImageDraw.Draw(image)
-    draw.text((10,10),"Sample Text",(255,255,255))
-    text=row["action_combo"]
+    text=str(row["action_combo"])
+    draw.text((10,10),text,(255,255,255))
+    images.append(image)
+    
+    
 
 images[0].save('pillow_imagedraw.gif',
                save_all = True, append_images = images[1:],
