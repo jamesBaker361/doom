@@ -36,6 +36,7 @@ import struct
 import accelerate
 import wandb
 
+COMBO_LIST=[['LEFT'], ['RIGHT'], ['LEFT', 'DOWN'], ['RIGHT', 'DOWN'], ['DOWN'], ['DOWN', 'B'], ['B']]
 
 parser=argparse.ArgumentParser()
 parser.add_argument("--game",type=str,default="SonicTheHedgehog2-Genesis")
@@ -84,12 +85,6 @@ def pad_image_with_text(img:Image.Image, lines:list, font_size:int=20)->Image.Im
     return new_img
 
 
-
-
-
-
-
-
 class FrameActionPerEpisodeLogger(BaseCallback):
     def __init__(self, save_freq: int,info_keys:list,accelerator:accelerate.Accelerator,dest_dataset:str,verbose: int = 0,image_saving:bool=True):
         super().__init__(verbose)
@@ -103,7 +98,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
         self.info_keys=info_keys
         self.image_saving=image_saving
         self.output_dict={
-            key:[] for key in ["episode", "frame_in_episode", "action","image"]+self.info_keys
+            key:[] for key in ["episode", "frame_in_episode", "action","image","action_combo"]+self.info_keys
         }
         self.accelerator=accelerator
         self.dest_dataset=dest_dataset
@@ -130,6 +125,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
             self.output_dict["episode"].append(self.episode_idx)
             self.output_dict["frame_in_episode"].append(self.frame_idx)
             self.output_dict["action"].append(action)
+            self.output_dict["action_combo"].append(COMBO_LIST[action])
 
             for key,value in self.locals["infos"][0].items():
                 if key in self.output_dict:
@@ -176,13 +172,14 @@ class Discretizer(gym.ActionWrapper):
         return self._decode_discrete_action[act].copy()
 
 
+
 class SonicDiscretizer(Discretizer):
     """
     Use Sonic-specific discrete actions
     based on https://github.com/openai/retro-baselines/blob/master/agents/sonic_util.py
     """
     def __init__(self, env):
-        super().__init__(env=env, combos=[['LEFT'], ['RIGHT'], ['LEFT', 'DOWN'], ['RIGHT', 'DOWN'], ['DOWN'], ['DOWN', 'B'], ['B']])
+        super().__init__(env=env, combos=COMBO_LIST)
 
 
 
@@ -202,6 +199,7 @@ if __name__=="__main__":
             )
 
     action = env.action_space.sample()
+    accelerator.print("action space",action)
 
     # Take the step using the random action
     env.reset()
@@ -222,6 +220,7 @@ if __name__=="__main__":
     console=args.game.split("-")[-1]
     env=SonicDiscretizer(env)
     action_space_size = env.action_space.n
+    accelerator.print("discretized action ",env.action_space.sample())
     print("discretized Action space size:", action_space_size)
 
     if args.use_timelimit:
