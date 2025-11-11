@@ -62,9 +62,9 @@ class Newtonian(torch.nn.Module):
     def __init__(self,hidden_layer_dim_list:list,embedding_dim:int, action_dim:int,img_shape:tuple,
                  image_encoder: torch.nn.Module=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        input_dim=embedding_dim+action_dim
+        input_dim=embedding_dim+action_dim+4
         layers=[]
-        dim_list=[input_dim]+hidden_layer_dim_list+[5]
+        dim_list=[input_dim]+hidden_layer_dim_list+[2]
         for k,dim in enumerate(dim_list[:-1]):
             layers.append(torch.nn.Linear(dim, dim_list[k+1]))
             layers.append(torch.nn.LeakyReLU())
@@ -72,66 +72,30 @@ class Newtonian(torch.nn.Module):
         self.layers=torch.nn.Sequential(*layers)
         
         self.g=torch.nn.Parameter(torch.randn([1]))
-        self.mu_air=torch.nn.Parameter(torch.randn([1]))
-        self.mu_ground=torch.nn.Parameter(torch.randn([1]))
+        self.drag_coefficient=torch.nn.Parameter(torch.randn([1]))
         self.mass=1.
         self.image_encoder=image_encoder
         
-        ground_layers=[torch.nn.Conv2d(3,4,4,2),torch.nn.LeakyReLU(),torch.nn.BatchNorm2d(4)]
-        ground_dims=[4,16,64,256]
-        for k,dim in enumerate(ground_dims[:-1]):
-            ground_layers.append(torch.nn.Conv2d(dim,dim*4,4,2))
-            ground_layers.append(torch.nn.LeakyReLU())
-            ground_layers.append(torch.nn.BatchNorm2d(4*dim))
-        ground_layers.append(torch.nn.Flatten())
-        img=torch.ones(img_shape)
-        
-        for layer in ground_layers:
-            img=layer(img)
             
-        ground_dim=img.size()[-1]
-        
-        ground_layers.append(torch.nn.Linear(ground_dim,1))
-        ground_layers.append(torch.nn.Tanh())
-        self.ground_layers=torch.nn.Sequential(*ground_layers)
-            
-        self.module_list=torch.nn.ModuleList([self.layers,self.ground_layers])
+        self.module_list=torch.nn.ModuleList([self.layers])
         
     def forward(self,vi_x,vi_y,xi,yi,img,action):
         
         img_embedding=self.image_encoder(img)
+        misc_f_x,misc_f_y=self.layers(torch.cat(img_embedding,action,vi_x,vi_y,xi,yi))
         
-        ground=self.ground_layers(img)
-        ground=(ground >0. ).int().to(ground.dtype)
+        drag_y=-1.*self.drag_coefficient*vi_y
+        drag_x=-1.*self.drag_coefficient*vi_x
         
-        #print("img",img_embedding.size(),"action",action.size())
-        predicted=self.layers(torch.concat([img_embedding,action],dim=-1))
-        fx_internal,fy_internal, fx_external,fy_external,theta_f=predicted.chunk(5,dim=1)
-
-        mg=self.mass*self.g
-        
-        ground_fx=ground*(2*torch.cos(theta_f)*torch.sin(theta_f)-self.mu_ground*(torch.cos(theta_f)**2))*mg
-        
-        fx=fx_internal+fx_external+ground_fx
+        vf_x=vi_x+misc_f_x+drag_x
+        vf_y=vi_y+misc_f_y+drag_y-self.g
         
         
-        #ground_fx=ground_fx*ground
-        '''print('fx_internal',fx_internal.size())
-        print('fx_external',fx_external.size())
-        print('theta_f',theta_f.size())
-        print('self.mu_ground',self.mu_ground.size())
-        print("ground ",ground.size())'''
-        
-        ground_y= ground * (-1+(torch.cos(theta_f)**2)-(torch.sin(theta_f)**2))*mg
-        fy=fy_internal+fy_external+ground_y
-        
-        vf_x=vi_x+fx
-        vf_y=vi_y+fy
-        
-        xf=xi+vf_x
-        yf=yi+vf_y
-        
-        return vf_x,vf_y,xf,yf
+        return vf_x,vf_y
+    
+    def parameters(self, recurse = True):
+        p= super().parameters(recurse)
+        return p+[self.g,self.drag_coefficient]
     
 class ImageEncoder(torch.nn.Module):
     def __init__(self,n_layers:int, *args, **kwargs):
@@ -261,16 +225,12 @@ def main(args):
                         
                         
                     #with accelerator.autocast():   
-                    vf_x,vf_y,xf,yf=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
+                    vf_x,vf_y=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
                     
                     vx_loss=F.mse_loss(vf_x.float(),batch["vf_x"].float())
                     vy_loss=F.mse_loss(vf_y.float(),batch["vf_y"].float())
-                    x_loss=F.mse_loss(xf.float(),batch["xf"].float())
-                    y_loss=F.mse_loss(yf.float(),batch["yf"].float())
                 
-                    total_loss=vx_loss+vy_loss+x_loss+y_loss
-                    
-                    
+                    total_loss=vx_loss+vy_loss
                     
                     accelerator.backward(total_loss)
                     optimizer.step()
