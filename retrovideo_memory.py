@@ -199,7 +199,7 @@ if __name__=="__main__":
             )
 
     action = env.action_space.sample()
-    accelerator.print("action space",action)
+    accelerator.print("action space",action,len(action))
 
     # Take the step using the random action
     env.reset()
