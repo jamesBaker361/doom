@@ -122,13 +122,22 @@ class RenderingModelDatasetHF(Dataset):
     
     
 class VelocityPositionDatasetHF(Dataset):
-    def __init__(self,src_dataset:str):
+    def __init__(self,src_dataset:str,image_processor:VaeImageProcessor=None,process:bool=False):
         super().__init__()
         self.data=load_dataset(src_dataset,split="train")
         self.start_index_list=[]
         episode_set=set()
         self.initial_velocity_x=[]
         self.initial_velocity_y=[]
+        
+        if process:
+            self.n_actions=len(set(self.data["action"]))
+            if image_processor is not None:
+                self.data=self.data.map(lambda x :{"image": image_processor.preprocess( x["image"])[0]})
+            self.data=self.data.map(lambda x: {"action":F.one_hot(x["action"],self.n_actions)})
+        else:
+            self.n_actions=len(self.data["action"][0])
+        
         for i,row in enumerate(self.data):
             if row["episode"] not in episode_set:
                 episode_set.add(row["episode"])
