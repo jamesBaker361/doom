@@ -220,12 +220,14 @@ if __name__=="__main__":
         d["key"].append(k)
         act=[0]*len(action)
         act[k]=1
+        print(act)
         for z in range(z_range):
             
             step=env.step(act)
             image=Image.fromarray(step[0])
             d[f"image_{z}"].append(image)
             
+    print(d)
     Dataset.from_dict(d).push_to_hub("jlbaker361/sonic-buttons")
 
     info_keys=[k for k in step[-1].keys()]
