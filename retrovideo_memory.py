@@ -208,7 +208,8 @@ if __name__=="__main__":
     #print(step)
     env.reset()
     
-    z_range=20
+    z_range=10
+    s=20
     
     d={
         f"image_{z}":[] for z in range(z_range)
@@ -221,11 +222,13 @@ if __name__=="__main__":
         act=[0]*len(action)
         act[k]=1
         print(act)
-        for z in range(z_range):
+        for z in range(z_range*s):
+            
             
             step=env.step(act)
-            image=Image.fromarray(step[0])
-            d[f"image_{z}"].append(image)
+            if z%s==0:
+                image=Image.fromarray(step[0])
+                d[f"image_{z//s}"].append(image)
             
     print(d)
     Dataset.from_dict(d).push_to_hub("jlbaker361/sonic-buttons")
