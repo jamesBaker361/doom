@@ -164,27 +164,7 @@ print("snes_map",SNES_MAP)
 print("genesis_map",GENESIS_MAP)
 
 
-class Discretizer(gym.ActionWrapper):
-    def __init__(self, env,console:str="Genesis"):
-        super().__init__(env)
-        if console=="Genesis":
-            self.buttons=GENESIS_BUTTONS
-            self.console_map=GENESIS_MAP
-        elif console=="Snes":
-            self.buttons=SNES_BUTTONS
-            self.console_map=SNES_MAP
-        self._actions=[]
-        for action in self.console_map.keys():
-            button_combo = self.console_map[action]
-            arr = np.array([False] * len(self.buttons))
-            for btn in button_combo:
-                arr[self.buttons.index(btn)] = True
-            self._actions.append(arr)
-        
-        self.action_space = gym.spaces.Discrete(len(self._actions))
 
-    def action(self, a): # pylint: disable=W0221
-        return self._actions[a].copy()
 
 
 
@@ -308,6 +288,40 @@ class FrameActionPerEpisodeLogger(BaseCallback):
             self.episode_idx += 1
             self.frame_idx = 0  # reset per episode
         return True
+    
+class Discretizer(gym.ActionWrapper):
+    """
+    Wrap a gym environment and make it use discrete actions.
+
+    Args:
+        combos: ordered list of lists of valid button combinations
+    """
+
+    def __init__(self, env, combos):
+        super().__init__(env)
+        assert isinstance(env.action_space, gym.spaces.MultiBinary)
+        buttons = env.unwrapped.buttons
+        self._decode_discrete_action = []
+        for combo in combos:
+            arr = np.array([False] * env.action_space.n)
+            for button in combo:
+                arr[buttons.index(button)] = True
+            self._decode_discrete_action.append(arr)
+
+        self.action_space = gym.spaces.Discrete(len(self._decode_discrete_action))
+
+    def action(self, act):
+        return self._decode_discrete_action[act].copy()
+
+
+class SonicDiscretizer(Discretizer):
+    """
+    Use Sonic-specific discrete actions
+    based on https://github.com/openai/retro-baselines/blob/master/agents/sonic_util.py
+    """
+    def __init__(self, env):
+        super().__init__(env=env, combos=[['LEFT'], ['RIGHT'], ['LEFT', 'DOWN'], ['RIGHT', 'DOWN'], ['DOWN'], ['DOWN', 'B'], ['B']])
+
 
 
 if __name__=="__main__":
@@ -344,9 +358,9 @@ if __name__=="__main__":
         )
 
     console=args.game.split("-")[-1]
-    env=Discretizer(env,console)
+    env=SonicDiscretizer(env)
     action_space_size = env.action_space.n
-    print("Action space size:", action_space_size)
+    print("discretized Action space size:", action_space_size)
 
     if args.use_timelimit:
         env=gym.wrappers.TimeLimit(env,args.max_episode_steps)
