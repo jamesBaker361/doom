@@ -36,7 +36,7 @@ import struct
 import accelerate
 import wandb
 
-COMBO_LIST=[['LEFT'], ['RIGHT'], ['LEFT', 'B'], ['RIGHT', 'B'], ['DOWN'], ['UP'], ['B']]
+COMBO_LIST=[['LEFT'], ['RIGHT'], ['DOWN'], ['B']]
 
 parser=argparse.ArgumentParser()
 parser.add_argument("--game",type=str,default="SonicTheHedgehog2-Genesis")
@@ -50,6 +50,7 @@ parser.add_argument("--dest_dataset",type=str,default="jlbaker361/sonic_rl")
 parser.add_argument("--use_timelimit",action="store_true")
 parser.add_argument("--max_episode_steps",type=int,default=50)
 parser.add_argument("--image_saving",action="store_false")
+parser.add_argument("--hard_coded_steps",type=int,default=1000)
 
 
 CSV_NAME="actions.csv"
@@ -241,6 +242,10 @@ if __name__=="__main__":
         info_keys=info_keys,
         image_saving=args.image_saving
     )
+    
+        
+        
+    
 
     save_path=os.path.join(MODEL_SAVE_DIR,args.game,args.scenario)
     checkpoint_path=os.path.join(save_path,"checkpoints")
@@ -257,8 +262,32 @@ if __name__=="__main__":
 
     model.learn(args.timesteps,callback=CallbackList([checkpoint_callback, callback]))
     model.save(save_path)
-
+    
     output_dict=callback.output_dict
+    hard_coded_steps=[]
+    for q in range(args.hard_coded_steps):
+        if q%20!=0:
+            hard_coded_steps.append(COMBO_LIST.find(["RIGHT"]))
+        else:
+            hard_coded_steps.append(COMBO_LIST.find(["B"]))
+            
+    output_dict=callback.output_dict
+    episode=output_dict["episode"][-1]+1
+    for k,action in enumerate(hard_coded_steps):
+        result=env.step(action)
+        frame=result[0]
+        info=result[-1]
+        image=Image.fromarray(frame)
+        output_dict["image"].append(image)
+        output_dict["episode"].append(episode)
+        output_dict["frame_in_episode"].append(k)
+        output_dict["action"].append(action)
+        for key,value in info.items():
+            if key in output_dict:
+                output_dict[key].append(value)
+        
+
+    
 
     Dataset.from_dict(output_dict).push_to_hub(args.dest_dataset)
 
