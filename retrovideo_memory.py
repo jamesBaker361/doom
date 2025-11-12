@@ -267,9 +267,9 @@ if __name__=="__main__":
     hard_coded_steps=[]
     for q in range(args.hard_coded_steps):
         if q%20!=0:
-            hard_coded_steps.append(COMBO_LIST.find(["RIGHT"]))
+            hard_coded_steps.append(COMBO_LIST.index(["RIGHT"]))
         else:
-            hard_coded_steps.append(COMBO_LIST.find(["B"]))
+            hard_coded_steps.append(COMBO_LIST.index(["B"]))
             
     output_dict=callback.output_dict
     episode=output_dict["episode"][-1]+1
