@@ -282,6 +282,7 @@ if __name__=="__main__":
         output_dict["episode"].append(episode)
         output_dict["frame_in_episode"].append(k)
         output_dict["action"].append(action)
+        output_dict["action_combo"].append(COMBO_LIST[action])
         for key,value in info.items():
             if key in output_dict:
                 output_dict[key].append(value)
