@@ -15,6 +15,7 @@ import time
 import torch.nn.functional as F
 from PIL import Image
 from diffusers.models.autoencoders.vq_model import VQModel
+from constants import VAE_WEIGHTS_NAME
 import random
 import wandb
 import numpy as np
@@ -134,16 +135,16 @@ def main(args):
             autoencoder=pipe.vae.to(device)
         elif args.encoder_type=="vqvae":
             autoencoder=VQModel()
-        WEIGHTS_NAME="diffusion_pytorch_model.safetensors"
+        
         CONFIG_NAME="config.json"
 
 
         start_epoch=1
         try:
             if args.load_hf:
-                pretrained_weights_path=api.hf_hub_download(args.name,WEIGHTS_NAME,force_download=True)
+                pretrained_vae_path=api.hf_hub_download(args.name,VAE_WEIGHTS_NAME,force_download=True)
                 pretrained_config_path=api.hf_hub_download(args.name,CONFIG_NAME,force_download=True)
-                autoencoder.load_state_dict(torch.load(pretrained_weights_path,weights_only=True),strict=False)
+                autoencoder.load_state_dict(torch.load(pretrained_vae_path,weights_only=True),strict=False)
                 with open(pretrained_config_path,"r") as f:
                     data=json.load(f)
                 start_epoch=data["start_epoch"]+1
@@ -192,7 +193,7 @@ def main(args):
         save_subdir=os.path.join(args.save_dir,args.name)
         os.makedirs(save_subdir,exist_ok=True)
         
-        save_path=os.path.join(save_subdir,WEIGHTS_NAME)
+        save_path=os.path.join(save_subdir,VAE_WEIGHTS_NAME)
         config_path=os.path.join(save_subdir,CONFIG_NAME)
         def save(e:int):
             state_dict=autoencoder.state_dict()
@@ -206,7 +207,7 @@ def main(args):
             print(f"saved {save_path}")
             try:
                 api.upload_file(path_or_fileobj=save_path,
-                                        path_in_repo=WEIGHTS_NAME,
+                                        path_in_repo=VAE_WEIGHTS_NAME,
                                         repo_id=args.name)
                 api.upload_file(path_or_fileobj=config_path,path_in_repo=CONFIG_NAME,
                                         repo_id=args.name)
