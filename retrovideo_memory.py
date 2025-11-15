@@ -138,9 +138,13 @@ class FrameActionPerEpisodeLogger(BaseCallback):
                 Dataset.from_dict(self.output_dict).push_to_hub(self.dest_dataset)
         dones = self.locals["dones"]
         #print(self.locals["infos"])
-        if dones[0]:
+        if "rewards" in self.locals:
             accelerator.log({
                 "reward":self.locals["rewards"][0]
+            })
+        if dones[0]:
+            accelerator.log({
+                "final_reward":self.locals["rewards"][0]
             })
 
             Dataset.from_dict(self.output_dict).push_to_hub(self.dest_dataset)
