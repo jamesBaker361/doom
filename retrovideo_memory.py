@@ -238,10 +238,10 @@ if __name__=="__main__":
             self.render()
         #print("hello monkey")
         rings=dict(info)["rings"]
-        print(rings," rings")
         if rings>self.rings:
             rew+=rings-self.rings
             self.rings=rings
+            print("rings ",rings)
         else:
             rew-=0.00001
         return ob, rew, bool(done), False, dict(info)
