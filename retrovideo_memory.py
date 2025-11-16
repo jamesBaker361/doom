@@ -270,7 +270,7 @@ if __name__=="__main__":
         self.visited_y=set()
         self.rings=0
         self.visited_x=set()
-        return original_reset(self,seed,options)
+        return original_reset(seed,options)
         
     
     action = env.action_space.sample()
