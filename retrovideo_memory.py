@@ -218,6 +218,10 @@ if __name__=="__main__":
     def step_monkey_sonic(self, a):
         if getattr(self,"rings",None)==None:
             self.rings=0
+        if getattr(self, "visited_x",None)==None:
+            self.visited_x=set()
+        if getattr(self,"visited_y",None)==None:
+            self.visited_y=set()
         if self.img is None and self.ram is None:
             raise RuntimeError("Please call env.reset() before env.step()")
 
@@ -239,13 +243,32 @@ if __name__=="__main__":
         #print("hello monkey")
         rings=dict(info)["rings"]
         if rings>self.rings:
-            rew+=rings-self.rings
+            rew+=10
             self.rings=rings
             print("rings ",rings)
-        else:
-            rew-=0.00001
+        x=dict(info)["x"]
+        y=dict(info)["x"]
+        if x not in self.visited_x:
+            self.visited_x.add(x)
+            rew+=0.01*abs(x-self.starting_x)
+        if y not in self.visited_y:
+            self.visited_y.add(y)
+            rew+=0.00001* abs(y-self.starting_y)
+        rew-=0.000001
         return ob, rew, bool(done), False, dict(info)
     
+    action = env.action_space.sample()
+    accelerator.print("action space",action,len(action))
+
+    # Take the step using the random action
+    env.reset()
+    step= env.step(action)
+    info=step[-1]
+    
+    if getattr(env,"starting_x",None)==None:
+        env.starting_x=info["x"]
+    if getattr(env,"starting_y",None)==None:
+        env.starting_y=info["y"]
     env.step=step_monkey_sonic.__get__(env)
 
     action = env.action_space.sample()
