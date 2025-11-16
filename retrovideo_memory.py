@@ -186,6 +186,15 @@ class SonicDiscretizer(Discretizer):
     """
     def __init__(self, env):
         super().__init__(env=env, combos=COMBO_LIST)
+        
+class RingObservationReward(gym.ObservationWrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        self.ring_count=0
+        
+    def observation(self, observation):
+        print(observation)
+        return observation
 
 
 
@@ -203,6 +212,39 @@ if __name__=="__main__":
                 scenario=args.scenario,
                 render_mode="rgb_array",
             )
+    
+    
+    
+    def step_monkey_sonic(self, a):
+        if getattr(self,"rings",None)==None:
+            self.rings=0
+        if self.img is None and self.ram is None:
+            raise RuntimeError("Please call env.reset() before env.step()")
+
+        for p, ap in enumerate(self.action_to_array(a)):
+            if self.movie:
+                for i in range(self.num_buttons):
+                    self.movie.set_key(i, ap[i], p)
+            self.em.set_button_mask(ap, p)
+
+        if self.movie:
+            self.movie.step()
+        self.em.step()
+        self.data.update_ram()
+        ob = self._update_obs()
+        rew, done, info = self.compute_step()
+
+        if self.render_mode == "human":
+            self.render()
+        #print("hello monkey")
+        rings=dict(info)["rings"]
+        print(rings," rings")
+        if rings>self.rings:
+            rew+=rings-self.rings
+            self.rings=rings
+        else:
+            rew-=0.00001
+        return ob, rew, bool(done), False, dict(info)
 
     action = env.action_space.sample()
     accelerator.print("action space",action,len(action))
