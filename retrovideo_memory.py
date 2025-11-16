@@ -219,6 +219,8 @@ if __name__=="__main__":
                 render_mode="rgb_array",
             )
     
+    original_reset=env.reset
+    
     
     
     def step_monkey_sonic(self, a):
@@ -264,33 +266,11 @@ if __name__=="__main__":
         return ob, rew, bool(done), False, dict(info)
     
     def reset_monkey(self, seed=None, options=None):
-        super().reset(seed=seed)
-
-        if self.initial_state:
-            self.em.set_state(self.initial_state)
-        for p in range(self.players):
-            self.em.set_button_mask(np.zeros([self.num_buttons], np.uint8), p)
-        self.em.step()
-        if self.movie_path is not None:
-            rel_statename = os.path.splitext(os.path.basename(self.statename))[0]
-            self.record_movie(
-                os.path.join(
-                    self.movie_path,
-                    "%s-%s-%06d.bk2" % (self.gamename, rel_statename, self.movie_id),
-                ),
-            )
-            self.movie_id += 1
-        if self.movie:
-            self.movie.step()
-        self.data.reset()
-        self.data.update_ram()
-
-        if self.render_mode == "human":
-            self.render()
+        
         self.visited_y=set()
         self.rings=0
         self.visited_x=set()
-        return self._update_obs(), {}
+        return original_reset(self,seed,options)
         
     
     action = env.action_space.sample()
