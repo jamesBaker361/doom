@@ -103,6 +103,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
         }
         self.accelerator=accelerator
         self.dest_dataset=dest_dataset
+        self.cum_reward=0
         
 
     def _on_step(self) -> bool:
@@ -141,6 +142,10 @@ class FrameActionPerEpisodeLogger(BaseCallback):
         if "rewards" in self.locals:
             accelerator.log({
                 "reward":self.locals["rewards"][0]
+            })
+            self.cum_reward+=self.locals["rewards"][0]
+            accelerator.log({
+                "cum_reward":self.cum_reward
             })
         if dones[0]:
             accelerator.log({
@@ -242,8 +247,8 @@ if __name__=="__main__":
             self.render()
         #print("hello monkey")
         rings=dict(info)["rings"]
-        if rings>self.rings:
-            rew+=10
+        if rings!=self.rings:
+            rew+=(rings-self.rings)
             self.rings=rings
             print("rings ",rings)
         x=dict(info)["x"]
