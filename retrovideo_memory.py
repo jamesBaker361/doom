@@ -148,6 +148,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
                 "cum_reward":self.cum_reward
             })
         if dones[0]:
+            self.cum_reward=0
             accelerator.log({
                 "final_reward":self.locals["rewards"][0]
             })
@@ -262,6 +263,36 @@ if __name__=="__main__":
         rew-=0.000001
         return ob, rew, bool(done), False, dict(info)
     
+    def reset_monkey(self, seed=None, options=None):
+        super().reset(seed=seed)
+
+        if self.initial_state:
+            self.em.set_state(self.initial_state)
+        for p in range(self.players):
+            self.em.set_button_mask(np.zeros([self.num_buttons], np.uint8), p)
+        self.em.step()
+        if self.movie_path is not None:
+            rel_statename = os.path.splitext(os.path.basename(self.statename))[0]
+            self.record_movie(
+                os.path.join(
+                    self.movie_path,
+                    "%s-%s-%06d.bk2" % (self.gamename, rel_statename, self.movie_id),
+                ),
+            )
+            self.movie_id += 1
+        if self.movie:
+            self.movie.step()
+        self.data.reset()
+        self.data.update_ram()
+
+        if self.render_mode == "human":
+            self.render()
+        self.visited_y=set()
+        self.rings=0
+        self.visited_x=set()
+        return self._update_obs(), {}
+        
+    
     action = env.action_space.sample()
     accelerator.print("action space",action,len(action))
 
@@ -275,6 +306,7 @@ if __name__=="__main__":
     if getattr(env,"starting_y",None)==None:
         env.starting_y=info["y"]
     env.step=step_monkey_sonic.__get__(env)
+    env.reset=reset_monkey.__get__(env)
 
     action = env.action_space.sample()
     accelerator.print("action space",action,len(action))
