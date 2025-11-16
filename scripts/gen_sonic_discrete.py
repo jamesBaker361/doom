@@ -1,4 +1,4 @@
-for timesteps in [100_000,10_000,1000_000]:
+for timesteps in [5000_000]:
   for num in [
       1
       #,2
@@ -13,5 +13,5 @@ for timesteps in [100_000,10_000,1000_000]:
                         ]:
         scenario=f"{_scenario}{num}"
         command=f"sbatch -J sonic --err=slurm_chip/sonic_sequences_discrete/{scenario}{timesteps}.err --out=slurm_chip/sonic_sequences_discrete/{scenario}{timesteps}.out runpygpu_chip.sh retrovideo_memory.py --scenario {scenario} --timesteps {timesteps} "
-        command+=f" --dest_dataset jlbaker361/discrete_{scenario}{timesteps} --max_episode_steps {timesteps//20} --state {scenario} "
+        command+=f" --dest_dataset jlbaker361/discrete_{scenario}{timesteps} --max_episode_steps {timesteps//100} --state {scenario} "
         print(command)
