@@ -245,6 +245,8 @@ if __name__=="__main__":
         else:
             rew-=0.00001
         return ob, rew, bool(done), False, dict(info)
+    
+    env.step=step_monkey_sonic.__get__(env)
 
     action = env.action_space.sample()
     accelerator.print("action space",action,len(action))
