@@ -174,7 +174,10 @@ def main(args):
             "bf16":torch.bfloat16
         }[args.mixed_precision]
         
-        dataset=VelocityPositionDatasetHF(args.velocity_dataset)
+        pipe=DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7")
+        image_processor=pipe.image_processor
+        
+        dataset=VelocityPositionDatasetHF(args.velocity_dataset,image_processor,True)
         test_size=int(len(dataset)//4)
         train_size=int(len(dataset)-2*test_size)
         
