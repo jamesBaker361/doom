@@ -374,7 +374,7 @@ from diffusers import LCMScheduler,DiffusionPipeline,DEISMultistepScheduler,DDIM
 from diffusers.models.attention_processor import IPAdapterAttnProcessor2_0
 from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
-from data_loaders import WorldModelDatasetHF
+from data_loaders import RenderingModelDatasetHF
 from torch.utils.data import random_split, DataLoader
 from torch.distributions import Normal
 from torch.distributions.kl import kl_divergence
@@ -443,7 +443,7 @@ def main(args):
     if not args.use_metadata:
         args.metadata_key_list=[]
 
-    dataset=WorldModelDatasetHF(args.src_dataset,DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7").image_processor,args.metadata_key_list)
+    dataset=RenderingModelDatasetHF(args.src_dataset,DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7").image_processor,args.metadata_key_list)
 
     test_size=args.batch_size * 2
     train_size=len(dataset)-test_size

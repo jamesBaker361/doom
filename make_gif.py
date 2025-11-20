@@ -5,15 +5,16 @@ from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
 
-data=load_dataset("jlbaker361/discrete_CasinoNightZone.Act110",split="train")
+data=load_dataset("jlbaker361/discrete_HillTopZone.Act11000000",split="train")
 
 images=[]
-duration=40
+duration=500
 for n,row in enumerate(data):
     image=row["image"]
     draw=ImageDraw.Draw(image)
     text=str(row["action_combo"])
-    draw.text((10,10),text,(255,255,255))
+    font = ImageFont.load_default(20)
+    draw.text((150,10),text,(255,255,255),font=font)
     images.append(image)
     
     
