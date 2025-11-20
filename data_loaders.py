@@ -39,12 +39,13 @@ class ImageDatasetHF(Dataset):
                  skip_num:int=1):
         super().__init__()
         data=load_dataset(src_dataset,split="train")["image"]
+        self.image_processor=image_processor
         if process:
             _image_list=[self.image_processor.preprocess(image)[0] for image in data]
         else:
             _image_list=data
         self.image_list=_image_list[::skip_num]
-        self.image_processor=image_processor
+        
 
     def __len__(self):
         return len(self.image_list)
