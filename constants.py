@@ -1,0 +1,1 @@
+VAE_WEIGHTS_NAME="vae_pytorch_model.safetensors"
