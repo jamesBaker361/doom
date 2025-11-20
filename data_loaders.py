@@ -135,7 +135,7 @@ class VelocityPositionDatasetHF(Dataset):
             self.n_actions=len(set(self.data["action"]))
             if image_processor is not None:
                 self.data=self.data.map(lambda x :{"image": image_processor.preprocess( x["image"])[0]})
-            self.data=self.data.map(lambda x: {"action":F.one_hot(x["action"],self.n_actions)})
+            self.data=self.data.map(lambda x: {"action":F.one_hot(torch.tensor(x["action"]),self.n_actions)})
         else:
             self.n_actions=len(self.data["action"][0])
         
