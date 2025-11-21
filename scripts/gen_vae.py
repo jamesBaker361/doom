@@ -7,5 +7,5 @@ for encoder_type in ["vae"]:
                 command=f" sbatch -J vae --constraint=L40S --err=slurm_chip/encoder/{name}.err --out=slurm_chip/encoder/{name}.out runpygpu_chip_l40.sh sonic_vae.py "
                 command+=f" --name  jlbaker361/sonic-encoder-{name} --save_dir sonic_encoder_{name}  --encoder_type  {encoder_type}  --project_name sonic-encoding --gradient_accumulation_steps {grad} "
                 command+=f" --lr {lr} "
-                command+=f" --process_data --skip_num 100 --src_dataset {data} "
+                command+=f" --process_data --skip_num 2 --src_dataset {data} "
                 print(command)
