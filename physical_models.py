@@ -5,6 +5,7 @@ from datasets import load_dataset
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import json
+import itertools
 
 import torch
 import accelerate
@@ -111,7 +112,7 @@ class Newtonian(torch.nn.Module):
     
     def parameters(self, recurse = True):
         p= super().parameters(recurse)
-        return p+[self.g,self.drag_coefficient]
+        return itertools.chain(p, [self.g,self.drag_coefficient])
     
 class ImageEncoder(torch.nn.Module):
     def __init__(self,n_layers:int, *args, **kwargs):
