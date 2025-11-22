@@ -87,7 +87,7 @@ class Newtonian(torch.nn.Module):
     def forward(self,vi_x,vi_y,xi,yi,img,action):
         
         img_embedding=self.image_encoder(img)
-        misc_f_x,misc_f_y,theta,ground=self.layers(torch.cat([img_embedding,action,vi_x,vi_y,xi,yi]))
+        misc_f_x,misc_f_y,theta,ground=self.layers(torch.cat([img_embedding,action,vi_x,vi_y,xi,yi],dim=1))
         
         drag_y=-1.*self.drag_coefficient*vi_y
         drag_x=-1.*self.drag_coefficient*vi_x
