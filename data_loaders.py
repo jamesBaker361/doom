@@ -132,6 +132,11 @@ class VelocityPositionDatasetHF(Dataset):
     def __init__(self,src_dataset:str,image_processor:VaeImageProcessor=None,process:bool=False):
         super().__init__()
         self.data=load_dataset(src_dataset,split="train")
+        try:
+            self.data=self.data.cast_column("image",datasets.Image())
+        except:
+            pass
+        
         self.start_index_list=[]
         episode_set=set()
         self.initial_velocity_x=[]
