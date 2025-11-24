@@ -288,14 +288,12 @@ def main(args):
                             image=batch["image"]
                             action=batch["action"]
                                 
-                            vf_x,vf_y,xf,yf=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
-                            
-                            vx_loss=F.mse_loss(vf_x.float(),batch["vf_x"].float())
-                            vy_loss=F.mse_loss(vf_y.float(),batch["vf_y"].float())
-                            x_loss=F.mse_loss(xf.float(),batch["xf"].float())
-                            y_loss=F.mse_loss(yf.float(),batch["yf"].float())
+                            x_f,y_f=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
+                    
+                            vx_loss=F.mse_loss(x_f.float(),batch["xf"].float())
+                            vy_loss=F.mse_loss(y_f.float(),batch["yf"].float())
                         
-                            total_loss=vx_loss+vy_loss+x_loss+y_loss
+                            total_loss=vx_loss+vy_loss
                             
                             loss_list.append(total_loss.cpu().detach().numpy())
                     end=time.time()
@@ -313,14 +311,12 @@ def main(args):
                     image=batch["image"]
                     action=batch["action"]
                         
-                    vf_x,vf_y,xf,yf=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
+                    x_f,y_f=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
                     
-                    vx_loss=F.mse_loss(vf_x.float(),batch["vf_x"].float())
-                    vy_loss=F.mse_loss(vf_y.float(),batch["vf_y"].float())
-                    x_loss=F.mse_loss(xf.float(),batch["xf"].float())
-                    y_loss=F.mse_loss(yf.float(),batch["yf"].float())
+                    vx_loss=F.mse_loss(x_f.float(),batch["xf"].float())
+                    vy_loss=F.mse_loss(y_f.float(),batch["yf"].float())
                 
-                    total_loss=vx_loss+vy_loss+x_loss+y_loss
+                    total_loss=vx_loss+vy_loss
                     
                     loss_list.append(total_loss.cpu().detach().numpy())
             end=time.time()
