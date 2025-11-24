@@ -12,6 +12,7 @@ from diffusers.image_processor import VaeImageProcessor
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
 from diffusers import AutoencoderKL
 from datasets import load_dataset
+import datasets
 
 import numpy as np
 import torch.nn.functional as F
@@ -38,7 +39,12 @@ class ImageDatasetHF(Dataset):
                  process:bool=False,
                  skip_num:int=1):
         super().__init__()
-        data=load_dataset(src_dataset,split="train")["image"]
+        dataset=load_dataset(src_dataset,split="train")
+        try:
+            dataset=dataset.cast_column("image",datasets.Image())
+        except:
+            pass
+        data=dataset["image"]
         self.image_processor=image_processor
         if process:
             _image_list=[self.image_processor.preprocess(image)[0] for image in data]
