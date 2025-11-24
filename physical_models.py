@@ -255,8 +255,8 @@ def main(args):
                     #with accelerator.autocast():   
                     x_f,y_f=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
                     
-                    vx_loss=F.mse_loss(vf_x.float(),batch["xf"].float())
-                    vy_loss=F.mse_loss(vf_y.float(),batch["yf"].float())
+                    vx_loss=F.mse_loss(x_f.float(),batch["xf"].float())
+                    vy_loss=F.mse_loss(y_f.float(),batch["yf"].float())
                 
                     total_loss=vx_loss+vy_loss
                     
