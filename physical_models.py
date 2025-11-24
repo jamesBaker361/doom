@@ -91,7 +91,11 @@ class Newtonian(torch.nn.Module):
                             ['img_embedding','action','vi_x','vi_y','xi','yi']):
             print("dims???",_t.size(),_name)
             
-        misc_f_x,misc_f_y,theta,ground=self.layers(torch.cat([img_embedding,action,vi_x,vi_y,xi,yi],dim=1))
+        misc_f_x,misc_f_y,theta,ground=self.layers(torch.cat([img_embedding,action,
+                                                              vi_x.unsqueeze(-1),
+                                                              vi_y.unsqueeze(-1),
+                                                              xi.unsqueeze(-1),
+                                                              yi.unsqueeze(-1)],dim=1))
         
         drag_y=-1.*self.drag_coefficient*vi_y
         drag_x=-1.*self.drag_coefficient*vi_x
