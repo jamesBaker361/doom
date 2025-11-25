@@ -87,9 +87,9 @@ class Newtonian(torch.nn.Module):
     def forward(self,vi_x,vi_y,xi,yi,img,action):
         
         img_embedding=self.image_encoder(img)
-        for _t,_name in zip([img_embedding,action,vi_x,vi_y,xi,yi],
+        '''for _t,_name in zip([img_embedding,action,vi_x,vi_y,xi,yi],
                             ['img_embedding','action','vi_x','vi_y','xi','yi']):
-            print("dims???",_t.size(),_name)
+            print("dims???",_t.size(),_name)'''
             
         layer_output=self.layers(torch.cat([img_embedding,action,
                                                               vi_x.unsqueeze(-1),
