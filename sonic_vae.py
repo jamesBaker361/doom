@@ -27,7 +27,6 @@ from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
 from data_loaders import ImageDatasetHF
 from torch.utils.data import ConcatDataset, DataLoader
-from diffusers import AutoencoderKL,DiffusionPipeline
 from transformers import AutoProcessor, CLIPModel
 from diffusers.image_processor import VaeImageProcessor
 from torch.utils.data import random_split, DataLoader
@@ -222,9 +221,6 @@ def main(args):
         
         save_path=os.path.join(save_subdir,VAE_WEIGHTS_NAME)
         config_path=os.path.join(save_subdir,CONFIG_NAME)
-        import os
-        import json
-        from diffusers import AutoencoderKL
 
         def save_model(vae: AutoencoderKL, epoch: int, repo_id: str, save_dir: str = "vae_ckpt"):
             """
