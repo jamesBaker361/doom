@@ -36,7 +36,7 @@ try:
 except ImportError:
     print("cant import register_fsdp_forward_method")
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
-from huggingface_hub import create_repo,HfApi
+from huggingface_hub import create_repo,HfApi,hf_hub_download
 
 parser=argparse.ArgumentParser()
 parser.add_argument("--mixed_precision",type=str,default="fp16")
@@ -137,19 +137,33 @@ def main(args):
             autoencoder=VQModel()
         
         CONFIG_NAME="config.json"
+        
+        
+        def load_model(repo_id: str):
+            """
+            Loads VAE from HuggingFace in correct architecture + resume epoch.
+            """
+            # 1. Download the folder
+            vae = AutoencoderKL.from_pretrained(repo_id)
+
+            # 2. Read training metadata (start_epoch)
+            index_path = hf_hub_download(repo_id, "model_index.json")
+            with open(index_path, "r") as f:
+                data = json.load(f)
+
+            if "training" in data and "start_epoch" in data["training"]:
+                start_epoch = data["training"]["start_epoch"] + 1
+            else:
+                start_epoch = 1  # fresh training
+
+            print(f"[OK] Loaded VAE from {repo_id}, resume at epoch {start_epoch}")
+
+            return vae, start_epoch
 
 
         start_epoch=1
-        try:
-            if args.load_hf:
-                pretrained_vae_path=api.hf_hub_download(args.name,VAE_WEIGHTS_NAME,force_download=True)
-                pretrained_config_path=api.hf_hub_download(args.name,CONFIG_NAME,force_download=True)
-                autoencoder.load_state_dict(torch.load(pretrained_vae_path,weights_only=True),strict=False)
-                with open(pretrained_config_path,"r") as f:
-                    data=json.load(f)
-                start_epoch=data["start_epoch"]+1
-        except Exception as e:
-            accelerator.print(e)
+        if args.load_hf:
+            autoencoder,start_epoch=load_model(args.name)
             
 
 
@@ -195,26 +209,43 @@ def main(args):
         
         save_path=os.path.join(save_subdir,VAE_WEIGHTS_NAME)
         config_path=os.path.join(save_subdir,CONFIG_NAME)
-        def save(e:int):
-            state_dict=autoencoder.state_dict()
-            print("state dict len",len(state_dict))
-            torch.save(state_dict,save_path)
-            with open(config_path,"w+") as config_file:
-                data={"start_epoch":e}
-                json.dump(data,config_file, indent=4)
-                pad = " " * 2048  # ~1KB of padding
-                config_file.write(pad)
-            print(f"saved {save_path}")
-            try:
-                api.upload_file(path_or_fileobj=save_path,
-                                        path_in_repo=VAE_WEIGHTS_NAME,
-                                        repo_id=args.name)
-                api.upload_file(path_or_fileobj=config_path,path_in_repo=CONFIG_NAME,
-                                        repo_id=args.name)
-                print(f"uploaded {args.name} to hub")
-            except Exception as e:
-                accelerator.print("failed to upload")
-                accelerator.print(e)
+        import os
+        import json
+        from diffusers import AutoencoderKL
+
+        def save_model(vae: AutoencoderKL, epoch: int, repo_id: str, save_dir: str = "vae_ckpt"):
+            """
+            Save AutoEncoderKL in HF-pretrained format + store start_epoch safely.
+            """
+            os.makedirs(save_dir, exist_ok=True)
+
+            # 1. Save full HF format (weights + config)
+            vae.save_pretrained(save_dir)
+
+            # 2. Add training metadata (e.g., epoch) into model_index.json
+            index_path = os.path.join(save_dir, "model_index.json")
+            if os.path.exists(index_path):
+                with open(index_path, "r") as f:
+                    index_data = json.load(f)
+            else:
+                index_data = {}
+
+            index_data["training"] = {"start_epoch": epoch}
+
+            with open(index_path, "w") as f:
+                json.dump(index_data, f, indent=4)
+
+            print(f"[OK] Saved VAE checkpoint to {save_dir}")
+
+            # 3. Upload entire folder to HuggingFace repo
+            from huggingface_hub import upload_folder
+            upload_folder(
+                folder_path=save_dir,
+                repo_id=repo_id,
+                path_in_repo=".",   # root of the repo
+            )
+            print(f"[OK] Uploaded to HuggingFace: {repo_id}")
+
             
 
         for e in range(start_epoch,args.epochs+1):
@@ -245,7 +276,7 @@ def main(args):
                     "loss_mean":np.mean(loss_buffer),
                     "loss_std":np.std(loss_buffer),
                 })
-            save(e)
+            save_model(autoencoder,e,args.name,save_subdir)
             if e%args.image_interval==1:
                 with torch.no_grad():
                     predicted_batch=autoencoder(initial_batch).sample
@@ -260,7 +291,7 @@ def main(args):
                         })
 
         with torch.no_grad():
-            save(e)
+            save_model(autoencoder,e,args.name,save_subdir)
             for initial_batch in test_loader:
                 initial_batch=initial_batch["image"].to(device)
                 predicted_batch=autoencoder(initial_batch).sample
