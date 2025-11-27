@@ -163,7 +163,20 @@ def main(args):
 
         start_epoch=1
         if args.load_hf:
-            autoencoder,start_epoch=load_model(args.name)
+            repo_id=args.name
+            autoencoder = AutoencoderKL.from_pretrained(repo_id)
+
+            # 2. Read training metadata (start_epoch)
+            index_path = hf_hub_download(repo_id, "model_index.json")
+            with open(index_path, "r") as f:
+                data = json.load(f)
+
+            if "training" in data and "start_epoch" in data["training"]:
+                start_epoch = data["training"]["start_epoch"] + 1
+            else:
+                start_epoch = 1  # fresh training
+
+            print(f"[OK] Loaded VAE from {repo_id}, resume at epoch {start_epoch}")
             
 
 
