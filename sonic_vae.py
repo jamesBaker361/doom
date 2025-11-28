@@ -36,7 +36,7 @@ except ImportError:
     print("cant import register_fsdp_forward_method")
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
 from huggingface_hub import create_repo,HfApi,hf_hub_download
-import huggingface_hub
+import requests
 
 parser=argparse.ArgumentParser()
 parser.add_argument("--mixed_precision",type=str,default="fp16")
@@ -178,7 +178,7 @@ def main(args):
                     start_epoch = 1  # fresh training
 
                 accelerator.print(f"[OK] Loaded VAE from {repo_id}, resume at epoch {start_epoch}")
-            except huggingface_hub.errors.EntryNotFoundError:
+            except requests.exceptions.HTTPError:
                 accelerator.print("not found couldnt load")
             
 
