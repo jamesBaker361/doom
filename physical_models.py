@@ -26,7 +26,9 @@ from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
 from data_loaders import VelocityPositionDatasetHF
 from torch.utils.data import random_split, DataLoader
+from accelerate.utils import set_seed
 
+set_seed(123) 
 
 from transformers import AutoProcessor, CLIPModel
 try:
@@ -225,13 +227,6 @@ def main(args):
         image_encoder,train_loader,test_loader,val_loader=accelerator.prepare(image_encoder,train_loader,test_loader,val_loader)
             
         image_embedding_dim=image_encoder(batch["image"].to(device)).size()[-1]
-        
-        
-
-        
-        # Set seed for reproducibility
-        generator = torch.Generator().manual_seed(42)
-
         
         
         hidden_layer_dim_list=[256,128,64,32]
