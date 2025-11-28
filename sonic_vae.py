@@ -35,7 +35,7 @@ try:
 except ImportError:
     print("cant import register_fsdp_forward_method")
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
-from huggingface_hub import create_repo,HfApi,hf_hub_download
+from huggingface_hub import create_repo,HfApi,hf_hub_download,upload_folder
 import requests
 from accelerate.utils import set_seed
 
@@ -150,7 +150,7 @@ def main(args):
             vae = AutoencoderKL.from_pretrained(repo_id)
 
             # 2. Read training metadata (start_epoch)
-            index_path = hf_hub_download(repo_id, "model_index.json")
+            index_path = hf_hub_download(repo_id, CONFIG_NAME)
             with open(index_path, "r") as f:
                 data = json.load(f)
 
@@ -167,20 +167,7 @@ def main(args):
         start_epoch=1
         if args.load_hf:
             try:
-                repo_id=args.name
-                autoencoder = AutoencoderKL.from_pretrained(repo_id)
-
-                # 2. Read training metadata (start_epoch)
-                index_path = hf_hub_download(repo_id, "model_index.json")
-                with open(index_path, "r") as f:
-                    data = json.load(f)
-
-                if "training" in data and "start_epoch" in data["training"]:
-                    start_epoch = data["training"]["start_epoch"] + 1
-                else:
-                    start_epoch = 1  # fresh training
-
-                accelerator.print(f"[OK] Loaded VAE from {repo_id}, resume at epoch {start_epoch}")
+                autoencoder,start_epoch=load_model(args.name)
             except requests.exceptions.HTTPError:
                 accelerator.print("not found couldnt load")
             
@@ -239,7 +226,7 @@ def main(args):
             vae.save_pretrained(save_dir)
 
             # 2. Add training metadata (e.g., epoch) into model_index.json
-            index_path = os.path.join(save_dir, "model_index.json")
+            index_path = os.path.join(save_dir, CONFIG_NAME)
             if os.path.exists(index_path):
                 with open(index_path, "r") as f:
                     index_data = json.load(f)
@@ -251,16 +238,16 @@ def main(args):
             with open(index_path, "w") as f:
                 json.dump(index_data, f, indent=4)
 
-            print(f"[OK] Saved VAE checkpoint to {save_dir}")
+            accelerator.print(f"[OK] Saved VAE checkpoint to {save_dir}")
 
             # 3. Upload entire folder to HuggingFace repo
-            from huggingface_hub import upload_folder
+            
             upload_folder(
                 folder_path=save_dir,
                 repo_id=repo_id,
                 path_in_repo=".",   # root of the repo
             )
-            print(f"[OK] Uploaded to HuggingFace: {repo_id}")
+            accelerator.print(f"[OK] Uploaded to HuggingFace: {repo_id}")
 
             
 
