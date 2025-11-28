@@ -37,6 +37,9 @@ except ImportError:
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
 from huggingface_hub import create_repo,HfApi,hf_hub_download
 import requests
+from accelerate.utils import set_seed
+
+set_seed(123)
 
 parser=argparse.ArgumentParser()
 parser.add_argument("--mixed_precision",type=str,default="fp16")
