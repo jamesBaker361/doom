@@ -36,6 +36,7 @@ except ImportError:
     print("cant import register_fsdp_forward_method")
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
 from huggingface_hub import create_repo,HfApi,hf_hub_download
+import huggingface_hub
 
 parser=argparse.ArgumentParser()
 parser.add_argument("--mixed_precision",type=str,default="fp16")
@@ -162,20 +163,23 @@ def main(args):
 
         start_epoch=1
         if args.load_hf:
-            repo_id=args.name
-            autoencoder = AutoencoderKL.from_pretrained(repo_id)
+            try:
+                repo_id=args.name
+                autoencoder = AutoencoderKL.from_pretrained(repo_id)
 
-            # 2. Read training metadata (start_epoch)
-            index_path = hf_hub_download(repo_id, "model_index.json")
-            with open(index_path, "r") as f:
-                data = json.load(f)
+                # 2. Read training metadata (start_epoch)
+                index_path = hf_hub_download(repo_id, "model_index.json")
+                with open(index_path, "r") as f:
+                    data = json.load(f)
 
-            if "training" in data and "start_epoch" in data["training"]:
-                start_epoch = data["training"]["start_epoch"] + 1
-            else:
-                start_epoch = 1  # fresh training
+                if "training" in data and "start_epoch" in data["training"]:
+                    start_epoch = data["training"]["start_epoch"] + 1
+                else:
+                    start_epoch = 1  # fresh training
 
-            print(f"[OK] Loaded VAE from {repo_id}, resume at epoch {start_epoch}")
+                accelerator.print(f"[OK] Loaded VAE from {repo_id}, resume at epoch {start_epoch}")
+            except huggingface_hub.errors.EntryNotFoundError:
+                accelerator.print("not found couldnt load")
             
 
 
