@@ -137,10 +137,13 @@ def main(args):
 
         if args.encoder_type=="vae":
             autoencoder=pipe.vae.to(device)
+            
         elif args.encoder_type=="vqvae":
             autoencoder=VQModel()
         
         CONFIG_NAME="config.json"
+        
+        accelerator.print(autoencoder.config)
         
         
         def load_model(repo_id: str):
