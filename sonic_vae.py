@@ -62,6 +62,7 @@ parser.add_argument("--load_hf",action="store_true")
 parser.add_argument("--encoder_type",type=str,default="vae")
 parser.add_argument("--skip_num",type=int,default=100)
 parser.add_argument("--process_data",action="store_true")
+parser.add_argument("--load_locally",action="store_true")
 
 def concat_images_horizontally(images)-> Image.Image:
     """
