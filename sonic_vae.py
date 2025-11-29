@@ -99,6 +99,7 @@ def concat_images_horizontally(images)-> Image.Image:
     return new_img
 
 def main(args):
+    e=0
     accelerator=Accelerator(log_with="wandb",mixed_precision=args.mixed_precision,gradient_accumulation_steps=args.gradient_accumulation_steps)
     print("accelerator device",accelerator.device)
     device=accelerator.device
