@@ -241,7 +241,7 @@ def main(args):
     initial_batch=initial_batch["image"].to(device)
 
     with torch.no_grad():
-        for initial_batch in test_loader:
+        for j,initial_batch in enumerate(test_loader):
             initial_batch=initial_batch["image"].to(device)
             predicted_batch=autoencoder(initial_batch).sample
             batch_size=predicted_batch.size()[0]
@@ -250,7 +250,7 @@ def main(args):
             for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
                 concatenated_image=concat_images_horizontally([real,reconstructed])
                 accelerator.log({
-                    f"test_image_{k}":wandb.Image(concatenated_image)
+                    f"test_image_{j}_{k}":wandb.Image(concatenated_image)
                 })
     
     
@@ -334,8 +334,7 @@ def main(args):
                     })
 
     with torch.no_grad():
-        save_model(autoencoder,e,args.name,save_subdir)
-        for initial_batch in test_loader:
+        for j,initial_batch in enumerate(test_loader):
             initial_batch=initial_batch["image"].to(device)
             predicted_batch=autoencoder(initial_batch).sample
             batch_size=predicted_batch.size()[0]
@@ -344,13 +343,12 @@ def main(args):
             for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
                 concatenated_image=concat_images_horizontally([real,reconstructed])
                 accelerator.log({
-                    f"test_image_{k}":wandb.Image(concatenated_image)
+                    f"test_image_{j}_{k}":wandb.Image(concatenated_image)
                 })
                 
     autoencoder=AutoencoderKL.from_pretrained(args.name).to(device)
     with torch.no_grad():
-        save_model(autoencoder,e,args.name,save_subdir)
-        for initial_batch in test_loader:
+        for j,initial_batch in enumerate(test_loader):
             initial_batch=initial_batch["image"].to(device)
             predicted_batch=autoencoder(initial_batch).sample
             batch_size=predicted_batch.size()[0]
@@ -359,14 +357,13 @@ def main(args):
             for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
                 concatenated_image=concat_images_horizontally([real,reconstructed])
                 accelerator.log({
-                    f"test_image_{k}":wandb.Image(concatenated_image)
+                    f"test_image_{j}_{k}":wandb.Image(concatenated_image)
                 })
                 
     autoencoder=AutoencoderKL.from_pretrained(save_subdir).to(device)
     
     with torch.no_grad():
-        save_model(autoencoder,e,args.name,save_subdir)
-        for initial_batch in test_loader:
+        for j,initial_batch in enumerate(test_loader):
             initial_batch=initial_batch["image"].to(device)
             predicted_batch=autoencoder(initial_batch).sample
             batch_size=predicted_batch.size()[0]
@@ -375,7 +372,7 @@ def main(args):
             for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
                 concatenated_image=concat_images_horizontally([real,reconstructed])
                 accelerator.log({
-                    f"test_image_{k}":wandb.Image(concatenated_image)
+                    f"test_image_{j}_{k}":wandb.Image(concatenated_image)
                 })
 
         
