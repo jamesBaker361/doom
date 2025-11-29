@@ -86,7 +86,7 @@ class Newtonian(torch.nn.Module):
             
         self.module_list=torch.nn.ModuleList([self.layers])
         
-    def forward(self,vi_x,vi_y,xi,yi,img,action):
+    def forward(self,vi_x,vi_y,xi,yi,img,action,g_scale=1,drag_scale=1):
         
         img_embedding=self.image_encoder(img)
         '''for _t,_name in zip([img_embedding,action,vi_x,vi_y,xi,yi],
@@ -105,17 +105,17 @@ class Newtonian(torch.nn.Module):
         ground=layer_output[:,3]
         #misc_f_y,theta,ground=layer_output
         
-        drag_y=-1.*self.drag_coefficient*vi_y
-        drag_x=-1.*self.drag_coefficient*vi_x
+        drag_y=drag_scale * -1.*self.drag_coefficient*vi_y
+        drag_x= drag_scale * -1.*self.drag_coefficient*vi_x
         
         ground=(ground > 0.5).float()
         theta=theta*2* torch.pi
         
-        normal_x=self.g*torch.cos(theta)*torch.sin(theta)*ground
-        normal_y=self.g*torch.cos(theta)*torch.cos(theta)*ground
+        normal_x=(g_scale * self.g)*torch.cos(theta)*torch.sin(theta)*ground
+        normal_y=(g_scale * self.g)*torch.cos(theta)*torch.cos(theta)*ground
         
         vf_x=vi_x+misc_f_x+drag_x+normal_x
-        vf_y=vi_y+misc_f_y+drag_y-self.g+normal_y
+        vf_y=vi_y+misc_f_y+drag_y-(g_scale * self.g)+normal_y
         
         a_x=vf_x-vi_x
         a_y=vf_y-vi_y
