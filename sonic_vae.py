@@ -277,11 +277,12 @@ def main(args):
         )
         accelerator.print(f"[OK] Uploaded to HuggingFace: {repo_id}")
 
-    with accelerator.autocast():    
+       
 
-        for e in range(start_epoch,args.epochs+1):
-            start=time.time()
-            loss_buffer=[]
+    for e in range(start_epoch,args.epochs+1):
+        start=time.time()
+        loss_buffer=[]
+        with accelerator.autocast(): 
             for b,batch in enumerate(train_loader):
                 if b==args.limit:
                     break
@@ -299,27 +300,27 @@ def main(args):
                     optimizer.zero_grad()
                     loss_buffer.append(loss.cpu().detach().item())
 
-            end=time.time()
+        end=time.time()
 
-            accelerator.print(f"\t epoch {e} elapsed {end-start}")
+        accelerator.print(f"\t epoch {e} elapsed {end-start}")
 
-            accelerator.log({
-                    "loss_mean":np.mean(loss_buffer),
-                    "loss_std":np.std(loss_buffer),
-                })
-            save_model(autoencoder,e,args.name,save_subdir)
-            if e%args.image_interval==1:
-                with torch.no_grad():
-                    predicted_batch=autoencoder(initial_batch).sample
-                    batch_size=predicted_batch.size()[0]
-                    predicted_images=image_processor.postprocess(predicted_batch,do_denormalize= [True]*batch_size)
-                    initial_images=image_processor.postprocess(initial_batch,do_denormalize= [True]*batch_size)
-                    print('type(predicted_images)',type(predicted_images))
-                    for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
-                        concatenated_image=concat_images_horizontally([real,reconstructed])
-                        accelerator.log({
-                            f"image_{k}":wandb.Image(concatenated_image)
-                        })
+        accelerator.log({
+                "loss_mean":np.mean(loss_buffer),
+                "loss_std":np.std(loss_buffer),
+            })
+        save_model(autoencoder,e,args.name,save_subdir)
+        if e%args.image_interval==1:
+            with torch.no_grad():
+                predicted_batch=autoencoder(initial_batch).sample
+                batch_size=predicted_batch.size()[0]
+                predicted_images=image_processor.postprocess(predicted_batch,do_denormalize= [True]*batch_size)
+                initial_images=image_processor.postprocess(initial_batch,do_denormalize= [True]*batch_size)
+                print('type(predicted_images)',type(predicted_images))
+                for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
+                    concatenated_image=concat_images_horizontally([real,reconstructed])
+                    accelerator.log({
+                        f"image_{k}":wandb.Image(concatenated_image)
+                    })
 
     with torch.no_grad():
         save_model(autoencoder,e,args.name,save_subdir)
