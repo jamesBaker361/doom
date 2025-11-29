@@ -199,7 +199,7 @@ def main(args):
                 accelerator.print("not found couldnt load")
                 
         if args.load_locally:
-            autoencoder,start_epoch=load_model(save_subdir)
+            autoencoder,start_epoch=load_model_locally(save_subdir)
             
 
 
