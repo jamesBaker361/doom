@@ -347,7 +347,7 @@ def main(args):
                     f"test_image_{k}":wandb.Image(concatenated_image)
                 })
                 
-    autoencoder=AutoencoderKL.from_pretrained(args.name)
+    autoencoder=AutoencoderKL.from_pretrained(args.name).to(device)
     with torch.no_grad():
         save_model(autoencoder,e,args.name,save_subdir)
         for initial_batch in test_loader:
@@ -362,7 +362,7 @@ def main(args):
                     f"test_image_{k}":wandb.Image(concatenated_image)
                 })
                 
-    autoencoder=AutoencoderKL.from_pretrained(save_subdir)
+    autoencoder=AutoencoderKL.from_pretrained(save_subdir).to(device)
     
     with torch.no_grad():
         save_model(autoencoder,e,args.name,save_subdir)
