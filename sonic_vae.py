@@ -145,6 +145,11 @@ def main(args):
         
         accelerator.print(autoencoder.config)
         
+        save_subdir=os.path.join(os.getcwd(),args.save_dir,args.name)
+        os.makedirs(save_subdir,exist_ok=True)
+        
+        
+        
         
         def load_model(repo_id: str):
             """
@@ -174,6 +179,9 @@ def main(args):
                 autoencoder,start_epoch=load_model(args.name)
             except requests.exceptions.HTTPError:
                 accelerator.print("not found couldnt load")
+                
+        if args.load_locally:
+            autoencoder,start_epoch=load_model(save_subdir)
             
 
 
@@ -214,11 +222,9 @@ def main(args):
 
         initial_batch=initial_batch["image"].to(device)
 
-        save_subdir=os.path.join(args.save_dir,args.name)
-        os.makedirs(save_subdir,exist_ok=True)
         
-        save_path=os.path.join(save_subdir,VAE_WEIGHTS_NAME)
-        config_path=os.path.join(save_subdir,CONFIG_NAME)
+        
+        
 
         def save_model(vae: AutoencoderKL, epoch: int, repo_id: str, save_dir: str = "vae_ckpt"):
             """
