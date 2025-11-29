@@ -172,6 +172,23 @@ def main(args):
             print(f"[OK] Loaded VAE from {repo_id}, resume at epoch {start_epoch}")
 
             return vae, start_epoch
+        
+        def load_model_locally(subdir:str):
+            vae = AutoencoderKL.from_pretrained(subdir)
+
+            # 2. Read training metadata (start_epoch)
+            index_path = os.path.join(subdir, CONFIG_NAME)
+            with open(index_path, "r") as f:
+                data = json.load(f)
+
+            if "training" in data and "start_epoch" in data["training"]:
+                start_epoch = data["training"]["start_epoch"] + 1
+            else:
+                start_epoch = 1  # fresh training
+
+            print(f"[OK] Loaded VAE from {subdir}, resume at epoch {start_epoch}")
+
+            return vae, start_epoch
 
 
         start_epoch=1
