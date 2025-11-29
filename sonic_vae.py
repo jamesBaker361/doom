@@ -130,154 +130,154 @@ def main(args):
         "bf16":torch.bfloat16
     }[args.mixed_precision]
 
-    with accelerator.autocast():
+    
 
-        pipe=DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7")
-        image_processor=pipe.image_processor
+    pipe=DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7")
+    image_processor=pipe.image_processor
+    
+
+    if args.encoder_type=="vae":
+        autoencoder=pipe.vae.to(device)
         
+    elif args.encoder_type=="vqvae":
+        autoencoder=VQModel()
+    
+    CONFIG_NAME="config.json"
+    
+    accelerator.print(autoencoder.config)
+    
+    save_subdir=os.path.join(os.getcwd(),args.save_dir,args.name)
+    os.makedirs(save_subdir,exist_ok=True)
+    
+    
+    
+    
+    def load_model(repo_id: str):
+        """
+        Loads VAE from HuggingFace in correct architecture + resume epoch.
+        """
+        # 1. Download the folder
+        vae = AutoencoderKL.from_pretrained(repo_id)
 
-        if args.encoder_type=="vae":
-            autoencoder=pipe.vae.to(device)
+        # 2. Read training metadata (start_epoch)
+        index_path = hf_hub_download(repo_id, CONFIG_NAME)
+        with open(index_path, "r") as f:
+            data = json.load(f)
+
+        if "training" in data and "start_epoch" in data["training"]:
+            start_epoch = data["training"]["start_epoch"] + 1
+        else:
+            start_epoch = 1  # fresh training
+
+        print(f"[OK] Loaded VAE from {repo_id}, resume at epoch {start_epoch}")
+
+        return vae, start_epoch
+    
+    def load_model_locally(subdir:str):
+        vae = AutoencoderKL.from_pretrained(subdir)
+
+        # 2. Read training metadata (start_epoch)
+        index_path = os.path.join(subdir, CONFIG_NAME)
+        with open(index_path, "r") as f:
+            data = json.load(f)
+
+        if "training" in data and "start_epoch" in data["training"]:
+            start_epoch = data["training"]["start_epoch"] + 1
+        else:
+            start_epoch = 1  # fresh training
+
+        print(f"[OK] Loaded VAE from {subdir}, resume at epoch {start_epoch}")
+
+        return vae, start_epoch
+
+
+    start_epoch=1
+    if args.load_hf:
+        try:
+            autoencoder,start_epoch=load_model(args.name)
+        except requests.exceptions.HTTPError:
+            accelerator.print("not found couldnt load")
             
-        elif args.encoder_type=="vqvae":
-            autoencoder=VQModel()
+    if args.load_locally:
+        autoencoder,start_epoch=load_model_locally(save_subdir)
         
-        CONFIG_NAME="config.json"
-        
-        accelerator.print(autoencoder.config)
-        
-        save_subdir=os.path.join(os.getcwd(),args.save_dir,args.name)
-        os.makedirs(save_subdir,exist_ok=True)
-        
-        
-        
-        
-        def load_model(repo_id: str):
-            """
-            Loads VAE from HuggingFace in correct architecture + resume epoch.
-            """
-            # 1. Download the folder
-            vae = AutoencoderKL.from_pretrained(repo_id)
 
-            # 2. Read training metadata (start_epoch)
-            index_path = hf_hub_download(repo_id, CONFIG_NAME)
+
+    accelerator.print("start epoch: ",start_epoch)
+
+
+    dataset=ImageDatasetHF(args.src_dataset, image_processor,args.process_data,args.skip_num)
+    accelerator.print("dataset len",len(dataset))
+
+
+    test_size=16
+    train_size=len(dataset)-test_size
+
+    
+    # Set seed for reproducibility
+    generator = torch.Generator().manual_seed(42)
+
+    # Split the dataset
+    train_dataset, test_dataset = random_split(dataset, [train_size, test_size], generator=generator)
+
+
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
+
+    
+
+    
+    params=[p for p in autoencoder.parameters()]
+
+    optimizer=torch.optim.AdamW(params,args.lr)
+
+    train_loader,autoencoder,optimizer=accelerator.prepare(train_loader,autoencoder,optimizer)
+
+    
+
+    for initial_batch in train_loader:
+        break
+
+    initial_batch=initial_batch["image"].to(device)
+
+    
+    
+    
+
+    def save_model(vae: AutoencoderKL, epoch: int, repo_id: str, save_dir: str = "vae_ckpt"):
+        """
+        Save AutoEncoderKL in HF-pretrained format + store start_epoch safely.
+        """
+        os.makedirs(save_dir, exist_ok=True)
+
+        # 1. Save full HF format (weights + config)
+        vae.save_pretrained(save_dir)
+
+        # 2. Add training metadata (e.g., epoch) into model_index.json
+        index_path = os.path.join(save_dir, CONFIG_NAME)
+        if os.path.exists(index_path):
             with open(index_path, "r") as f:
-                data = json.load(f)
+                index_data = json.load(f)
+        else:
+            index_data = {}
 
-            if "training" in data and "start_epoch" in data["training"]:
-                start_epoch = data["training"]["start_epoch"] + 1
-            else:
-                start_epoch = 1  # fresh training
+        index_data["training"] = {"start_epoch": epoch}
 
-            print(f"[OK] Loaded VAE from {repo_id}, resume at epoch {start_epoch}")
+        with open(index_path, "w") as f:
+            json.dump(index_data, f, indent=4)
 
-            return vae, start_epoch
+        accelerator.print(f"[OK] Saved VAE checkpoint to {save_dir}")
+
+        # 3. Upload entire folder to HuggingFace repo
         
-        def load_model_locally(subdir:str):
-            vae = AutoencoderKL.from_pretrained(subdir)
+        upload_folder(
+            folder_path=save_dir,
+            repo_id=repo_id,
+            path_in_repo=".",   # root of the repo
+        )
+        accelerator.print(f"[OK] Uploaded to HuggingFace: {repo_id}")
 
-            # 2. Read training metadata (start_epoch)
-            index_path = os.path.join(subdir, CONFIG_NAME)
-            with open(index_path, "r") as f:
-                data = json.load(f)
-
-            if "training" in data and "start_epoch" in data["training"]:
-                start_epoch = data["training"]["start_epoch"] + 1
-            else:
-                start_epoch = 1  # fresh training
-
-            print(f"[OK] Loaded VAE from {subdir}, resume at epoch {start_epoch}")
-
-            return vae, start_epoch
-
-
-        start_epoch=1
-        if args.load_hf:
-            try:
-                autoencoder,start_epoch=load_model(args.name)
-            except requests.exceptions.HTTPError:
-                accelerator.print("not found couldnt load")
-                
-        if args.load_locally:
-            autoencoder,start_epoch=load_model_locally(save_subdir)
-            
-
-
-        accelerator.print("start epoch: ",start_epoch)
-
-
-        dataset=ImageDatasetHF(args.src_dataset, image_processor,args.process_data,args.skip_num)
-        accelerator.print("dataset len",len(dataset))
-
-
-        test_size=16
-        train_size=len(dataset)-test_size
-
-        
-        # Set seed for reproducibility
-        generator = torch.Generator().manual_seed(42)
-
-        # Split the dataset
-        train_dataset, test_dataset = random_split(dataset, [train_size, test_size], generator=generator)
-
-
-        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
-
-        
-
-        
-        params=[p for p in autoencoder.parameters()]
-
-        optimizer=torch.optim.AdamW(params,args.lr)
-
-        train_loader,autoencoder,optimizer=accelerator.prepare(train_loader,autoencoder,optimizer)
-
-        
-
-        for initial_batch in train_loader:
-            break
-
-        initial_batch=initial_batch["image"].to(device)
-
-        
-        
-        
-
-        def save_model(vae: AutoencoderKL, epoch: int, repo_id: str, save_dir: str = "vae_ckpt"):
-            """
-            Save AutoEncoderKL in HF-pretrained format + store start_epoch safely.
-            """
-            os.makedirs(save_dir, exist_ok=True)
-
-            # 1. Save full HF format (weights + config)
-            vae.save_pretrained(save_dir)
-
-            # 2. Add training metadata (e.g., epoch) into model_index.json
-            index_path = os.path.join(save_dir, CONFIG_NAME)
-            if os.path.exists(index_path):
-                with open(index_path, "r") as f:
-                    index_data = json.load(f)
-            else:
-                index_data = {}
-
-            index_data["training"] = {"start_epoch": epoch}
-
-            with open(index_path, "w") as f:
-                json.dump(index_data, f, indent=4)
-
-            accelerator.print(f"[OK] Saved VAE checkpoint to {save_dir}")
-
-            # 3. Upload entire folder to HuggingFace repo
-            
-            upload_folder(
-                folder_path=save_dir,
-                repo_id=repo_id,
-                path_in_repo=".",   # root of the repo
-            )
-            accelerator.print(f"[OK] Uploaded to HuggingFace: {repo_id}")
-
-            
+    with accelerator.autocast():    
 
         for e in range(start_epoch,args.epochs+1):
             start=time.time()
@@ -321,19 +321,19 @@ def main(args):
                             f"image_{k}":wandb.Image(concatenated_image)
                         })
 
-        with torch.no_grad():
-            save_model(autoencoder,e,args.name,save_subdir)
-            for initial_batch in test_loader:
-                initial_batch=initial_batch["image"].to(device)
-                predicted_batch=autoencoder(initial_batch).sample
-                batch_size=predicted_batch.size()[0]
-                predicted_images=image_processor.postprocess(predicted_batch,do_denormalize= [True]*batch_size)
-                initial_images=image_processor.postprocess(initial_batch,do_denormalize= [True]*batch_size)
-                for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
-                    concatenated_image=concat_images_horizontally([real,reconstructed])
-                    accelerator.log({
-                        f"test_image_{k}":wandb.Image(concatenated_image)
-                    })
+    with torch.no_grad():
+        save_model(autoencoder,e,args.name,save_subdir)
+        for initial_batch in test_loader:
+            initial_batch=initial_batch["image"].to(device)
+            predicted_batch=autoencoder(initial_batch).sample
+            batch_size=predicted_batch.size()[0]
+            predicted_images=image_processor.postprocess(predicted_batch,do_denormalize= [True]*batch_size)
+            initial_images=image_processor.postprocess(initial_batch,do_denormalize= [True]*batch_size)
+            for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
+                concatenated_image=concat_images_horizontally([real,reconstructed])
+                accelerator.log({
+                    f"test_image_{k}":wandb.Image(concatenated_image)
+                })
 
         
 
