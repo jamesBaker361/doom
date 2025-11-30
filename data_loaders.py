@@ -64,7 +64,9 @@ class ImageDatasetHF(Dataset):
         }
     
 class RenderingModelDatasetHF(Dataset):
-    def __init__(self,src_dataset:str,image_processor:VaeImageProcessor,max_sequence_length,metadata_key_list:list=[],
+    def __init__(self,src_dataset:str,image_processor:VaeImageProcessor,
+               #  max_sequence_length,
+                 metadata_key_list:list=[],
                  process:bool=False,
                  vae:AutoencoderKL=None):
         super().__init__()
@@ -80,14 +82,14 @@ class RenderingModelDatasetHF(Dataset):
             self.data=self.data.map(lambda x: {"action":F.one_hot(x["action"],self.n_actions)})
         else:
             self.n_actions=len(self.data["action"][0])
-        
+        self.vae=vae
         for i,row in enumerate(self.data):
             if row["episode"] not in episode_set:
                 episode_set.add(row["episode"])
                 self.start_index_list.append(i)
         self.start_index_list.append(i)
         self.metadata_key_list=metadata_key_list
-        self.max_sequence_length=max_sequence_length
+        #self.max_sequence_length=max_sequence_length
         '''if vae is not None:
             self.data.map(lambda x:)'''
         for key in metadata_key_list:
