@@ -47,6 +47,7 @@ parser.add_argument("--limit",type=int,default=-1)
 parser.add_argument("--save_dir",type=str,default="weights")
 parser.add_argument("--batch_size",type=int,default=4)
 parser.add_argument("--load_hf",action="store_true")
+parser.add_argument("--val_interval",type=int,default=10)
 parser.add_argument("--action",type=str,default="embedding",help="encoder or embedding")
 parser.add_argument("--dataset",type=str,default="jlbaker361/discrete_HillTopZone.Act1100")
 parser.add_argument("--vae_checkpoint",type=str,default="jlbaker361/sonic-vae")
@@ -252,6 +253,74 @@ def main(args):
                 "loss_std":np.std(loss_buffer),
             })
         save(e,unet.state_dict(),action_encoder.state_dict())
+        
+        if e % args.val_interval ==1:
+            with torch.no_grad():
+                start=time.time()
+                loss_buffer=[]
+                for b,batch in enumerate(val_loader):
+                    
+                    action=batch["action"]
+                    x=batch["x"]
+                    y=batch["y"]
+                    
+                    past_image=batch["past_image"]
+                    image=batch["image"]
+                    
+                    metadata=prepare_metadata(x,y)
+                    
+                    past_image=vae.encode(past_image).latent_dist.sample()
+                    image=vae.encode(image).latent_dist.sample()
+                    
+
+                    action_embedding=action_encoder(action)
+                    predicted=forward_with_metadata(unet,sample=past_image,
+                                                    encoder_hidden_states=action_embedding,
+                                                    metadata=metadata)
+                    loss=F.mse_loss(predicted.float(),image.float())
+                        
+
+                end=time.time()
+                accelerator.print(f"\t val epoch {e} elapsed {end-start}")
+
+                accelerator.log({
+                        "val_loss_mean":np.mean(loss_buffer),
+                        "val_loss_std":np.std(loss_buffer),
+                    })
+                
+    with torch.no_grad():
+        start=time.time()
+        loss_buffer=[]
+        for b,batch in enumerate(test_loader):
+            
+            action=batch["action"]
+            x=batch["x"]
+            y=batch["y"]
+            
+            past_image=batch["past_image"]
+            image=batch["image"]
+            
+            metadata=prepare_metadata(x,y)
+            
+            past_image=vae.encode(past_image).latent_dist.sample()
+            image=vae.encode(image).latent_dist.sample()
+            
+
+            action_embedding=action_encoder(action)
+            predicted=forward_with_metadata(unet,sample=past_image,
+                                            encoder_hidden_states=action_embedding,
+                                            metadata=metadata)
+            loss=F.mse_loss(predicted.float(),image.float())
+                
+
+        end=time.time()
+        accelerator.print(f"\t test epoch elapsed {end-start}")
+
+        accelerator.log({
+                "test_loss_mean":np.mean(loss_buffer),
+                "test_loss_std":np.std(loss_buffer),
+            })
+        
 
 
 if __name__=='__main__':
