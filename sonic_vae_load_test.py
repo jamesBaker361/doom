@@ -222,7 +222,7 @@ def main(args):
 
 
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
 
     
 
@@ -362,6 +362,20 @@ def main(args):
                 
     autoencoder=AutoencoderKL.from_pretrained(save_subdir).to(device)
     
+    with torch.no_grad():
+        for j,initial_batch in enumerate(test_loader):
+            initial_batch=initial_batch["image"].to(device)
+            predicted_batch=autoencoder(initial_batch).sample
+            batch_size=predicted_batch.size()[0]
+            predicted_images=image_processor.postprocess(predicted_batch,do_denormalize= [True]*batch_size)
+            initial_images=image_processor.postprocess(initial_batch,do_denormalize= [True]*batch_size)
+            for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
+                concatenated_image=concat_images_horizontally([real,reconstructed])
+                accelerator.log({
+                    f"test_image_{j}_{k}":wandb.Image(concatenated_image)
+                })
+                
+    autoencoder=DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7").vae.to(device)
     with torch.no_grad():
         for j,initial_batch in enumerate(test_loader):
             initial_batch=initial_batch["image"].to(device)
