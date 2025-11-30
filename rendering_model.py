@@ -22,7 +22,7 @@ import wandb
 import numpy as np
 import random
 from torch.utils.data import random_split, DataLoader
-from diffusers import LCMScheduler,DiffusionPipeline,DEISMultistepScheduler,DDIMScheduler,SCMScheduler,AutoencoderDC
+from diffusers import LCMScheduler,DiffusionPipeline,DEISMultistepScheduler,DDIMScheduler,SCMScheduler,AutoencoderKL
 from diffusers.models.attention_processor import IPAdapterAttnProcessor2_0
 from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
@@ -48,7 +48,7 @@ parser.add_argument("--save_dir",type=str,default="weights")
 parser.add_argument("--batch_size",type=int,default=4)
 parser.add_argument("--load_hf",action="store_true")
 parser.add_argument("--action",type=str,default="embedding",help="encoder or embedding")
-parser.add_argument("--dataset",type=str,default="jlbaker361/discrete_AquaticRuinZone.Act110000")
+parser.add_argument("--dataset",type=str,default="jlbaker361/discrete_HillTopZone.Act1100")
 parser.add_argument("--vae_checkpoint",type=str,default="jlbaker361/sonic-vae")
 
 class ActionEncoder(torch.nn.Module):
@@ -166,8 +166,7 @@ def main(args):
     elif args.action=="encoder":
         action_encoder=ActionEncoder(action_dim,embedding_dim,3,n_actions)
     
-    pretrained_vae_path=api.hf_hub_download(args.name,VAE_WEIGHTS_NAME,force_download=True)
-    vae.load_state_dict(torch.load(pretrained_vae_path,weights_only=True),strict=False)
+    #vae=AutoencoderKL.from_pretrained(args.vae_checkpoint)
 
     start_epoch=1
     try:
@@ -185,6 +184,8 @@ def main(args):
 
     params=[p for p in unet.parameters()]+[p for p in action_encoder.parameters()]
     optimizer=torch.optim.AdamW(params,args.lr)
+    
+    optimizer,unet,action_encoder,train_loader,test_loader,val_loader = accelerator.prepare(optimizer,unet,action_encoder,train_loader,test_loader,val_loader)
 
     def save(e:int,state_dict:dict,state_dict_action:dict):
         #state_dict=???
