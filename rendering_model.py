@@ -26,6 +26,7 @@ from diffusers import LCMScheduler,DiffusionPipeline,DEISMultistepScheduler,DDIM
 from diffusers.models.attention_processor import IPAdapterAttnProcessor2_0
 from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
+from experiment_helpers.loop_decorator import optimization_loop
 
 
 
@@ -190,8 +191,12 @@ def main(args):
     
     optimizer,unet,action_encoder,train_loader,test_loader,val_loader = accelerator.prepare(optimizer,unet,action_encoder,train_loader,test_loader,val_loader)
 
-    def save(e:int,state_dict:dict,state_dict_action:dict):
+    state_memory={
+        "epochs":start_epoch
+    }
+    def save():
         #state_dict=???
+        state_dict=unet.st
         print("state dict len",len(state_dict))
         torch.save(state_dict,save_path)
         torch.save(action_path,state_dict_action)
