@@ -26,6 +26,7 @@ from diffusers import LCMScheduler,DiffusionPipeline,DEISMultistepScheduler,DDIM
 from diffusers.models.attention_processor import IPAdapterAttnProcessor2_0
 from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
+from experiment_helpers.loop_decorator import optimization_loop
 
 from transformers import AutoProcessor, CLIPModel
 try:
