@@ -71,6 +71,10 @@ class RenderingModelDatasetHF(Dataset):
                  vae:AutoencoderKL=None):
         super().__init__()
         self.data=load_dataset(src_dataset,split="train")
+        try:
+            self.data=self.data.cast_column("image",datasets.Image())
+        except:
+            pass
         #self.data=self.data.select(range(0,len(self.data),skip_num))
         self.image_processor=image_processor
         self.start_index_list=[]
