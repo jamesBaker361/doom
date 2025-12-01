@@ -119,7 +119,7 @@ class RenderingModelDatasetHF(Dataset):
             self.images.append(self.data["image"][i])
             self.next_images.append(self.data["image"][i + 1])
 
-            for k in metadata_key_list:
+            for k in metadata_key_list+["action"]:
                 self.other_metadata[k].append(self.data[k][i])
 
         # number of valid transitions
@@ -142,7 +142,7 @@ class RenderingModelDatasetHF(Dataset):
             "next_image": next_image,
         }
 
-        for k in self.metadata_key_list:
+        for k in self.metadata_key_list+["action"]:
             out[k] = self.other_metadata[k][index]
 
         return out
