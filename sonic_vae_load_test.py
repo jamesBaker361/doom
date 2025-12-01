@@ -320,7 +320,7 @@ def main(args):
                 "loss_std":np.std(loss_buffer),
             })
         save_model(autoencoder,e,args.name,save_subdir)
-        if e%args.image_interval==1:
+        if True:
             with torch.no_grad():
                 predicted_batch=autoencoder(initial_batch).sample
                 batch_size=predicted_batch.size()[0]
