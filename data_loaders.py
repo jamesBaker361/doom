@@ -143,7 +143,7 @@ class RenderingModelDatasetHF(Dataset):
         }
 
         for k in self.metadata_key_list+["action"]:
-            out[k] = self.other_metadata[k][index]
+            out[k] = torch.tensor(self.other_metadata[k][index])
 
         return out
     
