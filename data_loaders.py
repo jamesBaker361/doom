@@ -82,8 +82,9 @@ class RenderingModelDatasetHF(Dataset):
         episode_set=set()
         if process:
             self.n_actions=len(set(self.data["action"]))
-            self.data=self.data.map(lambda x :{"image": image_processor.preprocess( x["image"])[0]})
-            self.data=self.data.map(lambda x: {"action":F.one_hot(x["action"],self.n_actions)})
+            if image_processor is not None:
+                self.data=self.data.map(lambda x :{"image": image_processor.preprocess( x["image"])[0]})
+            self.data=self.data.map(lambda x: {"action":F.one_hot(torch.tensor(x["action"]),self.n_actions)})
         else:
             self.n_actions=len(self.data["action"][0])
         self.vae=vae
@@ -98,40 +99,53 @@ class RenderingModelDatasetHF(Dataset):
             self.data.map(lambda x:)'''
         for key in metadata_key_list:
             self.data=self.data.map(lambda x: {key:torch.tensor(x[key])})
+            
+        # ------------------------------------------------------------------ #
+        #                   PRECOMPUTE VALID IMAGE PAIRS                     #
+        # ------------------------------------------------------------------ #
+        self.images = []
+        self.next_images = []
+        self.other_metadata = {k: [] for k in metadata_key_list}
+
+        # Episode tracking
+        episodes = self.data["episode"]
+        N = len(self.data)
+
+        for i in range(N - 1):
+            # Skip if next frame is from a new episode
+            if episodes[i] != episodes[i + 1]:
+                continue
+
+            self.images.append(self.data["image"][i])
+            self.next_images.append(self.data["image"][i + 1])
+
+            for k in metadata_key_list:
+                self.other_metadata[k].append(self.data[k][i])
+
+        # number of valid transitions
+        self.length = len(self.images)
 
     def __len__(self):
-        return len(self.data)-1
+        return self.length
     
     def __getitem__(self, index):
-        '''#return super().__getitem__(index)
-        end_index=find_earliest_less_than(self.start_index_list,index)
-        output_dict={"image":torch.tensor(self.data["image"][index]),
-                     "action":torch.tensor(self.data["action"][index])}
-        if len(self.metadata_key_list)>0:
-            for key in self.metadata_key_list:
-                output_dict[key]=self.data[key][index:end_index]
-            output_dict["metadata"]=torch.cat([output_dict[key] for key in self.metadata_key_list ])
-        print(output_dict)
-        for k,v in output_dict.items():
-            shape=v[0].size()
-            output_dict[k]+=[torch.zeros(shape) for _ in range(self.max_sequence_length)]
-        output_dict["stop"]=end_index-index
-        return output_dict'''
-        image=torch.tensor(self.data["image"][index])
+        image = torch.tensor(self.images[index])
+        next_image = torch.tensor(self.next_images[index])
+
+        # Optional VAE encoding
         if self.vae is not None:
-            image=self.vae.encode(image).latent_dist.sample()
-            
-        next_image=torch.tensor(self.data["image"][index+1])
-        if self.vae is not None:
-            next_image=self.vae.encode(next_image).latent_dist.sample()
-        output_dict={
-            "image":image,
-            "next_image":next_image
+            image = self.vae.encode(image).latent_dist.sample()
+            next_image = self.vae.encode(next_image).latent_dist.sample()
+
+        out = {
+            "image": image,
+            "next_image": next_image,
         }
-        for key in self.metadata_key_list:
-            output_dict[key]=self.data[key][index]
-            
-        return index
+
+        for k in self.metadata_key_list:
+            out[k] = self.other_metadata[k][index]
+
+        return out
     
     
 class VelocityPositionDatasetHF(Dataset):
