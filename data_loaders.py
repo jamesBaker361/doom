@@ -105,7 +105,7 @@ class RenderingModelDatasetHF(Dataset):
         # ------------------------------------------------------------------ #
         self.images = []
         self.next_images = []
-        self.other_metadata = {k: [] for k in metadata_key_list}
+        self.other_metadata = {k: [] for k in metadata_key_list+["action"]}
 
         # Episode tracking
         episodes = self.data["episode"]
