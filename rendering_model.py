@@ -192,14 +192,17 @@ def main(args):
     optimizer,unet,action_encoder,train_loader,test_loader,val_loader = accelerator.prepare(optimizer,unet,action_encoder,train_loader,test_loader,val_loader)
 
     state_memory={
-        "epochs":start_epoch
+        "start_epoch":start_epoch
     }
     def save():
         #state_dict=???
-        state_dict=unet.st
+        state_dict=unet.state_dict()
+        state_dict_action=action_encoder.state_dict()
         print("state dict len",len(state_dict))
         torch.save(state_dict,save_path)
         torch.save(action_path,state_dict_action)
+        e=state_memory["start_epoch"]
+        state_memory["start_epoch"]+=1
         with open(config_path,"w+") as config_file:
             data={"start_epoch":e}
             json.dump(data,config_file, indent=4)
@@ -218,115 +221,41 @@ def main(args):
             accelerator.print("failed to upload")
             accelerator.print(e)
 
-    for e in range(start_epoch,args.epochs+1):
-        start=time.time()
-        loss_buffer=[]
-        for b,batch in enumerate(train_loader):
-            if b==args.limit:
-                break
-            if b%args.skip_num!=0:
-                continue
-            
-            action=batch["action"]
-            x=batch["x"]
-            y=batch["y"]
-            
-            past_image=batch["past_image"]
-            image=batch["image"]
-            
-            metadata=prepare_metadata(x,y)
-            
-            past_image=vae.encode(past_image).latent_dist.sample()
-            image=vae.encode(image).latent_dist.sample()
-            
-
+    @optimization_loop(
+        accelerator,train_loader,args.epochs,args.val_interval,args.limit,
+        val_loader,test_loader,save,start_epoch
+    )
+    def batch_function(batch,training):
+        action=batch["action"]
+        x=batch["x"]
+        y=batch["y"]
+        
+        past_image=batch["past_image"]
+        image=batch["image"]
+        
+        metadata=prepare_metadata(x,y)
+        
+        past_image=vae.encode(past_image).latent_dist.sample()
+        image=vae.encode(image).latent_dist.sample()
+        
+        if training:
             with accelerator.accumulate(params):
                 action_embedding=action_encoder(action)
                 predicted=forward_with_metadata(unet,sample=past_image,
                                                 encoder_hidden_states=action_embedding,
                                                 metadata=metadata)
                 loss=F.mse_loss(predicted.float(),image.float())
+                
                 accelerator.backward(loss)
                 optimizer.step()
                 optimizer.zero_grad()
-                loss_buffer.append(loss.cpu().detach().item())
-                
-
-        end=time.time()
-        accelerator.print(f"\t epoch {e} elapsed {end-start}")
-
-        accelerator.log({
-                "loss_mean":np.mean(loss_buffer),
-                "loss_std":np.std(loss_buffer),
-            })
-        save(e,unet.state_dict(),action_encoder.state_dict())
-        
-        if e % args.val_interval ==1:
-            with torch.no_grad():
-                start=time.time()
-                loss_buffer=[]
-                for b,batch in enumerate(val_loader):
-                    
-                    action=batch["action"]
-                    x=batch["x"]
-                    y=batch["y"]
-                    
-                    past_image=batch["past_image"]
-                    image=batch["image"]
-                    
-                    metadata=prepare_metadata(x,y)
-                    
-                    past_image=vae.encode(past_image).latent_dist.sample()
-                    image=vae.encode(image).latent_dist.sample()
-                    
-
-                    action_embedding=action_encoder(action)
-                    predicted=forward_with_metadata(unet,sample=past_image,
-                                                    encoder_hidden_states=action_embedding,
-                                                    metadata=metadata)
-                    loss=F.mse_loss(predicted.float(),image.float())
-                        
-
-                end=time.time()
-                accelerator.print(f"\t val epoch {e} elapsed {end-start}")
-
-                accelerator.log({
-                        "val_loss_mean":np.mean(loss_buffer),
-                        "val_loss_std":np.std(loss_buffer),
-                    })
-                
-    with torch.no_grad():
-        start=time.time()
-        loss_buffer=[]
-        for b,batch in enumerate(test_loader):
-            
-            action=batch["action"]
-            x=batch["x"]
-            y=batch["y"]
-            
-            past_image=batch["past_image"]
-            image=batch["image"]
-            
-            metadata=prepare_metadata(x,y)
-            
-            past_image=vae.encode(past_image).latent_dist.sample()
-            image=vae.encode(image).latent_dist.sample()
-            
-
+        else:
             action_embedding=action_encoder(action)
             predicted=forward_with_metadata(unet,sample=past_image,
                                             encoder_hidden_states=action_embedding,
                                             metadata=metadata)
             loss=F.mse_loss(predicted.float(),image.float())
-                
-
-        end=time.time()
-        accelerator.print(f"\t test epoch elapsed {end-start}")
-
-        accelerator.log({
-                "test_loss_mean":np.mean(loss_buffer),
-                "test_loss_std":np.std(loss_buffer),
-            })
+        return loss.cpu().detach().item()
         
 
 
