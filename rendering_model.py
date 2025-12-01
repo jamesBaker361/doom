@@ -132,6 +132,8 @@ def main(args):
     for batch in dataset:
         break
     
+    print(batch["action"])
+    
     action_dim=batch["action"].size()[-1]
     image_shape=batch["image"].unsqueeze(0).size()
     accelerator.print("image shape",image_shape)
