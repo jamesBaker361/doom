@@ -85,7 +85,7 @@ def main(args):
     unet=set_metadata_embedding(unet,2)
     accelerator.print("len params after metadata",len([p for p in unet.parameters()]))
     accelerator.print("len weight dict after metadata ",len(unet.state_dict()))
-    vae=pipe.vae
+    vae=pipe.vae.to(device)
     image_processor=pipe.image_processor
     unet.to(device)
 
