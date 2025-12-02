@@ -152,17 +152,8 @@ def main(args):
     save_subdir=os.path.join(args.save_dir,args.repo_id)
     os.makedirs(save_subdir,exist_ok=True)
 
-    WEIGHTS_NAME="diffusion_pytorch_model.safetensors"
-    
-    ACTION_WEIGHTS_NAME="action_pytorch_model.safetensors"
-    CONFIG_NAME="config.json"
-    
-    save_path=os.path.join(save_subdir,WEIGHTS_NAME)
-    action_path=os.path.join(save_subdir,ACTION_WEIGHTS_NAME)
-    config_path=os.path.join(save_subdir,CONFIG_NAME)
-    
-    
-    
+
+
     DIM_PER_TOKEN=768
     N_TOKENS=4
     
