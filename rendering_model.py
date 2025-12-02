@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 import json
 from unet_helpers import prepare_metadata,forward_with_metadata,set_metadata_embedding
 from constants import VAE_WEIGHTS_NAME
+from diffusers.schedulers.scheduling_flow_match_euler_discrete import FlowMatchEulerDiscreteScheduler
 
 import torch
 import accelerate
@@ -88,6 +89,7 @@ def main(args):
     vae=pipe.vae.to(device)
     image_processor=pipe.image_processor
     unet.to(device)
+    scheduler=FlowMatchEulerDiscreteScheduler.from_config()
 
     #dataset=??????
 
@@ -132,7 +134,7 @@ def main(args):
     params=[p for p in unet.parameters()]+[p for p in action_encoder.parameters()]
     optimizer=torch.optim.AdamW(params,args.lr)
     
-    optimizer,unet,action_encoder,train_loader,test_loader,val_loader = accelerator.prepare(optimizer,unet,action_encoder,train_loader,test_loader,val_loader)
+    optimizer,unet,action_encoder,train_loader,test_loader,val_loader,scheduler = accelerator.prepare(optimizer,unet,action_encoder,train_loader,test_loader,val_loader,scheduler)
 
     
     save,load=save_and_load_functions({
@@ -154,15 +156,23 @@ def main(args):
         past_image=batch["past_image"]
         image=batch["image"]
         
+        bsz=image.size()[0]
+        
         metadata=prepare_metadata(x,y)
         
         past_image=vae.encode(past_image).latent_dist.sample()
         image=vae.encode(image).latent_dist.sample()
         
+        timesteps = torch.randint(0, scheduler.config.num_train_timesteps, (bsz,), device=device)
+        timesteps = timesteps.long()
+        
+        past_image=scheduler.step()
+        
         if training:
             with accelerator.accumulate(params):
                 action_embedding=action_encoder(action)
                 predicted=forward_with_metadata(unet,sample=past_image,
+                                                timestep=timesteps,
                                                 encoder_hidden_states=action_embedding,
                                                 metadata=metadata)
                 loss=F.mse_loss(predicted.float(),image.float())
@@ -173,6 +183,7 @@ def main(args):
         else:
             action_embedding=action_encoder(action)
             predicted=forward_with_metadata(unet,sample=past_image,
+                                            timestep=timesteps,
                                             encoder_hidden_states=action_embedding,
                                             metadata=metadata)
             loss=F.mse_loss(predicted.float(),image.float())
