@@ -74,7 +74,8 @@ class ActionEncoder(torch.nn.Module):
             
 
 def main(args):
-    api,accelerator=repo_api_init(args)
+    api,accelerator,device=repo_api_init(args)
+
 
     
     pipe=DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7")
@@ -86,6 +87,7 @@ def main(args):
     accelerator.print("len weight dict after metadata ",len(unet.state_dict()))
     vae=pipe.vae
     image_processor=pipe.image_processor
+    unet.to(device)
 
     #dataset=??????
 
@@ -119,9 +121,9 @@ def main(args):
     embedding_dim=DIM_PER_TOKEN*N_TOKENS
     
     if args.action=="embedding":
-        action_encoder=torch.nn.Embedding(action_dim,embedding_dim)
+        action_encoder=torch.nn.Embedding(action_dim,embedding_dim).to(device)
     elif args.action=="encoder":
-        action_encoder=ActionEncoder(action_dim,embedding_dim,3,n_actions)
+        action_encoder=ActionEncoder(action_dim,embedding_dim,3,n_actions).to(device)
     
     #vae=AutoencoderKL.from_pretrained(args.vae_checkpoint)
 
