@@ -129,8 +129,8 @@ class RenderingModelDatasetHF(Dataset):
             next_image = self.vae.encode(next_image).latent_dist.sample()
 
         out = {
-            "image": image,
-            "next_image": next_image,
+            "past_image": image,
+            "image": next_image,
         }
 
         for k in self.metadata_key_list+["action"]:
