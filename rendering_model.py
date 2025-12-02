@@ -28,6 +28,7 @@ from diffusers.models.attention_processor import IPAdapterAttnProcessor2_0
 from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
 from experiment_helpers.loop_decorator import optimization_loop
+from experiment_helpers.data_helpers import split_data
 
 
 
@@ -140,11 +141,7 @@ def main(args):
     accelerator.print("image shape",image_shape)
     
     # Split the dataset
-    train_dataset, test_dataset,val_dataset = random_split(dataset, [train_size, test_size,test_size],)
-    
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
+    train_loader,test_loader,val_loader=split_data(dataset,0.8,args.batch_size)
     
     for batch in train_loader:
         break
