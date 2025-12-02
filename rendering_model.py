@@ -1,6 +1,7 @@
 import os
 import argparse
 from experiment_helpers.gpu_details import print_details
+from experiment_helpers.saving_helpers import save_and_load_functions
 from datasets import load_dataset
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
@@ -174,54 +175,20 @@ def main(args):
     
     #vae=AutoencoderKL.from_pretrained(args.vae_checkpoint)
 
-    start_epoch=1
-    try:
-        if args.load_hf:
-            pretrained_weights_path=api.hf_hub_download(args.repo_id,WEIGHTS_NAME,force_download=True)
-            pretrained_action_path=api.hf_hub_download(args.repo_id,ACTION_WEIGHTS_NAME,force_download=True)
-            pretrained_config_path=api.hf_hub_download(args.repo_id,CONFIG_NAME,force_download=True)
-            unet.load_state_dict(torch.load(pretrained_weights_path,weights_only=True),strict=False)
-            action_encoder.load_state_dict(torch.load(pretrained_action_path,weights_only=True))
-            with open(pretrained_config_path,"r") as f:
-                data=json.load(f)
-            start_epoch=data["start_epoch"]+1
-    except Exception as e:
-        accelerator.print(e)
+    
 
     params=[p for p in unet.parameters()]+[p for p in action_encoder.parameters()]
     optimizer=torch.optim.AdamW(params,args.lr)
     
     optimizer,unet,action_encoder,train_loader,test_loader,val_loader = accelerator.prepare(optimizer,unet,action_encoder,train_loader,test_loader,val_loader)
 
-    state_memory={
-        "start_epoch":start_epoch
-    }
-    def save():
-        #state_dict=???
-        state_dict=unet.state_dict()
-        state_dict_action=action_encoder.state_dict()
-        print("state dict len",len(state_dict))
-        torch.save(state_dict,save_path)
-        torch.save(action_path,state_dict_action)
-        e=state_memory["start_epoch"]
-        state_memory["start_epoch"]+=1
-        with open(config_path,"w+") as config_file:
-            data={"start_epoch":e}
-            json.dump(data,config_file, indent=4)
-            pad = " " * 2048  # ~1KB of padding
-            config_file.write(pad)
-        print(f"saved {save_path}")
-        try:
-            api.upload_file(path_or_fileobj=save_path,
-                                    path_in_repo=WEIGHTS_NAME,
-                                    repo_id=args.repo_id)
-            api.upload_file(path_or_fileobj=config_path,path_in_repo=CONFIG_NAME,
-                                    repo_id=args.repo_id)
-            api.upload_file(path_or_fileobj=action_path,path_in_repo=ACTION_WEIGHTS_NAME,repo_id=args.repo_id)
-            print(f"uploaded {args.repo_id} to hub")
-        except Exception as e:
-            accelerator.print("failed to upload")
-            accelerator.print(e)
+    
+    save,load=save_and_load_functions({
+        "pytorch_weights.safetensors":unet,
+        "action_pytorch_weights.safetensors":action_encoder
+    },save_subdir,api,args.repo_id)
+    
+    start_epoch=load(True)
 
     @optimization_loop(
         accelerator,train_loader,args.epochs,args.val_interval,args.limit,
@@ -258,6 +225,8 @@ def main(args):
                                             metadata=metadata)
             loss=F.mse_loss(predicted.float(),image.float())
         return loss.cpu().detach().item()
+    
+    batch_function()
         
 
 
