@@ -8,7 +8,7 @@ from PIL import ImageDraw
 data=load_dataset("jlbaker361/discrete_HillTopZone.Act11000000",split="train")
 
 images=[]
-duration=500
+frames=500
 for n,row in enumerate(data):
     image=row["image"]
     draw=ImageDraw.Draw(image)
@@ -16,9 +16,11 @@ for n,row in enumerate(data):
     font = ImageFont.load_default(20)
     draw.text((150,10),text,(255,255,255),font=font)
     images.append(image)
+    if n==frames:
+        break
     
     
 
 images[0].save('pillow_imagedraw.gif',
                save_all = True, append_images = images[1:],
-               optimize = False, duration = duration//4)
+               optimize = True, duration = frames//4)
