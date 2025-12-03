@@ -39,7 +39,7 @@ try:
 except ImportError:
     print("cant import register_fsdp_forward_method")
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
-from huggingface_hub import create_repo,HfApi
+from huggingface_hub import create_repo,HfApi,hf_hub_download
 from data_loaders import VelocityPositionDatasetHF,RenderingModelDatasetHF
 from experiment_helpers.init_helpers import default_parser,repo_api_init
 
@@ -89,7 +89,8 @@ def main(args):
     vae=pipe.vae.to(device)
     image_processor=pipe.image_processor
     unet.to(device)
-    scheduler=FlowMatchEulerDiscreteScheduler.from_config()
+    scheduler=FlowMatchEulerDiscreteScheduler.from_config(json.loads(open(hf_hub_download(
+        "stabilityai/stable-diffusion-3-medium-diffusers","scheduler/scheduler_config.json"))))
 
     #dataset=??????
 
