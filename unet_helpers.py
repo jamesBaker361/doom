@@ -322,7 +322,7 @@ def inference_metadata(unet,
         predicted=forward_with_metadata(unet,sample=latents,
                                     timestep=timesteps,
                                     encoder_hidden_states=action_embedding,
-                                    metadata=metadata)
+                                    metadata=metadata).sample
         latents=scheduler.step(predicted,t,latents).prev_sample
     decoded=vae.decode(latents / vae.config.scaling_factor, return_dict=False)[0]
     return decoded

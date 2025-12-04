@@ -180,7 +180,7 @@ def main(args):
                     predicted=forward_with_metadata(unet,sample=past_image,
                                                     timestep=timesteps,
                                                     encoder_hidden_states=action_embedding,
-                                                    metadata=metadata)
+                                                    metadata=metadata).sample
                     loss=F.mse_loss(predicted.float(),image.float())
                 
                 accelerator.backward(loss)
