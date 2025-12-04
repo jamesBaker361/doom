@@ -188,7 +188,7 @@ def main(args):
                 optimizer.zero_grad()
         else:
             decoded=inference_metadata(unet,action,action_encoder,vae,args.num_inference_steps,
-                                       scheduler,past_image,x,y)
+                                       scheduler,past_image,x,y,device)
             loss=F.mse_loss(decoded.float(),image.float())
             _batch_size=decoded.size()[0]
             predicted_images=image_processor.postprocess(predicted,do_denormalize= [True]*_batch_size)

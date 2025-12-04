@@ -90,6 +90,7 @@ def main(args):
     CONFIG_NAME="config.json"
     
     accelerator.print(autoencoder.config)
+    accelerator.print('autoencoder.dtype',autoencoder.dtype)
     
     save_subdir=os.path.join(os.getcwd(),args.save_dir,args.repo_id)
     os.makedirs(save_subdir,exist_ok=True)
@@ -99,9 +100,6 @@ def main(args):
 
 
     train_loader,test_loader,val_loader=split_data(dataset,0.9,args.batch_size)
-
-    
-
     
     params=[p for p in autoencoder.parameters()]
 
@@ -109,17 +107,11 @@ def main(args):
 
     train_loader,autoencoder,optimizer=accelerator.prepare(train_loader,autoencoder,optimizer)
 
-    
-
     for initial_batch in train_loader:
         break
 
     initial_batch=initial_batch["image"].to(device)
     batch_size=initial_batch.size()[0]
-
-    
-    
-    
 
     save,load=save_and_load_functions({
         "pytorch_weights.safetensors":autoencoder,
@@ -141,8 +133,8 @@ def main(args):
                 optimizer.zero_grad()
         else:
             with accelerator.autocast():
-                    predicted=autoencoder(batch).sample
-                    loss=F.mse_loss(predicted.float(),batch.float())
+                predicted=autoencoder(batch).sample
+                loss=F.mse_loss(predicted.float(),batch.float())
             _batch_size=predicted.size()[0]
             predicted_images=image_processor.postprocess(predicted,do_denormalize= [True]*_batch_size)
             initial_images=image_processor.postprocess(initial_batch,do_denormalize= [True]*_batch_size)
@@ -161,17 +153,6 @@ def main(args):
         return loss.cpu().detach().numpy()
         
     process_batch()
-
-        
-
-
-
-                
-
-
-
-
-
 
 if __name__=='__main__':
     print_details()
