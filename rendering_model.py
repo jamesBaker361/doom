@@ -93,6 +93,7 @@ def main(args):
     unet.to(device)
     scheduler=FlowMatchEulerDiscreteScheduler.from_config(json.loads(open(hf_hub_download(
         "stabilityai/stable-diffusion-3-medium-diffusers","scheduler/scheduler_config.json")).read()))
+    ddim_scheduler=DDIMScheduler()
 
     #dataset=??????
 
@@ -134,7 +135,8 @@ def main(args):
     params=[p for p in unet.parameters()]+[p for p in action_encoder.parameters()]
     optimizer=torch.optim.AdamW(params,args.lr)
     
-    optimizer,unet,action_encoder,train_loader,test_loader,val_loader,scheduler = accelerator.prepare(optimizer,unet,action_encoder,train_loader,test_loader,val_loader,scheduler)
+    optimizer,unet,action_encoder,train_loader,test_loader,val_loader,scheduler,ddim_scheduler = accelerator.prepare(optimizer,
+                    unet,action_encoder,train_loader,test_loader,val_loader,scheduler,ddim_scheduler)
 
     
     save,load=save_and_load_functions({
@@ -171,7 +173,7 @@ def main(args):
             
             
             # model input scaling
-            past_image = scheduler.scale_noise(image,timesteps,past_image)
+            past_image = ddim_scheduler.add_noise(image,past_image,timesteps)
             with accelerator.accumulate(params):
                 action_embedding=action_encoder(action)
                 predicted=forward_with_metadata(unet,sample=past_image,
