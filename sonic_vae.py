@@ -9,6 +9,7 @@ from experiment_helpers.init_helpers import repo_api_init
 from experiment_helpers.saving_helpers import save_and_load_functions
 from experiment_helpers.loop_decorator import optimization_loop
 from experiment_helpers.image_helpers import concat_images_horizontally
+from experiment_helpers.data_helpers import split_data
 
 import torch
 import accelerate
@@ -97,19 +98,7 @@ def main(args):
     accelerator.print("dataset len",len(dataset))
 
 
-    test_size=16
-    train_size=len(dataset)-test_size
-
-    
-    # Set seed for reproducibility
-    generator = torch.Generator().manual_seed(42)
-
-    # Split the dataset
-    train_dataset, test_dataset = random_split(dataset, [train_size, test_size], generator=generator)
-
-
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
+    train_loader,test_loader,val_loader=split_data(dataset,0.9,args.batch_size)
 
     
 
@@ -138,7 +127,8 @@ def main(args):
     },save_subdir,api,args.name)
     
     start_epoch=load(True)
-
+    @optimization_loop(accelerator,train_loader,args.epochs,args.val_interval,
+                       args.limit,val_loader,test_loader,save,start_epoch)
     def process_batch(batch,training,misc_dict):
         batch=batch["image"]
         if training:
@@ -168,64 +158,7 @@ def main(args):
             
         return loss.cpu().detach().numpy()
         
-       
-
-    for e in range(start_epoch,args.epochs+1):
-        start=time.time()
-        loss_buffer=[]
-        with accelerator.autocast(): 
-            for b,batch in enumerate(train_loader):
-                if b==args.limit:
-                    break
-                '''if b%args.skip_num!=0:
-                    continue'''
-
-                with accelerator.accumulate(params):
-                    batch=batch["image"]
-                    batch=batch.to(device)
-                    #accelerator.print("batch size",batch.size())
-                    predicted=autoencoder(batch).sample
-                    loss=F.mse_loss(predicted.float(),batch.float())
-                    accelerator.backward(loss)
-                    optimizer.step()
-                    optimizer.zero_grad()
-                    loss_buffer.append(loss.cpu().detach().item())
-
-        end=time.time()
-
-        accelerator.print(f"\t epoch {e} elapsed {end-start}")
-
-        accelerator.log({
-                "loss_mean":np.mean(loss_buffer),
-                "loss_std":np.std(loss_buffer),
-            })
-        save_model(autoencoder,e,args.name,save_subdir)
-        if e%args.image_interval==1:
-            with torch.no_grad():
-                predicted_batch=autoencoder(initial_batch).sample
-                batch_size=predicted_batch.size()[0]
-                predicted_images=image_processor.postprocess(predicted_batch,do_denormalize= [True]*batch_size)
-                initial_images=image_processor.postprocess(initial_batch,do_denormalize= [True]*batch_size)
-                print('type(predicted_images)',type(predicted_images))
-                for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
-                    concatenated_image=concat_images_horizontally([real,reconstructed])
-                    accelerator.log({
-                        f"image_{k}":wandb.Image(concatenated_image)
-                    })
-
-    with torch.no_grad():
-        save_model(autoencoder,e,args.name,save_subdir)
-        for initial_batch in test_loader:
-            initial_batch=initial_batch["image"].to(device)
-            predicted_batch=autoencoder(initial_batch).sample
-            batch_size=predicted_batch.size()[0]
-            predicted_images=image_processor.postprocess(predicted_batch,do_denormalize= [True]*batch_size)
-            initial_images=image_processor.postprocess(initial_batch,do_denormalize= [True]*batch_size)
-            for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
-                concatenated_image=concat_images_horizontally([real,reconstructed])
-                accelerator.log({
-                    f"test_image_{k}":wandb.Image(concatenated_image)
-                })
+    process_batch()
 
         
 
