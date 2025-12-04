@@ -54,7 +54,7 @@ parser.add_argument("--n_layers_encoder",type=int,default=4)
 parser.add_argument("--epochs",type=int,default=2)
 parser.add_argument("--limit",type=int,default=10)
 parser.add_argument("--val_interval",type=int,default=10)
-parser.add_argument("--velocity_dataset",type=str,default="jlbaker361/discrete_AquaticRuinZone.Act110000")
+parser.add_argument("--velocity_dataset",type=str,default="jlbaker361/discrete_EmeraldHillZone.Act1100")
 parser.add_argument("--save_dir",type=str,default="physical")
 
 class Newtonian(torch.nn.Module):
