@@ -85,8 +85,8 @@ class RenderingModelDatasetHF(Dataset):
         #self.max_sequence_length=max_sequence_length
         '''if vae is not None:
             self.data.map(lambda x:)'''
-        for key in metadata_key_list+["action"]:
-            self.data=self.data.map(lambda x: {key:torch.tensor(x[key])})
+        '''for key in metadata_key_list+["action"]:
+            self.data=self.data.map(lambda x: {key:torch.tensor(x[key])})'''
             
         # ------------------------------------------------------------------ #
         #                   PRECOMPUTE VALID IMAGE PAIRS                     #
