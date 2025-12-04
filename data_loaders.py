@@ -31,10 +31,8 @@ class ImageDatasetHF(Dataset):
                  skip_num:int=1):
         super().__init__()
         dataset=load_dataset(src_dataset,split="train")
-        try:
-            dataset=dataset.cast_column("image",datasets.Image())
-        except:
-            pass
+        
+        dataset=dataset.cast_column("image",datasets.Image())
         data=dataset["image"]
         self.image_processor=image_processor
         if process:
