@@ -94,7 +94,7 @@ def main(args):
     save_subdir=os.path.join(os.getcwd(),args.save_dir,args.repo_id)
     os.makedirs(save_subdir,exist_ok=True)
 
-    dataset=ImageDatasetHF(args.src_dataset, image_processor,args.process_data,args.skip_num)
+    dataset=ImageDatasetHF(args.src_dataset, image_processor,args.skip_num)
     accelerator.print("dataset len",len(dataset))
 
 

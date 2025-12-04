@@ -27,7 +27,6 @@ def find_earliest_less_than(arr, target):
 class ImageDatasetHF(Dataset):
     def __init__(self,src_dataset:str,
                  image_processor:VaeImageProcessor,
-                 process:bool=False,
                  skip_num:int=1):
         super().__init__()
         dataset=load_dataset(src_dataset,split="train")
@@ -35,7 +34,7 @@ class ImageDatasetHF(Dataset):
         dataset=dataset.cast_column("image",datasets.Image())
         data=dataset["image"]
         self.image_processor=image_processor
-        if process:
+        if image_processor is not None:
             _image_list=[self.image_processor.preprocess(image)[0] for image in data]
         else:
             _image_list=data
