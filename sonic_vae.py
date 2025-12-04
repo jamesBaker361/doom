@@ -137,7 +137,7 @@ def main(args):
                 loss=F.mse_loss(predicted.float(),batch.float())
             _batch_size=predicted.size()[0]
             predicted_images=image_processor.postprocess(predicted,do_denormalize= [True]*_batch_size)
-            initial_images=image_processor.postprocess(initial_batch,do_denormalize= [True]*_batch_size)
+            initial_images=image_processor.postprocess(batch.cpu().detach(),do_denormalize= [True]*_batch_size)
             start=0
             if "batch_num" in misc_dict:
                 start=misc_dict["batch_num"]*batch_size
