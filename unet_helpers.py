@@ -317,10 +317,11 @@ def inference_metadata(unet,
     timesteps, num_inference_steps = retrieve_timesteps(
             scheduler, num_inference_steps, device
         )
-    
+    batch_size=latents.size()[0]
     for i, t in enumerate(timesteps):
+        print(t.size())
         predicted=forward_with_metadata(unet,sample=latents,
-                                    timestep=timesteps,
+                                    timestep=t,
                                     encoder_hidden_states=action_embedding,
                                     metadata=metadata).sample
         latents=scheduler.step(predicted,t,latents).prev_sample
