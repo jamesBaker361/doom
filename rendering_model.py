@@ -119,9 +119,9 @@ def main(args):
 
 
     DIM_PER_TOKEN=768
-    N_TOKENS=4
+    #N_TOKENS=4
     
-    embedding_dim=DIM_PER_TOKEN*N_TOKENS
+    embedding_dim=DIM_PER_TOKEN #*N_TOKENS
     
     if args.action=="embedding":
         action_encoder=torch.nn.Embedding(action_dim,embedding_dim).to(device)
