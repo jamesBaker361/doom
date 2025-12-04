@@ -148,7 +148,7 @@ def main(args):
         accelerator,train_loader,args.epochs,args.val_interval,args.limit,
         val_loader,test_loader,save,start_epoch
     )
-    def batch_function(batch,training,batch_num,epochs,misc_dict):
+    def batch_function(batch,training,misc_dict):
         action=batch["action"]
         x=batch["x"]
         y=batch["y"]
