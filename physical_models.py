@@ -234,7 +234,7 @@ def main(args):
         image=batch["image"]
         action=batch["action"]
         if training:
-            with accelerator.accumulate():
+            with accelerator.accumulate(params):
                 with accelerator.autocast():
                     x_f,y_f=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
                     
