@@ -191,7 +191,7 @@ def main(args):
                                        scheduler,past_image,x,y,device)
             loss=F.mse_loss(decoded.float(),image.float())
             _batch_size=decoded.size()[0]
-            predicted_images=image_processor.postprocess(predicted,do_denormalize= [True]*_batch_size)
+            predicted_images=image_processor.postprocess(decoded,do_denormalize= [True]*_batch_size)
             initial_images=image_processor.postprocess(image,do_denormalize= [True]*_batch_size)
             start=0
             if "batch_num" in misc_dict:
