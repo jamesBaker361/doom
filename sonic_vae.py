@@ -50,7 +50,7 @@ parser=argparse.ArgumentParser()
 parser.add_argument("--mixed_precision",type=str,default="fp16")
 parser.add_argument("--project_name",type=str,default="person")
 parser.add_argument("--gradient_accumulation_steps",type=int,default=4)
-parser.add_argument("--name",type=str,default="jlbaker361/vae-model",help="name on hf")
+parser.add_argument("--repo_id",type=str,default="jlbaker361/vae-model",help="name on hf")
 parser.add_argument("--lr",type=float,default=0.0001)
 parser.add_argument("--image_size",default=256,type=int)
 parser.add_argument("--image_folder_paths",nargs="+")
@@ -91,7 +91,7 @@ def main(args):
     
     accelerator.print(autoencoder.config)
     
-    save_subdir=os.path.join(os.getcwd(),args.save_dir,args.name)
+    save_subdir=os.path.join(os.getcwd(),args.save_dir,args.repo_id)
     os.makedirs(save_subdir,exist_ok=True)
 
     dataset=ImageDatasetHF(args.src_dataset, image_processor,args.process_data,args.skip_num)
@@ -124,7 +124,7 @@ def main(args):
     save,load=save_and_load_functions({
         "pytorch_weights.safetensors":autoencoder,
         #"action_pytorch_weights.safetensors":action_encoder
-    },save_subdir,api,args.name)
+    },save_subdir,api,args.repo_id)
     
     start_epoch=load(True)
     @optimization_loop(accelerator,train_loader,args.epochs,args.val_interval,

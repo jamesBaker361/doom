@@ -46,7 +46,7 @@ parser=argparse.ArgumentParser()
 parser.add_argument("--mixed_precision",type=str,default="fp16")
 parser.add_argument("--project_name",type=str,default="physical")
 parser.add_argument("--gradient_accumulation_steps",type=int,default=4)
-parser.add_argument("--name",type=str,default="jlbaker361/model",help="name on hf")
+parser.add_argument("--repo_id",type=str,default="jlbaker361/model",help="name on hf")
 parser.add_argument("--lr",type=float,default=0.0001)
 parser.add_argument("--batch_size",type=int,default=4)
 parser.add_argument("--image_encoder",type=str,help="one of vae, vqvae, trained",default="vae")
@@ -170,7 +170,7 @@ def main(args):
     with accelerator.autocast():
 
 
-        save_subdir=os.path.join(args.save_dir,args.name)
+        save_subdir=os.path.join(args.save_dir,args.repo_id)
         torch_dtype={
             "no":torch.float32,
             "fp16":torch.float16,
@@ -221,7 +221,7 @@ def main(args):
         
         save,load=save_and_load_functions(
             {"pytorch_model.safetensors":model},
-            save_subdir,api,args.name
+            save_subdir,api,args.repo_id
         )
         
         start_epoch=load(True)
