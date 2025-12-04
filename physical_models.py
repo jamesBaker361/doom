@@ -37,6 +37,10 @@ except ImportError:
     print("cant import register_fsdp_forward_method")
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
 from huggingface_hub import create_repo,HfApi
+from experiment_helpers.data_helpers import split_data
+from experiment_helpers.init_helpers import repo_api_init
+from experiment_helpers.saving_helpers import save_and_load_functions
+from experiment_helpers.loop_decorator import optimization_loop
 
 parser=argparse.ArgumentParser()
 parser.add_argument("--mixed_precision",type=str,default="fp16")
@@ -51,6 +55,7 @@ parser.add_argument("--epochs",type=int,default=2)
 parser.add_argument("--limit",type=int,default=10)
 parser.add_argument("--val_interval",type=int,default=10)
 parser.add_argument("--velocity_dataset",type=str,default="jlbaker361/discrete_AquaticRuinZone.Act110000")
+parser.add_argument("--save_dir",type=str,default="physical")
 
 class Newtonian(torch.nn.Module):
     #given metadata and embedding , predict net forces on sonic using network, 
@@ -161,30 +166,11 @@ class VAEWrapper(torch.nn.Module):
         return self.flatten(latents)
 
 def main(args):
-    accelerator=Accelerator(log_with="wandb",mixed_precision=args.mixed_precision,gradient_accumulation_steps=args.gradient_accumulation_steps)
-    print("accelerator device",accelerator.device)
+    api,accelerator,device=repo_api_init(args)
     with accelerator.autocast():
-        device=accelerator.device
-        state = PartialState()
-        print(f"Rank {state.process_index} initialized successfully")
-        if accelerator.is_main_process or state.num_processes==1:
-            accelerator.print(f"main process = {state.process_index}")
-        if accelerator.is_main_process or state.num_processes==1:
-            try:
-                accelerator.init_trackers(project_name=args.project_name,config=vars(args))
-
-                api=HfApi()
-                api.create_repo(args.name,exist_ok=True)
-            except HfHubHTTPError:
-                print("hf hub error!")
-                time.sleep(random.randint(5,120))
-                accelerator.init_trackers(project_name=args.project_name,config=vars(args))
-
-                api=HfApi()
-                api.create_repo(args.name,exist_ok=True)
 
 
-
+        save_subdir=os.path.join(args.save_dir,args.name)
         torch_dtype={
             "no":torch.float32,
             "fp16":torch.float16,
@@ -207,12 +193,7 @@ def main(args):
         
         params=[]
         
-        # Split the dataset
-        train_dataset, test_dataset,val_dataset = random_split(dataset, [train_size, test_size,test_size],)
-        
-        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
+        train_loader,test_loader,val_loader=split_data(dataset,0.9,args.batch_size)
         
         for batch in train_loader:
             break
@@ -238,22 +219,22 @@ def main(args):
         
         optimizer,model=accelerator.prepare(optimizer,model)
         
+        save,load=save_and_load_functions(
+            {"pytorch_model.safetensors":model},
+            save_subdir,api,args.name
+        )
         
-        start_epoch=1
-        for e in range(start_epoch+1,args.epochs+1):
-            loss_list=[]
-            start=time.time()
-            for b,batch in enumerate(train_loader):
-                if b==args.limit:
-                    break
+        start_epoch=load(True)
+        
+        @optimization_loop(accelerator,train_loader,
+                           args.epochs,args.val_interval,args.limit,
+                           val_loader,test_loader,save,start_epoch
+                           )
+        def batch_step(batch,training):
+            image=batch["image"]
+            action=batch["action"]
+            if training:
                 with accelerator.accumulate():
-                    image=batch["image"]
-                    action=batch["action"]
-                    if e==start_epoch and b==0:
-                        accelerator.print("image",image.device,image.dtype,image.size())
-                        
-                        
-                    #with accelerator.autocast():   
                     x_f,y_f=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
                     
                     vx_loss=F.mse_loss(x_f.float(),batch["xf"].float())
@@ -264,62 +245,17 @@ def main(args):
                     accelerator.backward(total_loss)
                     optimizer.step()
                     optimizer.zero_grad()
+            else:
+                x_f,y_f=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
                     
-                    loss_list.append(total_loss.cpu().detach().numpy())
-            end=time.time()
-            accelerator.print(f"epoch {e} elapsed {end-start}")
-            accelerator.log({
-                "loss":np.mean(loss_list)
-            })    
-            with torch.no_grad():
-                loss_list=[]
-                if e%args.val_interval==0:
-                    loss_list=[]
-                    start=time.time()
-                    for b,batch in enumerate(val_loader):
-                        if b==args.limit:
-                            break
-                        with accelerator.accumulate():
-                            image=batch["image"]
-                            action=batch["action"]
-                                
-                            x_f,y_f=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
-                    
-                            vx_loss=F.mse_loss(x_f.float(),batch["xf"].float())
-                            vy_loss=F.mse_loss(y_f.float(),batch["yf"].float())
-                        
-                            total_loss=vx_loss+vy_loss
-                            
-                            loss_list.append(total_loss.cpu().detach().numpy())
-                    end=time.time()
-                    accelerator.print(f"val epoch {e} elapsed {end-start}")
-                    accelerator.log({
-                        "val_loss":np.mean(loss_list)
-                    })
-        with torch.no_grad():
-            loss_list=[]
-            start=time.time()
-            for b,batch in enumerate(test_loader):
-                if b==args.limit:
-                    break
-                with accelerator.accumulate():
-                    image=batch["image"]
-                    action=batch["action"]
-                        
-                    x_f,y_f=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
-                    
-                    vx_loss=F.mse_loss(x_f.float(),batch["xf"].float())
-                    vy_loss=F.mse_loss(y_f.float(),batch["yf"].float())
+                vx_loss=F.mse_loss(x_f.float(),batch["xf"].float())
+                vy_loss=F.mse_loss(y_f.float(),batch["yf"].float())
+            
+                total_loss=vx_loss+vy_loss
                 
-                    total_loss=vx_loss+vy_loss
-                    
-                    loss_list.append(total_loss.cpu().detach().numpy())
-            end=time.time()
-            accelerator.print(f"test epoch {e} elapsed {end-start}")
-            accelerator.log({
-                "test_loss":np.mean(loss_list)
-            }) 
-                    
+            return total_loss.cpu().detach().numpy()
+        
+        batch_step()
                   
                 
                 
