@@ -149,7 +149,7 @@ def main(args):
         accelerator,train_loader,args.epochs,args.val_interval,args.limit,
         val_loader,test_loader,save,start_epoch
     )
-    def batch_function(batch,training):
+    def batch_function(batch,training,*args,**kwargs):
         action=batch["action"]
         x=batch["x"]
         y=batch["y"]
@@ -167,7 +167,7 @@ def main(args):
         timesteps = torch.randint(0, scheduler.config.num_train_timesteps, (bsz,), device=device)
         timesteps = timesteps.long()
         
-        past_image=scheduler.step()
+        past_image=scheduler.add_noise(image, past_image, timesteps)
         
         if training:
             with accelerator.accumulate(params):
