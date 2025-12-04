@@ -1,4 +1,5 @@
 from diffusers.models.unets.unet_2d_condition import *
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import retrieve_timesteps
 
 
 def prepare_metadata(*metadata):
@@ -301,3 +302,26 @@ def forward_with_metadata(
         return (sample,)
 
     return UNet2DConditionOutput(sample=sample)
+
+def inference_metadata(unet,
+                       action,
+                       action_encoder,
+                       vae,
+                       num_inference_steps,
+                       scheduler,
+                       past_image,x,y,device):
+    metadata=prepare_metadata(x,y)
+    action_embedding=action_encoder(action)
+    latents=vae.encode(past_image).latent_dist.sample()
+    timesteps, num_inference_steps = retrieve_timesteps(
+            scheduler, num_inference_steps, device
+        )
+    
+    for i, t in enumerate(timesteps):
+        predicted=forward_with_metadata(unet,sample=latents,
+                                    timestep=timesteps,
+                                    encoder_hidden_states=action_embedding,
+                                    metadata=metadata)
+        latents=scheduler.step(predicted,t,latents).prev_sample
+    decoded=vae.decode(latents / vae.config.scaling_factor, return_dict=False)[0]
+    return decoded

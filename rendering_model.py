@@ -6,7 +6,7 @@ from datasets import load_dataset
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import json
-from unet_helpers import prepare_metadata,forward_with_metadata,set_metadata_embedding
+from unet_helpers import prepare_metadata,forward_with_metadata,set_metadata_embedding,inference_metadata
 from constants import VAE_WEIGHTS_NAME
 from diffusers.schedulers.scheduling_flow_match_euler_discrete import FlowMatchEulerDiscreteScheduler
 
@@ -30,6 +30,7 @@ from torchvision.transforms.v2 import functional as F_v2
 from torchmetrics.image.fid import FrechetInceptionDistance
 from experiment_helpers.loop_decorator import optimization_loop
 from experiment_helpers.data_helpers import split_data
+from experiment_helpers.image_helpers import concat_images_horizontally
 
 
 
@@ -47,6 +48,7 @@ parser=default_parser()
 parser.add_argument("--action",type=str,default="embedding",help="encoder or embedding")
 parser.add_argument("--dataset",type=str,default="jlbaker361/discrete_HillTopZone.Act1100")
 parser.add_argument("--vae_checkpoint",type=str,default="jlbaker361/sonic-vae")
+parser.add_argument("--num_inference_steps",type=int,default=4)
 
 class ActionEncoder(torch.nn.Module):
     def __init__(self,input_dim:int,output_dim:int,n_layers:int,n_actions:int, *args, **kwargs):
@@ -98,20 +100,17 @@ def main(args):
                                     None)
     n_actions=dataset.n_actions
     
-    for batch in dataset:
-        break
     
-    print(batch["action"])
-    
-    action_dim=batch["action"].size()[-1]
-    image_shape=batch["image"].unsqueeze(0).size()
-    accelerator.print("image shape",image_shape)
     
     # Split the dataset
     train_loader,test_loader,val_loader=split_data(dataset,0.8,args.batch_size)
-    
     for batch in train_loader:
         break
+    
+    action_dim=batch["action"].size()[-1]
+    image_shape=batch["image"].size()
+    accelerator.print("image shape",image_shape)
+    batch_size=image_shape[0]
 
     save_subdir=os.path.join(args.save_dir,args.repo_id)
     os.makedirs(save_subdir,exist_ok=True)
@@ -149,7 +148,7 @@ def main(args):
         accelerator,train_loader,args.epochs,args.val_interval,args.limit,
         val_loader,test_loader,save,start_epoch
     )
-    def batch_function(batch,training,*args,**kwargs):
+    def batch_function(batch,training,batch_num,epochs,misc_dict):
         action=batch["action"]
         x=batch["x"]
         y=batch["y"]
@@ -159,17 +158,20 @@ def main(args):
         
         bsz=image.size()[0]
         
-        metadata=prepare_metadata(x,y)
         
-        past_image=vae.encode(past_image).latent_dist.sample()
-        image=vae.encode(image).latent_dist.sample()
-        
-        timesteps = torch.randint(0, scheduler.config.num_train_timesteps, (bsz,), device=device)
-        timesteps = timesteps.long()
-        
-        past_image=scheduler.add_noise(image, past_image, timesteps)
         
         if training:
+            metadata=prepare_metadata(x,y)
+        
+            past_image=vae.encode(past_image).latent_dist.sample()*vae.config.scaling_factor
+            image=vae.encode(image).latent_dist.sample()*vae.config.scaling_factor
+            
+            timesteps = torch.randint(0, scheduler.config.num_train_timesteps, (bsz,), device=device)
+            timesteps = timesteps.long()
+            
+            
+            # model input scaling
+            past_image = scheduler.scale_noise(image,timesteps,past_image)
             with accelerator.accumulate(params):
                 action_embedding=action_encoder(action)
                 predicted=forward_with_metadata(unet,sample=past_image,
@@ -182,12 +184,23 @@ def main(args):
                 optimizer.step()
                 optimizer.zero_grad()
         else:
-            action_embedding=action_encoder(action)
-            predicted=forward_with_metadata(unet,sample=past_image,
-                                            timestep=timesteps,
-                                            encoder_hidden_states=action_embedding,
-                                            metadata=metadata)
-            loss=F.mse_loss(predicted.float(),image.float())
+            decoded=inference_metadata(unet,action,action_encoder,vae,args.num_inference_steps,
+                                       scheduler,past_image,x,y)
+            loss=F.mse_loss(decoded.float(),image.float())
+            _batch_size=decoded.size()[0]
+            predicted_images=image_processor.postprocess(predicted,do_denormalize= [True]*_batch_size)
+            initial_images=image_processor.postprocess(image,do_denormalize= [True]*_batch_size)
+            start=0
+            if "batch_num" in misc_dict:
+                start=misc_dict["batch_num"]*batch_size
+            mode="test"
+            if "mode" in misc_dict:
+                mode=misc_dict["mode"]
+            for k,(real,reconstructed) in enumerate(zip(initial_images,predicted_images)):
+                    concatenated_image=concat_images_horizontally([real,reconstructed])
+                    accelerator.log({
+                        f"image_{k+start}_{mode}":wandb.Image(concatenated_image)
+                    })
         return loss.cpu().detach().item()
     
     batch_function()
