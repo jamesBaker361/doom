@@ -175,12 +175,13 @@ def main(args):
             # model input scaling
             past_image = ddim_scheduler.add_noise(image,past_image,timesteps)
             with accelerator.accumulate(params):
-                action_embedding=action_encoder(action)
-                predicted=forward_with_metadata(unet,sample=past_image,
-                                                timestep=timesteps,
-                                                encoder_hidden_states=action_embedding,
-                                                metadata=metadata)
-                loss=F.mse_loss(predicted.float(),image.float())
+                with accelerator.autocast():
+                    action_embedding=action_encoder(action)
+                    predicted=forward_with_metadata(unet,sample=past_image,
+                                                    timestep=timesteps,
+                                                    encoder_hidden_states=action_embedding,
+                                                    metadata=metadata)
+                    loss=F.mse_loss(predicted.float(),image.float())
                 
                 accelerator.backward(loss)
                 optimizer.step()

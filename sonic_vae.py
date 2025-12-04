@@ -133,8 +133,9 @@ def main(args):
         batch=batch["image"]
         if training:
             with accelerator.accumulate(params):
-                predicted=autoencoder(batch).sample
-                loss=F.mse_loss(predicted.float(),batch.float())
+                with accelerator.autocast():
+                    predicted=autoencoder(batch).sample
+                    loss=F.mse_loss(predicted.float(),batch.float())
                 accelerator.backward(loss)
                 optimizer.step()
                 optimizer.zero_grad()

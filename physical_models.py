@@ -167,102 +167,96 @@ class VAEWrapper(torch.nn.Module):
 
 def main(args):
     api,accelerator,device=repo_api_init(args)
-    with accelerator.autocast():
+    #with accelerator.autocast():
 
 
-        save_subdir=os.path.join(args.save_dir,args.repo_id)
-        torch_dtype={
-            "no":torch.float32,
-            "fp16":torch.float16,
-            "bf16":torch.bfloat16
-        }[args.mixed_precision]
+    save_subdir=os.path.join(args.save_dir,args.repo_id)
+    torch_dtype={
+        "no":torch.float32,
+        "fp16":torch.float16,
+        "bf16":torch.bfloat16
+    }[args.mixed_precision]
+    
+    pipe=DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7")
+    image_processor=pipe.image_processor
+    
+    dataset=VelocityPositionDatasetHF(args.velocity_dataset,image_processor,True)
+    test_size=int(len(dataset)//4)
+    train_size=int(len(dataset)-2*test_size)
+    
+    for batch in dataset:
+        break
+    
+    action_dim=batch["action"].size()[-1]
+    image_shape=batch["image"].unsqueeze(0).size()
+    accelerator.print("image shape",image_shape)
+    
+    params=[]
+    
+    train_loader,test_loader,val_loader=split_data(dataset,0.9,args.batch_size)
+    
+    for batch in train_loader:
+        break
+    
+    if args.image_encoder=="trained":
+        image_encoder=ImageEncoder(args.n_layers_encoder).to(device)
+        params+=[p for p in image_encoder.parameters()]
+        accelerator.print("encoder params len ",len(params))
+    elif args.image_encoder=="vae":
+        image_encoder=VAEWrapper()
         
-        pipe=DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7")
-        image_processor=pipe.image_processor
+    image_encoder,train_loader,test_loader,val_loader=accelerator.prepare(image_encoder,train_loader,test_loader,val_loader)
         
-        dataset=VelocityPositionDatasetHF(args.velocity_dataset,image_processor,True)
-        test_size=int(len(dataset)//4)
-        train_size=int(len(dataset)-2*test_size)
-        
-        for batch in dataset:
-            break
-        
-        action_dim=batch["action"].size()[-1]
-        image_shape=batch["image"].unsqueeze(0).size()
-        accelerator.print("image shape",image_shape)
-        
-        params=[]
-        
-        train_loader,test_loader,val_loader=split_data(dataset,0.9,args.batch_size)
-        
-        for batch in train_loader:
-            break
-        
-        if args.image_encoder=="trained":
-            image_encoder=ImageEncoder(args.n_layers_encoder).to(device)
-            params+=[p for p in image_encoder.parameters()]
-            accelerator.print("encoder params len ",len(params))
-        elif args.image_encoder=="vae":
-            image_encoder=VAEWrapper()
-            
-        image_encoder,train_loader,test_loader,val_loader=accelerator.prepare(image_encoder,train_loader,test_loader,val_loader)
-            
-        image_embedding_dim=image_encoder(batch["image"].to(device)).size()[-1]
-        
-        
-        hidden_layer_dim_list=[256,128,64,32]
-        
-        model=Newtonian(hidden_layer_dim_list,image_embedding_dim,action_dim,image_shape, image_encoder)
-        params+=[p for p in model.parameters()]
-        accelerator.print("model params",len(params))
-        optimizer=torch.optim.AdamW(params,args.lr)
-        
-        optimizer,model=accelerator.prepare(optimizer,model)
-        
-        save,load=save_and_load_functions(
-            {"pytorch_model.safetensors":model},
-            save_subdir,api,args.repo_id
-        )
-        
-        start_epoch=load(True)
-        
-        @optimization_loop(accelerator,train_loader,
-                           args.epochs,args.val_interval,args.limit,
-                           val_loader,test_loader,save,start_epoch
-                           )
-        def batch_step(batch,training):
-            image=batch["image"]
-            action=batch["action"]
-            if training:
-                with accelerator.accumulate():
+    image_embedding_dim=image_encoder(batch["image"].to(device)).size()[-1]
+    
+    
+    hidden_layer_dim_list=[256,128,64,32]
+    
+    model=Newtonian(hidden_layer_dim_list,image_embedding_dim,action_dim,image_shape, image_encoder)
+    params+=[p for p in model.parameters()]
+    accelerator.print("model params",len(params))
+    optimizer=torch.optim.AdamW(params,args.lr)
+    
+    optimizer,model=accelerator.prepare(optimizer,model)
+    
+    save,load=save_and_load_functions(
+        {"pytorch_model.safetensors":model},
+        save_subdir,api,args.repo_id
+    )
+    
+    start_epoch=load(True)
+    
+    @optimization_loop(accelerator,train_loader,
+                        args.epochs,args.val_interval,args.limit,
+                        val_loader,test_loader,save,start_epoch
+                        )
+    def batch_step(batch,training,misc):
+        image=batch["image"]
+        action=batch["action"]
+        if training:
+            with accelerator.accumulate():
+                with accelerator.autocast():
                     x_f,y_f=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
                     
                     vx_loss=F.mse_loss(x_f.float(),batch["xf"].float())
                     vy_loss=F.mse_loss(y_f.float(),batch["yf"].float())
                 
                     total_loss=vx_loss+vy_loss
-                    
-                    accelerator.backward(total_loss)
-                    optimizer.step()
-                    optimizer.zero_grad()
-            else:
-                x_f,y_f=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
-                    
-                vx_loss=F.mse_loss(x_f.float(),batch["xf"].float())
-                vy_loss=F.mse_loss(y_f.float(),batch["yf"].float())
+                
+                accelerator.backward(total_loss)
+                optimizer.step()
+                optimizer.zero_grad()
+        else:
+            x_f,y_f=model(batch["vi_x"],batch["vi_y"],batch["x"],batch["y"],image,action)
+                
+            vx_loss=F.mse_loss(x_f.float(),batch["xf"].float())
+            vy_loss=F.mse_loss(y_f.float(),batch["yf"].float())
+        
+            total_loss=vx_loss+vy_loss
             
-                total_loss=vx_loss+vy_loss
-                
-            return total_loss.cpu().detach().numpy()
-        
-        batch_step()
-                  
-                
-                
-                    
-                
-                    
-        
+        return total_loss.cpu().detach().numpy()
+    
+    batch_step()
 
 
 if __name__=='__main__':
