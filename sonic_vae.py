@@ -122,7 +122,7 @@ def main(args):
     @optimization_loop(accelerator,train_loader,args.epochs,args.val_interval,
                        args.limit,val_loader,test_loader,save,start_epoch)
     def process_batch(batch,training,misc_dict):
-        batch=batch["image"].to(autoencoder.dtype)
+        batch=batch["image"].to(device)
         if training:
             with accelerator.accumulate(params):
                 with accelerator.autocast():
