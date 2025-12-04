@@ -5,5 +5,5 @@ for image_encoder in ["vae","trained"]:
             data=f"jlbaker361/discrete_{zone}.Act15000000" #jlbaker361/discrete_HillTopZone.Act15000000
             command=f"sbatch -J phy --err=slurm_chip/physical/{name}.err --out=slurm_chip/physical/{name}.out "
             command+=f"runpygpu_chip.sh physical_models.py --image_encoder {image_encoder} --epochs 100 --val_interval 10 --gradient_accumulation_steps 8 --limit -1 "
-            command+=f" --name jlbaker361/{name}  --velocity_dataset {data} "
+            command+=f" --repo_id jlbaker361/{name}  --velocity_dataset {data} "
             print(command)
