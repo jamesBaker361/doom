@@ -11,6 +11,7 @@ def set_metadata_embedding(self:UNet2DConditionModel,num_metadata:int)->UNet2DCo
     self.metadata_embedding = nn.ModuleList([
                 TimestepEmbedding(timestep_input_dim, time_embed_dim) for _ in range(num_metadata)
             ])
+    setattr(self,"num_metadata",num_metadata)
     return self
 
 def forward_with_metadata(
