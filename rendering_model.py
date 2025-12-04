@@ -47,7 +47,7 @@ from experiment_helpers.init_helpers import default_parser,repo_api_init
 parser=default_parser()
 parser.add_argument("--action",type=str,default="embedding",help="encoder or embedding")
 parser.add_argument("--dataset",type=str,default="jlbaker361/discrete_HillTopZone.Act1100")
-parser.add_argument("--vae_checkpoint",type=str,default="jlbaker361/sonic-vae")
+parser.add_argument("--vae_checkpoint",type=str,default=None)
 parser.add_argument("--num_inference_steps",type=int,default=4)
 
 class ActionEncoder(torch.nn.Module):
