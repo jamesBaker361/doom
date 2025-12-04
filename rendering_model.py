@@ -90,7 +90,7 @@ def main(args):
     image_processor=pipe.image_processor
     unet.to(device)
     scheduler=FlowMatchEulerDiscreteScheduler.from_config(json.loads(open(hf_hub_download(
-        "stabilityai/stable-diffusion-3-medium-diffusers","scheduler/scheduler_config.json"))))
+        "stabilityai/stable-diffusion-3-medium-diffusers","scheduler/scheduler_config.json")).read()))
 
     #dataset=??????
 
