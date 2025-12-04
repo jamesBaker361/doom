@@ -319,7 +319,6 @@ def inference_metadata(unet,
         )
     batch_size=latents.size()[0]
     for i, t in enumerate(timesteps):
-        print(t.size())
         predicted=forward_with_metadata(unet,sample=latents,
                                     timestep=t,
                                     encoder_hidden_states=action_embedding,
