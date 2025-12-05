@@ -103,9 +103,12 @@ class FrameActionPerEpisodeLogger(BaseCallback):
         self.frame_idx = 0  # frame index within episode
         self.info_keys=info_keys
         self.image_saving=image_saving
-        self.output_dict={
-            key:[] for key in ["episode", "frame_in_episode", "action","image","action_combo"]+self.info_keys
-        }
+        try:
+            self.output_dict=load_dataset(dest_dataset,split="train").to_dict()
+        except:
+            self.output_dict={
+                key:[] for key in ["episode", "frame_in_episode", "action","image","action_combo"]+self.info_keys
+            }
         self.accelerator=accelerator
         self.dest_dataset=dest_dataset
         self.cum_reward=0
@@ -141,8 +144,8 @@ class FrameActionPerEpisodeLogger(BaseCallback):
 
             self.frame_idx += 1
 
-            if self.frame_idx%100==0:
-                Dataset.from_dict(self.output_dict).push_to_hub(self.dest_dataset)
+            '''if self.frame_idx%100==0:
+                Dataset.from_dict(self.output_dict).push_to_hub(self.dest_dataset)'''
         dones = self.locals["dones"]
         #print(self.locals["infos"])
         if "rewards" in self.locals:
@@ -281,6 +284,75 @@ if __name__=="__main__":
         self.rings=0
         self.visited_x=set()
         return original_reset(seed,options)
+    
+    
+    class MyWrapper(gym.Wrapper):
+        def __init__(self, env,
+                     length_schedule:list=[],
+                     length_index:int=0):
+            super().__init__(env)
+            self.visited_y=set()
+            self.rings=0
+            self.visited_x=set()
+            self.length_schedule=length_schedule
+            self.length_index=length_index
+            self.default_length=1000
+            self.elapsed_steps=0
+            
+        def step(self, a):
+            self.elapsed_steps+=1
+            if getattr(self,"rings",None)==None:
+                self.rings=0
+            if getattr(self, "visited_x",None)==None:
+                self.visited_x=set()
+            if getattr(self,"visited_y",None)==None:
+                self.visited_y=set()
+            if self.img is None and self.ram is None:
+                raise RuntimeError("Please call env.reset() before env.step()")
+
+            for p, ap in enumerate(self.action_to_array(a)):
+                if self.movie:
+                    for i in range(self.num_buttons):
+                        self.movie.set_key(i, ap[i], p)
+                self.em.set_button_mask(ap, p)
+
+            if self.movie:
+                self.movie.step()
+            self.em.step()
+            self.data.update_ram()
+            ob = self._update_obs()
+            rew, done, info = self.compute_step()
+
+            if self.render_mode == "human":
+                self.render()
+            #print("hello monkey")
+            rings=dict(info)["rings"]
+            if rings!=self.rings:
+                rew+=(rings-self.rings)
+                self.rings=rings
+                print("rings ",rings)
+            x=dict(info)["x"]
+            y=dict(info)["x"]
+            if x not in self.visited_x:
+                self.visited_x.add(x)
+                rew+=0.01*abs(x-self.starting_x)
+            if y not in self.visited_y:
+                self.visited_y.add(y)
+                rew+=0.00001* abs(y-self.starting_y)
+            rew-=0.000001
+            limit=self.default_length
+            if len(self.length_schedule)>0:
+                limit=self.length_schedule[min(len(self.length_schedule)-1,self.length_index)]
+            if self.elapsed_steps>=limit:
+                truncated=True
+            return ob, rew, bool(done), True, dict(info)
+            
+        def reset(self):
+            self.visited_y=set()
+            self.rings=0
+            self.visited_x=set()
+            self.elapsed_steps=0
+            self.length_index+=1
         
     
     action = env.action_space.sample()
@@ -325,19 +397,7 @@ if __name__=="__main__":
     action_space_size = env.action_space.n
     accelerator.print("discretized action ",env.action_space.sample())
     print("discretized Action space size:", action_space_size)
-    
-    
-    if args.use_timelimit:
-        env=gym.wrappers.TimeLimit(env,args.max_episode_steps)
 
-    
-
-
-
-    
-        
-        
-    
 
     save_path=os.path.join(MODEL_SAVE_DIR,args.game,args.scenario)
     checkpoint_path=os.path.join(save_path,"checkpoints")
@@ -373,7 +433,7 @@ if __name__=="__main__":
     output_dict=callback.output_dict
     hard_coded_steps=[]
     for q in range(args.hard_coded_steps):
-        if q%20!=0:
+        if q%50!=0:
             hard_coded_steps.append(COMBO_LIST.index(["RIGHT"]))
         else:
             hard_coded_steps.append(COMBO_LIST.index(["B"]))
@@ -395,7 +455,7 @@ if __name__=="__main__":
                 output_dict[key].append(value)
         
 
-    
+    gym.wrappers.TimeLimit
 
     Dataset.from_dict(output_dict).push_to_hub(args.dest_dataset)
 
