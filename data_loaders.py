@@ -96,19 +96,19 @@ class RenderingModelDatasetHF(Dataset):
         self.other_metadata = {k: [] for k in metadata_key_list+["action"]}
 
         # Episode tracking
-        episodes = self.data["episode"]
-        N = len(self.data)
+        episodes = data["episode"]
+        N = len(data)
 
         for i in range(N - 1):
             # Skip if next frame is from a new episode
             if episodes[i] != episodes[i + 1]:
                 continue
 
-            self.images.append(self.data["image"][i])
-            self.next_images.append(self.data["image"][i + 1])
+            self.images.append(data["image"][i])
+            self.next_images.append(data["image"][i + 1])
 
             for k in metadata_key_list+["action"]:
-                self.other_metadata[k].append(self.data[k][i])
+                self.other_metadata[k].append(data[k][i])
 
         # number of valid transitions
         self.length = len(self.images)
