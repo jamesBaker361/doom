@@ -219,9 +219,13 @@ class RingObservationReward(gym.ObservationWrapper):
     
 class MyWrapper(gym.Wrapper):
     def __init__(self, env,
+                 starting_x,
+                 starting_y,
                     length_schedule:list=[],
                     length_index:int=0):
         super().__init__(env)
+        self.starting_x=starting_x
+        self.starting_y=starting_y
         self.visited_y=set()
         self.rings=0
         self.visited_x=set()
@@ -229,6 +233,7 @@ class MyWrapper(gym.Wrapper):
         self.length_index=length_index
         self.default_length=1000
         self.elapsed_steps=0
+        
         
     def step(self, a):
         obs, rew, terminated, truncated, info = super().step(action)
@@ -290,10 +295,8 @@ if __name__=="__main__":
     step= env.step(action)
     info=step[-1]
     
-    if getattr(env,"starting_x",None)==None:
-        env.starting_x=info["x"]
-    if getattr(env,"starting_y",None)==None:
-        env.starting_y=info["y"]
+    starting_x=info["x"]
+    starting_y=info["y"]
 
     action = env.action_space.sample()
     accelerator.print("action space",action,len(action))
@@ -336,7 +339,9 @@ if __name__=="__main__":
     except:
         episode_start=0
     
-    env=MyWrapper(env,args.schedule,episode_start)
+    env=MyWrapper(env,
+                  starting_x,starting_y,
+                  args.schedule,episode_start)
     try:
         model=PPO.load(save_path, env=env, verbose=1)
         
