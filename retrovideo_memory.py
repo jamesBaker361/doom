@@ -277,12 +277,13 @@ class MyWrapper(gym.Wrapper):
             truncated=True
         return ob, rew, bool(done), True, dict(info)
         
-    def reset(self):
+    def reset(self,seed=None,options=None):
         self.visited_y=set()
         self.rings=0
         self.visited_x=set()
         self.elapsed_steps=0
         self.length_index+=1
+        return super().reset(seed=seed, options=options)
 
 
 
