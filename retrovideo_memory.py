@@ -17,7 +17,7 @@ from stable_baselines3.common.vec_env import (
 
 import retro
 
-
+import json
 import gymnasium
 import ale_py
 from PIL import Image
@@ -87,14 +87,19 @@ def pad_image_with_text(img:Image.Image, lines:list, font_size:int=20)->Image.Im
 
 
 class FrameActionPerEpisodeLogger(BaseCallback):
-    def __init__(self, save_freq: int,info_keys:list,accelerator:accelerate.Accelerator,dest_dataset:str,verbose: int = 0,image_saving:bool=True):
+    def __init__(self, save_freq: int,info_keys:list,
+                 accelerator:accelerate.Accelerator,dest_dataset:str,
+                 json_path:str,
+                 verbose: int = 0,image_saving:bool=True,
+                 episode_start:int=0,
+                 ):
         super().__init__(verbose)
         self.save_freq = save_freq
         '''self.save_dir = save_dir
         self.frame_dir = os.path.join(save_dir, frame_dir)
         self.csv_path = os.path.join(save_dir,frame_dir, CSV_NAME)
         os.makedirs(self.frame_dir, exist_ok=True)'''
-        self.episode_idx = 0
+        self.episode_idx = episode_start
         self.frame_idx = 0  # frame index within episode
         self.info_keys=info_keys
         self.image_saving=image_saving
@@ -104,6 +109,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
         self.accelerator=accelerator
         self.dest_dataset=dest_dataset
         self.cum_reward=0
+        self.json_path=json_path
         
 
     def _on_step(self) -> bool:
@@ -155,6 +161,10 @@ class FrameActionPerEpisodeLogger(BaseCallback):
 
             Dataset.from_dict(self.output_dict).push_to_hub(self.dest_dataset)
             self.episode_idx += 1
+            with open(self.json_path,"w+") as file:
+                json.dump({
+                    "episode_start":self.episode_idx
+                },file)
             self.frame_idx = 0  # reset per episode
         return True
     
@@ -323,13 +333,7 @@ if __name__=="__main__":
     
 
 
-    callback = FrameActionPerEpisodeLogger(
-        dest_dataset=args.dest_dataset,
-        accelerator=accelerator,
-        save_freq=1,           # Save every frame; increase if needed
-        info_keys=info_keys,
-        image_saving=args.image_saving
-    )
+
     
         
         
@@ -337,15 +341,30 @@ if __name__=="__main__":
 
     save_path=os.path.join(MODEL_SAVE_DIR,args.game,args.scenario)
     checkpoint_path=os.path.join(save_path,"checkpoints")
+    json_path=os.path.join(save_path,"data.json")
+    
     try:
         model=PPO.load(save_path, env=env, verbose=1)
+        with open(json_path) as file:
+            episode_start=json.load(file)["episode_start"]
     except:
         model = PPO("CnnPolicy", env, verbose=1)
+        episode_start=0
 
     checkpoint_callback = CheckpointCallback(
         save_freq=10_000,
         save_path=checkpoint_path,
         name_prefix="ppo"
+    )
+    
+    callback = FrameActionPerEpisodeLogger(
+        dest_dataset=args.dest_dataset,
+        json_path=json_path,
+        accelerator=accelerator,
+        save_freq=1,           # Save every frame; increase if needed
+        info_keys=info_keys,
+        image_saving=args.image_saving,
+        episode_start=episode_start
     )
 
     model.learn(args.timesteps,callback=CallbackList([checkpoint_callback, callback]))
