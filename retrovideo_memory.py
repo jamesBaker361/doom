@@ -52,6 +52,7 @@ parser.add_argument("--max_episode_steps",type=int,default=50)
 parser.add_argument("--image_saving",action="store_false")
 parser.add_argument("--hard_coded_steps",type=int,default=1000)
 parser.add_argument("--schedule",nargs="*",type=int,default=[])
+parser.add_argument("--repo_id",type=str,default="jlbaker361/sonic-rl-agent")
 
 
 CSV_NAME="actions.csv"
@@ -349,7 +350,7 @@ if __name__=="__main__":
     
 
 
-    save_path=os.path.join(MODEL_SAVE_DIR,args.game,args.scenario)
+    save_path=os.path.join(MODEL_SAVE_DIR,args.repo_id)
     checkpoint_path=os.path.join(save_path,"checkpoints")
     json_path=os.path.join(save_path,"data.json")
     
