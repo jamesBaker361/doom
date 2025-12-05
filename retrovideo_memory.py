@@ -51,6 +51,7 @@ parser.add_argument("--use_timelimit",action="store_true")
 parser.add_argument("--max_episode_steps",type=int,default=50)
 parser.add_argument("--image_saving",action="store_false")
 parser.add_argument("--hard_coded_steps",type=int,default=1000)
+parser.add_argument("--schedule",nargs="*",type=int,default=[])
 
 
 CSV_NAME="actions.csv"
@@ -214,29 +215,22 @@ class RingObservationReward(gym.ObservationWrapper):
     def observation(self, observation):
         print(observation)
         return observation
-
-
-
-if __name__=="__main__":
     
-    args=parser.parse_args()
-    print(args)
-    accelerator=accelerate.Accelerator(log_with="wandb")
-    accelerator.init_trackers(project_name=args.project_name,config=vars(args))
-    gymnasium.register_envs(ale_py)
-
-    env = retro.make(
-                game=args.game,
-                state=args.state,
-                scenario=args.scenario,
-                render_mode="rgb_array",
-            )
-    
-    original_reset=env.reset
-    
-    
-    
-    def step_monkey_sonic(self, a):
+class MyWrapper(gym.Wrapper):
+    def __init__(self, env,
+                    length_schedule:list=[],
+                    length_index:int=0):
+        super().__init__(env)
+        self.visited_y=set()
+        self.rings=0
+        self.visited_x=set()
+        self.length_schedule=length_schedule
+        self.length_index=length_index
+        self.default_length=1000
+        self.elapsed_steps=0
+        
+    def step(self, a):
+        self.elapsed_steps+=1
         if getattr(self,"rings",None)==None:
             self.rings=0
         if getattr(self, "visited_x",None)==None:
@@ -276,84 +270,39 @@ if __name__=="__main__":
             self.visited_y.add(y)
             rew+=0.00001* abs(y-self.starting_y)
         rew-=0.000001
-        return ob, rew, bool(done), False, dict(info)
-    
-    def reset_monkey(self, seed=None, options=None):
+        limit=self.default_length
+        if len(self.length_schedule)>0:
+            limit=self.length_schedule[min(len(self.length_schedule)-1,self.length_index)]
+        if self.elapsed_steps>=limit:
+            truncated=True
+        return ob, rew, bool(done), True, dict(info)
         
+    def reset(self):
         self.visited_y=set()
         self.rings=0
         self.visited_x=set()
-        return original_reset(seed,options)
+        self.elapsed_steps=0
+        self.length_index+=1
+
+
+
+if __name__=="__main__":
     
+    args=parser.parse_args()
+    print(args)
+    accelerator=accelerate.Accelerator(log_with="wandb")
+    accelerator.init_trackers(project_name=args.project_name,config=vars(args))
+    gymnasium.register_envs(ale_py)
+
+    env = retro.make(
+                game=args.game,
+                state=args.state,
+                scenario=args.scenario,
+                render_mode="rgb_array",
+            )
     
-    class MyWrapper(gym.Wrapper):
-        def __init__(self, env,
-                     length_schedule:list=[],
-                     length_index:int=0):
-            super().__init__(env)
-            self.visited_y=set()
-            self.rings=0
-            self.visited_x=set()
-            self.length_schedule=length_schedule
-            self.length_index=length_index
-            self.default_length=1000
-            self.elapsed_steps=0
-            
-        def step(self, a):
-            self.elapsed_steps+=1
-            if getattr(self,"rings",None)==None:
-                self.rings=0
-            if getattr(self, "visited_x",None)==None:
-                self.visited_x=set()
-            if getattr(self,"visited_y",None)==None:
-                self.visited_y=set()
-            if self.img is None and self.ram is None:
-                raise RuntimeError("Please call env.reset() before env.step()")
-
-            for p, ap in enumerate(self.action_to_array(a)):
-                if self.movie:
-                    for i in range(self.num_buttons):
-                        self.movie.set_key(i, ap[i], p)
-                self.em.set_button_mask(ap, p)
-
-            if self.movie:
-                self.movie.step()
-            self.em.step()
-            self.data.update_ram()
-            ob = self._update_obs()
-            rew, done, info = self.compute_step()
-
-            if self.render_mode == "human":
-                self.render()
-            #print("hello monkey")
-            rings=dict(info)["rings"]
-            if rings!=self.rings:
-                rew+=(rings-self.rings)
-                self.rings=rings
-                print("rings ",rings)
-            x=dict(info)["x"]
-            y=dict(info)["x"]
-            if x not in self.visited_x:
-                self.visited_x.add(x)
-                rew+=0.01*abs(x-self.starting_x)
-            if y not in self.visited_y:
-                self.visited_y.add(y)
-                rew+=0.00001* abs(y-self.starting_y)
-            rew-=0.000001
-            limit=self.default_length
-            if len(self.length_schedule)>0:
-                limit=self.length_schedule[min(len(self.length_schedule)-1,self.length_index)]
-            if self.elapsed_steps>=limit:
-                truncated=True
-            return ob, rew, bool(done), True, dict(info)
-            
-        def reset(self):
-            self.visited_y=set()
-            self.rings=0
-            self.visited_x=set()
-            self.elapsed_steps=0
-            self.length_index+=1
-        
+    original_reset=env.reset
+    
     
     action = env.action_space.sample()
     accelerator.print("action space",action,len(action))
@@ -367,8 +316,6 @@ if __name__=="__main__":
         env.starting_x=info["x"]
     if getattr(env,"starting_y",None)==None:
         env.starting_y=info["y"]
-    env.step=step_monkey_sonic.__get__(env)
-    env.reset=reset_monkey.__get__(env)
 
     action = env.action_space.sample()
     accelerator.print("action space",action,len(action))
@@ -397,6 +344,8 @@ if __name__=="__main__":
     action_space_size = env.action_space.n
     accelerator.print("discretized action ",env.action_space.sample())
     print("discretized Action space size:", action_space_size)
+    
+    
 
 
     save_path=os.path.join(MODEL_SAVE_DIR,args.game,args.scenario)
@@ -404,12 +353,18 @@ if __name__=="__main__":
     json_path=os.path.join(save_path,"data.json")
     
     try:
-        model=PPO.load(save_path, env=env, verbose=1)
         with open(json_path) as file:
             episode_start=json.load(file)["episode_start"]
     except:
-        model = PPO("CnnPolicy", env, verbose=1)
         episode_start=0
+    
+    env=MyWrapper(env,args.schedule,episode_start)
+    try:
+        model=PPO.load(save_path, env=env, verbose=1)
+        
+    except:
+        model = PPO("CnnPolicy", env, verbose=1)
+        
 
     checkpoint_callback = CheckpointCallback(
         save_freq=10_000,
