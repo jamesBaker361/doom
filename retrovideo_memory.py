@@ -231,32 +231,8 @@ class MyWrapper(gym.Wrapper):
         self.elapsed_steps=0
         
     def step(self, a):
+        obs, rew, terminated, truncated, info = super().step(action)
         self.elapsed_steps+=1
-        if getattr(self,"rings",None)==None:
-            self.rings=0
-        if getattr(self, "visited_x",None)==None:
-            self.visited_x=set()
-        if getattr(self,"visited_y",None)==None:
-            self.visited_y=set()
-        if self.img is None and self.ram is None:
-            raise RuntimeError("Please call env.reset() before env.step()")
-
-        for p, ap in enumerate(self.action_to_array(a)):
-            if self.movie:
-                for i in range(self.num_buttons):
-                    self.movie.set_key(i, ap[i], p)
-            self.em.set_button_mask(ap, p)
-
-        if self.movie:
-            self.movie.step()
-        self.em.step()
-        self.data.update_ram()
-        ob = self._update_obs()
-        rew, done, info = self.compute_step()
-
-        if self.render_mode == "human":
-            self.render()
-        #print("hello monkey")
         rings=dict(info)["rings"]
         if rings!=self.rings:
             rew+=(rings-self.rings)
@@ -276,7 +252,7 @@ class MyWrapper(gym.Wrapper):
             limit=self.length_schedule[min(len(self.length_schedule)-1,self.length_index)]
         if self.elapsed_steps>=limit:
             truncated=True
-        return ob, rew, bool(done), True, dict(info)
+        return obs, rew, terminated, truncated, dict(info)
         
     def reset(self,seed=None,options=None):
         self.visited_y=set()
