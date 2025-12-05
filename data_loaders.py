@@ -58,9 +58,9 @@ class RenderingModelDatasetHF(Dataset):
                  process:bool=False,
                  vae:AutoencoderKL=None):
         super().__init__()
-        self.data=load_dataset(src_dataset,split="train")
+        data=load_dataset(src_dataset,split="train")
         try:
-            self.data=self.data.cast_column("image",datasets.Image())
+            data=data.cast_column("image",datasets.Image())
         except:
             pass
         #self.data=self.data.select(range(0,len(self.data),skip_num))
@@ -69,14 +69,14 @@ class RenderingModelDatasetHF(Dataset):
         #self.n_actions=len(set(self.data["action"]))
         episode_set=set()
         if process:
-            self.n_actions=len(set(self.data["action"]))
+            self.n_actions=len(set(data["action"]))
             if image_processor is not None:
-                self.data=self.data.map(lambda x :{"image": image_processor.preprocess( x["image"])[0]})
-            self.data=self.data.map(lambda x: {"action":F.one_hot(torch.tensor(x["action"]),self.n_actions)})
+                data=data.map(lambda x :{"image": image_processor.preprocess( x["image"])[0]})
+            data=data.map(lambda x: {"action":F.one_hot(torch.tensor(x["action"]),self.n_actions)})
         else:
-            self.n_actions=len(self.data["action"][0])
+            self.n_actions=len(data["action"][0])
         self.vae=vae
-        for i,row in enumerate(self.data):
+        for i,row in enumerate(data):
             if row["episode"] not in episode_set:
                 episode_set.add(row["episode"])
                 self.start_index_list.append(i)
