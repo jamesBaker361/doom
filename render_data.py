@@ -18,3 +18,4 @@ for i in range(1,len(src)):
         dest_dict["past_image"].append(src[i-1])
         
 Dataset.from_dict(dest_dict).push_to_hub(args.dest)
+print("all done :)")
