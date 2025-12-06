@@ -52,87 +52,74 @@ class ImageDatasetHF(Dataset):
         }
     
 class RenderingModelDatasetHF(Dataset):
-    def __init__(self,src_dataset:str,image_processor:VaeImageProcessor,
-               #  max_sequence_length,
-                 metadata_key_list:list=[],
-                 process:bool=False,
-                 vae:AutoencoderKL=None):
+    def __init__(self, src_dataset, image_processor, metadata_key_list=[], process=False, vae=None):
         super().__init__()
-        data=load_dataset(src_dataset,split="train")
+        self.data = load_dataset(src_dataset, split="train")
+
         try:
-            data=data.cast_column("image",datasets.Image())
+            self.data = self.data.cast_column("image", datasets.Image())
         except:
             pass
-        #self.data=self.data.select(range(0,len(self.data),skip_num))
-        self.image_processor=image_processor
-        self.start_index_list=[]
-        #self.n_actions=len(set(self.data["action"]))
-        episode_set=set()
+
+        self.image_processor = image_processor
+        self.metadata_key_list = metadata_key_list
+        self.vae = vae
+
+        # preprocess metadata if needed
         if process:
-            self.n_actions=len(set(data["action"]))
+            self.n_actions = len(set(self.data["action"]))
             if image_processor is not None:
-                data=data.map(lambda x :{"image": image_processor.preprocess( x["image"])[0]})
-            data=data.map(lambda x: {"action":F.one_hot(torch.tensor(x["action"]),self.n_actions)})
+                self.data = self.data.map(
+                    lambda x: {"image": image_processor.preprocess(x["image"])[0]},
+                    batched=False
+                )
+            '''self.data = self.data.map(
+                lambda x: {"action": F.one_hot(torch.tensor(x["action"]), self.n_actions)},
+                batched=False
+            )'''
         else:
-            self.n_actions=len(data["action"][0])
-        self.vae=vae
-        for i,row in enumerate(data):
-            if row["episode"] not in episode_set:
-                episode_set.add(row["episode"])
-                self.start_index_list.append(i)
-        self.start_index_list.append(i)
-        self.metadata_key_list=metadata_key_list
-        #self.max_sequence_length=max_sequence_length
-        '''if vae is not None:
-            self.data.map(lambda x:)'''
-        '''for key in metadata_key_list+["action"]:
-            self.data=self.data.map(lambda x: {key:torch.tensor(x[key])})'''
-            
-        # ------------------------------------------------------------------ #
-        #                   PRECOMPUTE VALID IMAGE PAIRS                     #
-        # ------------------------------------------------------------------ #
-        self.images = []
-        self.next_images = []
-        self.other_metadata = {k: [] for k in metadata_key_list+["action"]}
+            self.n_actions = len(self.data["action"][0])
 
-        # Episode tracking
-        episodes = data["episode"]
-        N = len(data)
+        # -------------------------------------------- #
+        #         BUILD ONLY INDEX PAIRS (cheap)        #
+        # -------------------------------------------- #
 
-        for i in range(N - 1):
+        self.index_list = []
 
-            self.images.append(data["image"][i])
+        episodes = self.data["episode"]
+        N = len(self.data)
 
-            for k in metadata_key_list+["action"]:
-                self.other_metadata[k].append(data[k][i])
-
-        # number of valid transitions
-        self.length = len(self.images)
+        for i in range(1,N ):
+            # skip crossing episodes
+            if episodes[i] != episodes[i - 1]:
+                continue
+            self.index_list.append(i)
 
     def __len__(self):
-        return self.length
-    
-    def __getitem__(self, index):
-        if index in self.start_index_list:
-            index=index+1
-        image = torch.tensor(self.images[index])
-        past_image=torch.tensor(self.images[index-1])
+        return len(self.index_list)
+
+    def __getitem__(self, idx):
+        i = self.index_list[idx]
+
+        row = self.data[i]
+        past_row = self.data[i - 1]
+
+        img = row["image"]
+        past_img = past_row["image"]
+
+        if self.image_processor:
+            img = self.image_processor.preprocess(img)[0]
+            past_img = self.image_processor.preprocess(past_img)[0]
+
+        out = {"image": img, "past_image": past_img}
         
-
-        # Optional VAE encoding
-        if self.vae is not None:
-            image = self.vae.encode(image).latent_dist.sample()
-            past_image = self.vae.encode(past_image).latent_dist.sample()
-
-        out = {
-            "past_image": past_image,
-            "image": image,
-        }
-
-        for k in self.metadata_key_list+["action"]:
-            out[k] = torch.tensor(self.other_metadata[k][index])
-
+        # metadata
+        for k in self.metadata_key_list: # ["action"]:
+            out[k] = torch.tensor(row[k])
+            
+        out["action"]=F.one_hot(torch.tensor(row["action"],self.n_actions))
         return out
+
     
     
 class VelocityPositionDatasetHF(Dataset):
