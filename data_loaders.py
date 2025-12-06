@@ -100,12 +100,8 @@ class RenderingModelDatasetHF(Dataset):
         N = len(data)
 
         for i in range(N - 1):
-            # Skip if next frame is from a new episode
-            if episodes[i] != episodes[i + 1]:
-                continue
 
             self.images.append(data["image"][i])
-            self.next_images.append(data["image"][i + 1])
 
             for k in metadata_key_list+["action"]:
                 self.other_metadata[k].append(data[k][i])
@@ -117,17 +113,20 @@ class RenderingModelDatasetHF(Dataset):
         return self.length
     
     def __getitem__(self, index):
+        if index in self.start_index_list:
+            index=index+1
         image = torch.tensor(self.images[index])
-        next_image = torch.tensor(self.next_images[index])
+        past_image=torch.tensor(self.images[index-1])
+        
 
         # Optional VAE encoding
         if self.vae is not None:
             image = self.vae.encode(image).latent_dist.sample()
-            next_image = self.vae.encode(next_image).latent_dist.sample()
+            past_image = self.vae.encode(past_image).latent_dist.sample()
 
         out = {
-            "past_image": image,
-            "image": next_image,
+            "past_image": past_image,
+            "image": image,
         }
 
         for k in self.metadata_key_list+["action"]:
