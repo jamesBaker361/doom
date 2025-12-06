@@ -9,6 +9,7 @@ import json
 from unet_helpers import prepare_metadata,forward_with_metadata,set_metadata_embedding,inference_metadata
 from constants import VAE_WEIGHTS_NAME
 from diffusers.schedulers.scheduling_flow_match_euler_discrete import FlowMatchEulerDiscreteScheduler
+from peft import LoraConfig
 
 import torch
 import accelerate
@@ -49,6 +50,7 @@ parser.add_argument("--action",type=str,default="embedding",help="encoder or emb
 parser.add_argument("--dataset",type=str,default="jlbaker361/discrete_HillTopZone.Act1100")
 parser.add_argument("--vae_checkpoint",type=str,default="jlbaker361/sonic-encoder-vae_16_0.0001_HillTopZone")
 parser.add_argument("--num_inference_steps",type=int,default=4)
+parser.add_argument("--use_lora",action="store_true")
 
 class ActionEncoder(torch.nn.Module):
     def __init__(self,input_dim:int,output_dim:int,n_layers:int,n_actions:int, *args, **kwargs):
@@ -133,10 +135,17 @@ def main(args):
         action_encoder=ActionEncoder(action_dim,embedding_dim,3,n_actions).to(device)
     
     #vae=AutoencoderKL.from_pretrained(args.vae_checkpoint)
+    if args.use_lora:
+        unet.train(False)
+        unet.load_lora_adapter(
+            LoraConfig(
+                rank=4,
+                init_lora_weights="gaussian",
+                target_modules=["to_k", "to_q", "to_v", "to_out.0"]
+            )
+        )
 
-    
-
-    params=[p for p in unet.parameters()]+[p for p in action_encoder.parameters()]
+    params=[p for p in unet.parameters() if p.requires_grad]+[p for p in action_encoder.parameters()]
     optimizer=torch.optim.AdamW(params,args.lr)
     
     optimizer,unet,action_encoder,train_loader,test_loader,val_loader,scheduler,ddim_scheduler = accelerator.prepare(optimizer,
