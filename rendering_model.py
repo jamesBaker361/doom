@@ -47,7 +47,7 @@ from experiment_helpers.init_helpers import default_parser,repo_api_init
 parser=default_parser()
 parser.add_argument("--action",type=str,default="embedding",help="encoder or embedding")
 parser.add_argument("--dataset",type=str,default="jlbaker361/discrete_HillTopZone.Act1100")
-parser.add_argument("--vae_checkpoint",type=str,default=None)
+parser.add_argument("--vae_checkpoint",type=str,default="jlbaker361/sonic-encoder-vae_16_0.0001_HillTopZone")
 parser.add_argument("--num_inference_steps",type=int,default=4)
 
 class ActionEncoder(torch.nn.Module):
@@ -89,6 +89,10 @@ def main(args):
     accelerator.print("len params after metadata",len([p for p in unet.parameters()]))
     accelerator.print("len weight dict after metadata ",len(unet.state_dict()))
     vae=pipe.vae.to(device)
+    if args.vae_checkpoint!="":
+        weight_path=hf_hub_download("jlbaker361/sonic-encoder-vae_16_0.0001_HillTopZone",
+                                    "pytorch_weights.safetensors")
+        vae.load_state_dict(torch.load(weight_path,weights_only=True))
     image_processor=pipe.image_processor
     unet.to(device)
     scheduler=FlowMatchEulerDiscreteScheduler.from_config(json.loads(open(hf_hub_download(
