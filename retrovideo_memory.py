@@ -94,6 +94,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
                  json_path:str,
                  verbose: int = 0,image_saving:bool=True,
                  episode_start:int=0,
+                 steps_taken:int=0
                  ):
         super().__init__(verbose)
         self.save_freq = save_freq
@@ -116,9 +117,11 @@ class FrameActionPerEpisodeLogger(BaseCallback):
         self.dest_dataset=dest_dataset
         self.cum_reward=0
         self.json_path=json_path
+        self.steps_taken=steps_taken
         
 
     def _on_step(self) -> bool:
+        self.steps_taken+=1
         # Environment is vectorized; assume single environment
         
 
@@ -150,10 +153,10 @@ class FrameActionPerEpisodeLogger(BaseCallback):
 
             '''if self.frame_idx%100==0:
                 Dataset.from_dict(self.output_dict).push_to_hub(self.dest_dataset)'''
-        if len(set([type(elem) for elem in self.output_dict["episode"]]))>1:
+            '''if len(set([type(elem) for elem in self.output_dict["episode"]]))>1:
             print("hella types",self.frame_idx)
             print("self epsidoe idx",self.episode_idx)
-            print("self locals",",".join([k for k in self.locals["infos"][0]]))
+            print("self locals",",".join([k for k in self.locals["infos"][0]]))'''
         dones = self.locals["dones"]
         #print(self.locals["infos"])
         if "rewards" in self.locals:
@@ -175,7 +178,8 @@ class FrameActionPerEpisodeLogger(BaseCallback):
             self.episode_idx += 1
             with open(self.json_path,"w+") as file:
                 json.dump({
-                    "episode_start":self.episode_idx
+                    "episode_start":self.episode_idx,
+                    "steps_taken":self.steps_taken
                 },file)
             self.frame_idx = 0  # reset per episode
         return True
@@ -346,7 +350,13 @@ if __name__=="__main__":
     except:
         episode_start=0
         
-    print("episode_start",episode_start)
+    try:
+        with open(json_path) as file:
+            steps_taken=json.load(file)["steps_taken"]
+    except:
+        steps_taken=0
+        
+    print("episode_start",episode_start, "steps_taken",steps_taken, f"taking {args.timesteps-steps_taken} steps ")
     
     env=MyWrapper(env,
                   starting_x,starting_y,
@@ -371,10 +381,11 @@ if __name__=="__main__":
         save_freq=1,           # Save every frame; increase if needed
         info_keys=info_keys,
         image_saving=args.image_saving,
-        episode_start=episode_start
+        episode_start=episode_start,
+        steps_taken=steps_taken
     )
 
-    model.learn(args.timesteps,callback=CallbackList([checkpoint_callback, callback]))
+    model.learn(args.timesteps-steps_taken,callback=CallbackList([checkpoint_callback, callback]))
     model.save(save_path)
     
     output_dict=callback.output_dict
