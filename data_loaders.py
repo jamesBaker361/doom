@@ -108,7 +108,6 @@ class RenderingModelDatasetHF(Dataset):
         past_img = past_row["image"]
 
         if self.image_processor:
-            print(type(img))
             img = self.image_processor.preprocess(img)[0]
             past_img = self.image_processor.preprocess(past_img)[0]
 
@@ -118,7 +117,7 @@ class RenderingModelDatasetHF(Dataset):
         for k in self.metadata_key_list: # ["action"]:
             out[k] = torch.tensor(row[k])
             
-        out["action"]=F.one_hot(torch.tensor(row["action"],self.n_actions))
+        out["action"]=F.one_hot(torch.tensor(row["action"]),self.n_actions)
         return out
 
     
