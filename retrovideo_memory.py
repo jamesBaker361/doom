@@ -385,7 +385,9 @@ if __name__=="__main__":
         steps_taken=steps_taken
     )
 
-    model.learn(args.timesteps-steps_taken,callback=CallbackList([checkpoint_callback, callback]))
+    model.learn(args.timesteps-steps_taken,callback=CallbackList([
+        #checkpoint_callback, 
+        callback]))
     model.save(save_path)
     
     output_dict=callback.output_dict
