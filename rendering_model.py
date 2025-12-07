@@ -158,6 +158,8 @@ def main(args):
     },save_subdir,api,args.repo_id)
     
     start_epoch=load(True)
+    
+    accelerator.print("starting at ",start_epoch)
 
     @optimization_loop(
         accelerator,train_loader,args.epochs,args.val_interval,args.limit,
