@@ -141,13 +141,18 @@ class FrameActionPerEpisodeLogger(BaseCallback):
             self.output_dict["action"].append(action)
             self.output_dict["action_combo"].append(COMBO_LIST[action])
 
+            for key,value in self.locals["infos"][0].items():
+                
+                if key in self.output_dict:
+                    self.output_dict[key].append(value)
+            #print(", ".join([k for k in self.locals["infos"][0]]))
             self.frame_idx += 1
 
             '''if self.frame_idx%100==0:
                 Dataset.from_dict(self.output_dict).push_to_hub(self.dest_dataset)'''
-        dones = self.locals["dones"]
         if len(set([type(elem) for elem in self.output_dict["episode"]]))>1:
-            print("hella types",self.frame_idx)
+                print("hella types",self.frame_idx)
+        dones = self.locals["dones"]
         #print(self.locals["infos"])
         if "rewards" in self.locals:
             accelerator.log({
