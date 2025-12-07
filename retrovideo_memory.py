@@ -361,7 +361,7 @@ if __name__=="__main__":
                   starting_x,starting_y,
                   args.schedule,episode_start)
     try:
-        model=PPO.load(save_path, env=env, verbose=1)
+        model=PPO.load(save_path+".zip", env=env, verbose=1)
         print("successfully loaded")
     except Exception as e:
         model = PPO("CnnPolicy", env, verbose=1)
