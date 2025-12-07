@@ -363,8 +363,9 @@ if __name__=="__main__":
     try:
         model=PPO.load(save_path, env=env, verbose=1)
         print("successfully loaded")
-    except:
+    except Exception as e:
         model = PPO("CnnPolicy", env, verbose=1)
+        print('didnt load',e)
         
 
     checkpoint_callback = CheckpointCallback(
