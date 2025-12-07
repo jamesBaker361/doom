@@ -253,7 +253,6 @@ class MyWrapper(gym.Wrapper):
         if rings!=self.rings:
             rew+=(rings-self.rings)
             self.rings=rings
-            print("rings ",rings)
         x=dict(info)["x"]
         y=dict(info)["x"]
         if x not in self.visited_x:
@@ -363,7 +362,7 @@ if __name__=="__main__":
                   args.schedule,episode_start)
     try:
         model=PPO.load(save_path, env=env, verbose=1)
-        
+        print("successfully loaded")
     except:
         model = PPO("CnnPolicy", env, verbose=1)
         
