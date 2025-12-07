@@ -164,6 +164,9 @@ class FrameActionPerEpisodeLogger(BaseCallback):
             accelerator.log({
                 "final_reward":self.locals["rewards"][0]
             })
+            for col in self.output_dict:
+                types = set(type(x) for x in self.output_dict[col] if x is not None)
+                print(col, types)
 
             Dataset.from_dict(self.output_dict).push_to_hub(self.dest_dataset)
             self.episode_idx += 1
