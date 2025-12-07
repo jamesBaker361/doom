@@ -108,6 +108,7 @@ class RenderingModelDatasetHF(Dataset):
         past_img = past_row["image"]
 
         if self.image_processor:
+            print(type(img))
             img = self.image_processor.preprocess(img)[0]
             past_img = self.image_processor.preprocess(past_img)[0]
 
