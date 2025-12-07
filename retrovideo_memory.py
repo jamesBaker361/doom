@@ -107,6 +107,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
         self.image_saving=image_saving
         try:
             self.output_dict=load_dataset(dest_dataset,split="train").to_dict()
+            print("features",[k for k in self.output_dict.keys()])
         except:
             self.output_dict={
                 key:[] for key in ["episode", "frame_in_episode", "action","image","action_combo"]+self.info_keys
