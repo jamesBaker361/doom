@@ -137,7 +137,7 @@ def main(args):
     #vae=AutoencoderKL.from_pretrained(args.vae_checkpoint)
     if args.use_lora:
         unet.train(False)
-        unet.load_lora_adapter(
+        unet.add_adapter(
             LoraConfig(
                 r=4,
                 init_lora_weights="gaussian",
