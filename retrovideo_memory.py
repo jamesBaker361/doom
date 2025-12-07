@@ -142,9 +142,10 @@ class FrameActionPerEpisodeLogger(BaseCallback):
             self.output_dict["action_combo"].append(COMBO_LIST[action])
 
             for key,value in self.locals["infos"][0].items():
+                
                 if key in self.output_dict:
                     self.output_dict[key].append(value)
-
+            print(", ".join([k for k in self.locals["infos"][0]]))
             self.frame_idx += 1
 
             '''if self.frame_idx%100==0:
