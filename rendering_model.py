@@ -139,7 +139,7 @@ def main(args):
         unet.train(False)
         unet.load_lora_adapter(
             LoraConfig(
-                rank=4,
+                r=4,
                 init_lora_weights="gaussian",
                 target_modules=["to_k", "to_q", "to_v", "to_out.0"]
             )
