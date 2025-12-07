@@ -54,7 +54,7 @@ class ImageDatasetHF(Dataset):
 class RenderingModelDatasetHF(Dataset):
     def __init__(self, src_dataset, image_processor, metadata_key_list=[], process=False, vae=None):
         super().__init__()
-        self.data = load_dataset(src_dataset, split="train")[:10]
+        self.data = load_dataset(src_dataset, split="train")
 
         try:
             self.data = self.data.cast_column("image", datasets.Image())
