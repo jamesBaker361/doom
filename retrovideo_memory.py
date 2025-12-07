@@ -151,7 +151,9 @@ class FrameActionPerEpisodeLogger(BaseCallback):
             '''if self.frame_idx%100==0:
                 Dataset.from_dict(self.output_dict).push_to_hub(self.dest_dataset)'''
         if len(set([type(elem) for elem in self.output_dict["episode"]]))>1:
-                print("hella types",self.frame_idx)
+            print("hella types",self.frame_idx)
+            print("self epsidoe idx",self.episode_idx)
+            print("self locals",",".join([k for k in self.locals["infos"][0]]))
         dones = self.locals["dones"]
         #print(self.locals["infos"])
         if "rewards" in self.locals:
