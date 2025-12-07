@@ -58,8 +58,8 @@ class RenderingModelDatasetHF(Dataset):
 
         try:
             self.data = self.data.cast_column("image", datasets.Image())
-        except:
-            pass
+        except Exception as e:
+            print("map error ",e)
 
         self.image_processor = image_processor
         self.metadata_key_list = metadata_key_list
@@ -68,11 +68,11 @@ class RenderingModelDatasetHF(Dataset):
         # preprocess metadata if needed
         if process:
             self.n_actions = len(set(self.data["action"]))
-            if image_processor is not None:
+            '''if image_processor is not None:
                 self.data = self.data.map(
                     lambda x: {"image": image_processor.preprocess(x["image"])[0]},
                     batched=False
-                )
+                )'''
             '''self.data = self.data.map(
                 lambda x: {"action": F.one_hot(torch.tensor(x["action"]), self.n_actions)},
                 batched=False
