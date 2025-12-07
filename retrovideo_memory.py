@@ -164,9 +164,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
             accelerator.log({
                 "final_reward":self.locals["rewards"][0]
             })
-            for col in self.output_dict:
-                types = set(type(x) for x in self.output_dict[col] if x is not None)
-                print(col, types)
+            print(self.output_dict["episode"])
 
             Dataset.from_dict(self.output_dict).push_to_hub(self.dest_dataset)
             self.episode_idx += 1
@@ -342,6 +340,8 @@ if __name__=="__main__":
             episode_start=json.load(file)["episode_start"]
     except:
         episode_start=0
+        
+    print("episode_start",episode_start)
     
     env=MyWrapper(env,
                   starting_x,starting_y,
