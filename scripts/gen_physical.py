@@ -1,4 +1,4 @@
-for image_encoder in ["vae","trained"]:
+for image_encoder in ["trained"]:
     for lr in [0.001, 0.005]:
         for zone in ["EmeraldHillZone","HillTopZone"]:
             name=f"{image_encoder}_{lr}_{zone}"
