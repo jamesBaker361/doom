@@ -3,6 +3,7 @@ import pygame
 import numpy as np
 import os
 import time
+from PIL import Image
 
 # ---- SETTINGS ----
 RECORD_DIR = "records_user"
@@ -21,16 +22,18 @@ env = retro.make(
 # retro uses a fixed order of buttons depending on the game:
 # Example Genesis mapping: ['B','NULL','C','A','Start','Up','Down','Left','Right']
 BUTTONS = env.buttons
+print(BUTTONS)
+print(env.unwrapped.buttons)
 
 # Keyboard → Genesis button
 KEY_TO_BUTTON = {
-    pygame.K_RIGHT: "Right",
-    pygame.K_LEFT: "Left",
-    pygame.K_UP: "Up",
-    pygame.K_DOWN: "Down",
+    pygame.K_d: "RIGHT",
+    pygame.K_a: "LEFT",
+    pygame.K_w: "UP",
+    pygame.K_s: "DOWN",
 
-    pygame.K_z: "B",      # Jump
-    pygame.K_x: "A",
+    pygame.K_q: "B",      # Jump
+    pygame.K_x: "LEFT",
     pygame.K_c: "C",
 
     pygame.K_RETURN: "Start",
@@ -58,9 +61,10 @@ print(" Z/X/C = Buttons (jump/spin)")
 print(" Enter = Start")
 print(" ESC = Quit")
 print("------------------")
-
+count=0
 try:
     while not done:
+        count+=1
         pressed = pygame.key.get_pressed()
         action = np.zeros(len(BUTTONS), dtype=np.int8)
 
@@ -78,7 +82,12 @@ try:
                 done = True
 
         # Step emulator
-        obs, rew, done, info = env.step(action)
+        
+        obs, rew, terminated, truncated, info=env.step(action)
+        if count==1:
+            image=obs
+            image = Image.fromarray(image)
+            image.save("first.png")
         env.render()
 
         # Save user action
