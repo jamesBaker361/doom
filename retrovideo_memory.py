@@ -254,7 +254,7 @@ class MyWrapper(gym.Wrapper):
             rew+=(rings-self.rings)
             self.rings=rings
         x=dict(info)["x"]
-        y=dict(info)["x"]
+        y=dict(info)["y"]
         if x not in self.visited_x:
             self.visited_x.add(x)
             rew+=0.01*abs(x-self.starting_x)
