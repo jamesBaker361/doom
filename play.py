@@ -81,8 +81,8 @@ if __name__=='__main__':
     action_log = []
 
     print("Controls:")
-    print(" Arrow keys = Move")
-    print(" Z/X/C = Buttons (jump/spin)")
+    print(" AWASD = Move")
+    print(" Q = Buttons (jump/spin)")
     print(" Enter = Start")
     print(" ESC = Quit")
     print("------------------")
@@ -100,18 +100,20 @@ if __name__=='__main__':
     try:
         while not done:
             count+=1
-            if count>=1000:
+            if count>=5000:
                 break
             pressed = pygame.key.get_pressed()
             action = np.zeros(len(BUTTONS), dtype=np.int8)
 
+
+            pressed_list=[]
             for key, button_name in KEY_TO_BUTTON.items():
                 if pressed[key]:
-                    output_dict["action"].append(button_name)
+                    pressed_list.append(button_name)
                     idx = button_index.get(button_name, None)
                     if idx is not None:
                         action[idx] = 1
-                    break
+            output_dict["action"].append('-'.join(pressed_list))
             if np.sum(action)<1:
                 output_dict["action"].append("None")
 
@@ -127,7 +129,7 @@ if __name__=='__main__':
             obs, rew, terminated, truncated, info=env.step(action)
 
             image=obs
-            image = Image.fromarray(image)
+            image = Image.fromarray(image).resize((256,256))
             save_path_image=os.path.join(save_dir,f"{count}.jpg")
             image.save(save_path_image)
             env.render()
