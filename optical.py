@@ -57,6 +57,7 @@ SONIC_END=3
 
 os.makedirs("box",exist_ok=True)
 os.makedirs("sprite",exist_ok=True)
+os.makedirs("cropped",exist_ok=True)
 
 for game in ['SonicTheHedgehog2-Genesis','SuperMarioWorld-Snes','CastlevaniaBloodlines-Genesis']:
     for button in ["B","RIGHT","LEFT"]:
@@ -192,26 +193,27 @@ for game in ['SonicTheHedgehog2-Genesis','SuperMarioWorld-Snes','CastlevaniaBloo
         #gray_image = Image.fromarray(cv.cvtColor(final_mask, cv.COLOR_GRAY2RGB))
         #gray_image.save(f'components_{game}_{button}.jpg')
 
-        pil_data2=Image.open(os.path.join(PATH,f"{n//2}.jpg"))
+        pil_data2=Image.open(os.path.join(PATH,f"{1+n//2}.jpg"))
         frame2=np.array(pil_data2)[:, :, ::-1].copy()
 
         subset=frame2[y1:y2,x1:x2]
         #print(subset.shape,np.mean(subset))
         #print(minor,major)
         #sub_image=Image.fromarray(cv.cvtColor(subset, cv.COLOR_BGR2RGB))
-
+        
         sub_image=Image.fromarray(cv.cvtColor(subset, cv.COLOR_BGR2RGB))
-        sub_image.save(f"sub_{button}_{game[:10]}.jpg")
-        rem=rembg.remove(sub_image).convert("RGB")
-        #rem.save(f"sprite_{button}_{game[:10]}.jpg")
+        sub_image.save(os.path.join("sprite",f"{game}_{button}.jpg"))
+        #rem=rembg.remove(sub_image).convert("RGB")
+        #rem.save(os.path.join("cropped",f"{game}_{button}.jpg"))
 
-        sprite=np.array(rem)[:, :, ::-1].copy()
+        #sprite=np.array(rem)[:, :, ::-1].copy()
         #sprite=crop_black(sprite)
-        Image.fromarray(cv.cvtColor(sprite, cv.COLOR_BGR2RGB)).save(os.path.join("sprite",f"{game}_{button}.jpg"))
+        #Image.fromarray(cv.cvtColor(sprite, cv.COLOR_BGR2RGB)).save(os.path.join("sprite",f"{game}_{button}.jpg"))'''
 
         
 
         images=[Image.open(os.path.join(NEXT_PATH,f"{n}.jpg")) for n in range(start,end,step)]
+        print(f'{game}_{button}.gif')
         images[0].save(f'{game}_{button}.gif',
                     save_all = True, append_images = images[1:],
                     optimize = True, duration = len([n in range(start,end,step)])//4)

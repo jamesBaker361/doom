@@ -7,7 +7,7 @@ from PIL import Image
 import argparse
 import csv
 
-
+RIGHT_STEPS=10
 
 if __name__=='__main__':
 
@@ -112,7 +112,8 @@ if __name__=='__main__':
                 #clock.tick(60)
 
             
-            for _ in range(50):
+            for _ in range(RIGHT_STEPS):
+                
                 right= np.zeros(len(BUTTONS), dtype=np.int8)
                 
                 idx = button_index.get("RIGHT", None)
