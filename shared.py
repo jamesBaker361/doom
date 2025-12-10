@@ -65,3 +65,8 @@ game_key_dict={
     'SuperMarioWorld-Snes':['coins', 'score', 'lives', 'action', 'save_path'],
     'SonicTheHedgehog2-Genesis':['act', 'game_mode', 'level_end_bonus', 'score', 'lives', 'rings', 'screen_x_end', 'screen_x', 'screen_y', 'x', 'y', 'zone', 'action', 'save_path']
 }
+game_window_dict={
+    'SonicTheHedgehog2-Genesis':[224, 320], #['EmeraldHillZone.Act1','AquaticRuinZone.Act1','CasinoNightZone.Act1','HillTopZone.Act1'],
+        'SuperMarioWorld-Snes':[224, 256], #["ChocolateIsland1",'DonutPlains1','Forest1','VanillaDome1'],
+        'CastlevaniaBloodlines-Genesis': [224, 320], #['Level1-1','Level2-1','Level3-1','Level4-1']
+}
