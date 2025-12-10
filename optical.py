@@ -53,7 +53,7 @@ def highpass_optical_flow(flow, blur_size=21, sigma=2):
 
 BUFFER=5
 END=15
-SONIC_END=3
+SONIC_END=END
 
 os.makedirs("box",exist_ok=True)
 os.makedirs("sprite",exist_ok=True)
@@ -85,6 +85,8 @@ for game in ['SonicTheHedgehog2-Genesis','SuperMarioWorld-Snes','CastlevaniaBloo
         masked_image=cv.bitwise_and(frame1,frame1,mask=mask)'''
 
         gray_list=[]
+        bgr_list=[]
+        frame_list=[]
 
         if game =='SonicTheHedgehog2-Genesis':
             end=SONIC_END
@@ -95,6 +97,7 @@ for game in ['SonicTheHedgehog2-Genesis','SuperMarioWorld-Snes','CastlevaniaBloo
             
             pil_data2=Image.open(os.path.join(PATH,f"{n}.jpg"))
             frame2=np.array(pil_data2)[:, :, ::-1].copy()
+            frame_list.append(frame2.copy())
 
             next = cv.cvtColor(frame2.copy(), cv.COLOR_BGR2GRAY)
             flow = cv.calcOpticalFlowFarneback(prvs, next, None,
@@ -119,7 +122,8 @@ for game in ['SonicTheHedgehog2-Genesis','SuperMarioWorld-Snes','CastlevaniaBloo
             bgr = cv.cvtColor(hsv, cv.COLOR_HSV2BGR)
 
             gray=cv.cvtColor(bgr,cv.COLOR_BGR2GRAY)
-            gray_list.append(gray)
+            gray_list.append(gray.copy())
+            bgr_list.append(bgr.copy())
             ''''mask_roi = np.zeros_like(prvs)
             mask_roi[min_h:max_h, min_w:max_w] = 255  # only this rectangle is considered
 
@@ -213,6 +217,25 @@ for game in ['SonicTheHedgehog2-Genesis','SuperMarioWorld-Snes','CastlevaniaBloo
         
 
         images=[Image.open(os.path.join(NEXT_PATH,f"{n}.jpg")) for n in range(start,end,step)]
+        image_concat=final_image.copy()
+
+        for gray,frame in zip(gray_list,frame_list):
+            n_labels_gray, labels_gray, stats_gray, centroids_gray = cv.connectedComponentsWithStats(average_gray, connectivity=8)
+
+            for label_gray in range(1, n_labels_gray):
+                component_mask = (labels_gray == label_gray)
+
+                # Score = sum of magnitudes inside this region
+                score = gray[component_mask].sum()
+
+                small_sum=gray[y1:y2,x1:x2].sum()
+
+                if score>0 and small_sum/score >0.95:
+                    break
+            mask = component_mask.astype(np.uint8) * 255
+            masked_bgr = cv.bitwise_and(frame,frame, mask=mask)
+            image_concat=cv.hconcat([image_concat,masked_bgr])
+        Image.fromarray(cv.cvtColor(image_concat, cv.COLOR_BGR2RGB)).save(f'panorama_{game}_{button}.jpg')
         print(f'{game}_{button}.gif')
         images[0].save(f'{game}_{button}.gif',
                     save_all = True, append_images = images[1:],
