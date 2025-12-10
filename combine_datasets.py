@@ -2,7 +2,7 @@ import datasets
 from shared import game_state_dict
 from datasets import load_dataset,Dataset
 import sys
-
+import numpy as np
 
 print(sys.argv)
 exit(0)
@@ -17,7 +17,7 @@ merged_dict={
     "coords":[],
     "template_score":[],
     "episode":[],
-    "mask":[],
+   # "mask":[],
     "step":[]
 }
 for game,state_list in game_state_dict.items():
