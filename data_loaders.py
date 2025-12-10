@@ -24,6 +24,82 @@ def find_earliest_less_than(arr, target):
 
     return result
 
+class SequenceGameDatasetHF(Dataset):
+    def __init__(self, src_dataset, image_processor, metadata_key_list=[], 
+                 sequence_length:int=1,
+                 process=False,
+                 
+                 vae=None):
+        super().__init__()
+        self.data = load_dataset(src_dataset, split="train")
+
+        try:
+            self.data = self.data.cast_column("image", datasets.Image())
+        except Exception as e:
+            print("map error ",e)
+
+        self.image_processor = image_processor
+        self.metadata_key_list = metadata_key_list
+        self.vae = vae
+
+        # preprocess metadata if needed
+        if process:
+            self.n_actions = len(set(self.data["action"]))
+            '''if image_processor is not None:
+                self.data = self.data.map(
+                    lambda x: {"image": image_processor.preprocess(x["image"])[0]},
+                    batched=False
+                )'''
+            '''self.data = self.data.map(
+                lambda x: {"action": F.one_hot(torch.tensor(x["action"]), self.n_actions)},
+                batched=False
+            )'''
+        else:
+            self.n_actions = len(self.data["action"][0])
+
+        # -------------------------------------------- #
+        #         BUILD ONLY INDEX PAIRS (cheap)        #
+        # -------------------------------------------- #
+
+        self.index_list = []
+        self.seqence_length=sequence_length
+        episodes = self.data["episode"]
+        N = len(self.data)
+
+        for i in range(sequence_length,N ):
+            # skip crossing episodes
+            if episodes[i] != episodes[i - sequence_length]:
+                continue
+            self.index_list.append(i)
+
+    def __len__(self):
+        return len(self.index_list)
+
+    def __getitem__(self, idx):
+        i = self.index_list[idx]
+        row = self.data[i]
+
+        '''row = self.data[i]
+        past_row = self.data[i - ]
+
+        img = row["image"]
+        past_img = past_row["image"]
+
+        if self.image_processor:
+            img = self.image_processor.preprocess(img)[0]
+            past_img = self.image_processor.preprocess(past_img)[0]'''
+        sequence=[self.data[i-j] for j in range(self.seqence_length)]
+        sequence=self.image_processor.preprocess(sequence)
+        out = {"sequence":sequence}
+        
+        # metadata
+        for k in self.metadata_key_list: # ["action"]:
+            out[k] = torch.tensor(row[k])
+            
+        out["action"]=F.one_hot(torch.tensor(row["action"]),self.n_actions)
+        return out
+        
+
 class ImageDatasetHF(Dataset):
     def __init__(self,src_dataset:str,
                  image_processor:VaeImageProcessor,
