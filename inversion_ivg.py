@@ -131,7 +131,7 @@ def main(args):
     
     data=SequenceGameDatasetHF(
         args.src_dataset,
-        image_processor,[],args.sequence_length,True
+        image_processor,[],args.sequence_length,pretrained=args.pretrained
     )
     
     n_actions=data.n_actions

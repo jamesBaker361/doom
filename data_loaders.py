@@ -92,7 +92,7 @@ class SequenceGameDatasetHF(Dataset):
         game_index=self.token_list.index(row["game"])
         state_index=self.token_list.index(row["state"])
         none_index=self.token_list.index(NONE_STRING)
-        for j in range(1,self.seqence_length):
+        for j in range(1,self.seqence_length+1):
             if i-j <0:
                 img=Image.new('RGB',self.dim,'black')
             elif self.data[i-j]["episode"]!=self.data[i]["episode"]:
