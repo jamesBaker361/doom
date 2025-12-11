@@ -170,7 +170,7 @@ def main(args):
         mask=batch["mask"]
         bsz=image.size()[0]
         
-        if misc_dict["epoch"]>args.unet_epochs:
+        if misc_dict["epochs"]>args.unet_epochs:
             unet.requires_grad_(False)
         
             if not args.pretrained:
