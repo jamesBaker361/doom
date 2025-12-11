@@ -224,6 +224,7 @@ def main(args):
             else:
                 loss=torch.tensor([0])
         else:
+            encoder_hidden_states=pipe.encode_prompt([" "]*bsz, device,1,False)[0]
             if training:
                 image=vae.encode(image).latent_dist.sample()*vae.config.scaling_factor
                     
@@ -238,7 +239,7 @@ def main(args):
                         if misc_dict["b"]==0 and misc_dict["epochs"]==start_epoch:
                             print('image.size()',image.size())
                             
-                        predicted=unet(noisy_image, timesteps, return_dict=False)[0]
+                        predicted=unet(noisy_image, timesteps,encoder_hidden_states=encoder_hidden_states, return_dict=False)[0]
                         
                         loss=F.mse_loss(predicted.float(),image.float())
                     
@@ -246,7 +247,8 @@ def main(args):
                     unet_optimizer.step()
                     unet_optimizer.zero_grad()
             elif misc_dict["b"]==0:
-                predicted=pipe(num_inference_steps=args.num_inference_steps,height=args.dim,width=args.dim,output_type="pt")
+                predicted=pipe(encoder_hidden_states=encoder_hidden_states,
+                               num_inference_steps=args.num_inference_steps,height=args.dim,width=args.dim,output_type="pt")
                 loss=F.mse_loss(predicted.float(),image.float())
             else:
                 loss=torch.tensor([0])
