@@ -120,7 +120,7 @@ class SequenceGameDatasetHF(Dataset):
                "mask":mask,
                "tokens":tokens,
                #"score":row["template_score"],
-               "image":self.image_processor.preprocess(row["image"])[0]
+               "image":self.image_processor.preprocess(row["image"].resize(self.dim))[0]
                }
         return out
         
