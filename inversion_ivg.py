@@ -56,6 +56,7 @@ class SequenceEncoder(torch.nn.Module):
         desired_sequence_length=min(desired_sequence_length,sequence_length)
         while _length>desired_sequence_length:
             kernels_3d.append(True)
+        print("kernels 3d",len(kernels_3d))
         self.pretrained=pretrained
         
         layers=[]
