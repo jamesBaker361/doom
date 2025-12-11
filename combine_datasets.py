@@ -30,3 +30,5 @@ for game,state_list in game_state_dict.items():
                 merged_dict[key].append(row[key])
                 
 Dataset.from_dict(merged_dict).push_to_hub(f"jlbaker361/merged_ivg_{interval}_{limit}")
+
+print("donesies :)")
