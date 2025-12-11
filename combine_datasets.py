@@ -23,10 +23,10 @@ merged_dict={
 }
 for game,state_list in game_state_dict.items():
     for state in state_list:
-        path=f"jlbaker361/{game}_{state}_{limit}_{interval}_coords"
+        path=f"jlbaker361/{game}_{state}_{interval}_{limit}_coords"
         data=load_dataset(path,split="train")
         for row in data:
             for key in merged_dict:
                 merged_dict[key].append(row[key])
                 
-Dataset.from_dict(merged_dict).push_to_hub(f"jlbaker361/merged_ivg_{limit}_{interval}")
+Dataset.from_dict(merged_dict).push_to_hub(f"jlbaker361/merged_ivg_{interval}_{limit}")
