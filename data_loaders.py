@@ -9,6 +9,7 @@ from PIL import Image
 from shared import SONIC_GAME
 import random
 import numpy as np
+from transformers import AutoImageProcessor, AutoModel
 
 import torch.nn.functional as F
 
@@ -35,7 +36,8 @@ class SequenceGameDatasetHF(Dataset):
                  process=False,
                  dim=(256,256),
                  vae=None,
-                 threshold=0.4
+                 threshold=0.4,
+                 pretrained=False
                  ):
         super().__init__()
         self.data = load_dataset(src_dataset, split="train")
@@ -49,6 +51,11 @@ class SequenceGameDatasetHF(Dataset):
         self.metadata_key_list = metadata_key_list
         self.vae = vae
         self.threshold=threshold
+        self.pretrained=pretrained
+        
+        if self.pretrained:
+            self.processor = AutoImageProcessor.from_pretrained("facebook/dinov3-vits16-pretrain-lvd1689m")
+            self.model = AutoModel.from_pretrained("facebook/dinov3-vits16-pretrain-lvd1689m")
 
         # preprocess metadata if needed
         if process:
@@ -73,7 +80,7 @@ class SequenceGameDatasetHF(Dataset):
         self.index_list = []
         self.seqence_length=sequence_length
         self.dim=dim
-        self.token_set=set([t for t in self.data["game"]]+[t for t in self.data["state"]])
+        self.token_list=list(set([t for t in self.data["game"]]+[t for t in self.data["state"]]))+[NONE_STRING]
         
 
     def __len__(self):
@@ -81,47 +88,52 @@ class SequenceGameDatasetHF(Dataset):
 
     def __getitem__(self, i):
         row = self.data[i]
-
-        '''row = self.data[i]
-        past_row = self.data[i - ]
-
-        img = row["image"]
-        past_img = past_row["image"]
-
-        if self.image_processor:
-            img = self.image_processor.preprocess(img)[0]
-            past_img = self.image_processor.preprocess(past_img)[0]'''
         sequence=[]
+        game_index=self.token_list.index(row["game"])
+        state_index=self.token_list.index(row["state"])
+        none_index=self.token_list.index(NONE_STRING)
         for j in range(1,self.seqence_length):
             if i-j <0:
-                sequence.append(Image.new('RGB',self.dim,'black'))
+                img=Image.new('RGB',self.dim,'black')
             elif self.data[i-j]["episode"]!=self.data[i]["episode"]:
-                sequence.append(Image.new('RGB',self.dim,'black'))
+                img=Image.new('RGB',self.dim,'black')
             else:
-                sequence.append(self.data[i]["image"])
+                img=self.data[i]["image"]
+            if self.pretrained:
+                inputs = self.processor(images=img, return_tensors="pt")
+                outputs = self.model(**inputs)
+                img=outputs.pooler_output[0]
+            sequence.append(img)
         tokens=[]       
         if  self.data[i]["template_score"]<self.threshold:
             coords=self.data[i]["coords"]
             (x1,y1),(x2,y2)=coords
             if random.random()<0.5:
-                tokens+=[NONE_STRING, row["game"]]
+                tokens+=[none_index,game_index]
                 mask=torch.zeros(self.dim,dtype=torch.bool)
                 mask[y1:y2,x1:x2]=True
             else:
-                tokens+=[row["state"], NONE_STRING]
+                tokens+=[state_index,game_index]
                 mask=torch.ones(self.dim,dtype=torch.bool)
                 mask[y1:y2,x1:x2]=False
         else:
             mask=torch.ones(self.dim,dtype=torch.bool)
-            tokens+=[row["state"], row["game"]]
+            tokens+=[state_index,game_index]
+            
+        mask=mask.unsqueeze(0).expand([4,-1,-1])
+        tokens=torch.tensor(tokens)
                     
-        sequence=self.image_processor.preprocess(sequence)
+        if not self.pretrained:
+            sequence=self.image_processor.preprocess(sequence)
+
+        else:
+            sequence=torch.stack(sequence)
         out = {"sequence":sequence,
                "action":F.one_hot(torch.tensor(
                    self.action_list.index( row["action"])),self.n_actions),
                "mask":mask,
                "tokens":tokens,
-               "score":row["template_score"],
+               #"score":row["template_score"],
                "image":self.image_processor.preprocess(row["image"])[0]
                }
         return out
@@ -281,7 +293,14 @@ class VelocityPositionDatasetHF(Dataset):
 
 if __name__=="__main__":
     image_processor=VaeImageProcessor()
-    data=SequenceGameDatasetHF("jlbaker361/CastlevaniaBloodlines-Genesis_Level1-1_10_coords",image_processor,process=True)
+    data=SequenceGameDatasetHF("jlbaker361/CastlevaniaBloodlines-Genesis_Level1-1_10_coords",image_processor,process=True,pretrained=True)
+    data=torch.utils.data.DataLoader(data,batch_size=2,shuffle=True)
+    for row in data:
+        print("?")
+        break
+    sequence=row["sequence"].squeeze(1)
+    print(sequence.size())
+    data=SequenceGameDatasetHF("jlbaker361/CastlevaniaBloodlines-Genesis_Level1-1_10_coords",image_processor,process=True,)
     data=torch.utils.data.DataLoader(data,batch_size=2,shuffle=True)
     for row in data:
         print("?")
@@ -291,9 +310,10 @@ if __name__=="__main__":
     processed_image=image_processor.postprocess(sequence)
     print(type(processed_image),type(processed_image[0]),len(processed_image))
     processed_image[0].save("first.jpg")
-    mask=row["mask"].unsqueeze(1).expand([-1,3,-1,-1])
+    mask=row["mask"]
     print(mask.size())
     t=sequence*mask
     print(t.size())
-    print(row["score"])
-    image_processor.postprocess(t)[0].save("second.jpg")
+    #image_processor.postprocess(t)[0].save("second.jpg")
+    for key,value in row.items():
+        print(key,type(value),value.dtype)
