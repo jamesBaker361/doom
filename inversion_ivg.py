@@ -224,7 +224,7 @@ def main(args):
             else:
                 loss=torch.tensor([0])
         else:
-            encoder_hidden_states=pipe.encode_prompt([" "]*bsz, device,1,False)[0]
+            encoder_hidden_states=torch.zeros((bsz,1,DIM_PER_TOKEN),device=device)
             if training:
                 image=vae.encode(image).latent_dist.sample()*vae.config.scaling_factor
                     
