@@ -58,25 +58,9 @@ class SequenceGameDatasetHF(Dataset):
             self.processor = AutoImageProcessor.from_pretrained("facebook/dinov3-vits16-pretrain-lvd1689m")
             self.model = AutoModel.from_pretrained("facebook/dinov3-vits16-pretrain-lvd1689m")
 
-        # preprocess metadata if needed
-        if process:
-            self.n_actions = len(set(self.data["action"]))
-            self.action_list=list(set(self.data["action"]))
-            '''if image_processor is not None:
-                self.data = self.data.map(
-                    lambda x: {"image": image_processor.preprocess(x["image"])[0]},
-                    batched=False
-                )'''
-            '''self.data = self.data.map(
-                lambda x: {"action": F.one_hot(torch.tensor(x["action"]), self.n_actions)},
-                batched=False
-            )'''
-        else:
-            self.n_actions = len(self.data["action"][0])
 
-        # -------------------------------------------- #
-        #         BUILD ONLY INDEX PAIRS (cheap)        #
-        # -------------------------------------------- #
+        self.n_actions = len(set(self.data["action"]))
+        self.action_list=list(set(self.data["action"]))
 
         self.index_list = []
         self.seqence_length=sequence_length
@@ -124,6 +108,7 @@ class SequenceGameDatasetHF(Dataset):
             
         mask=mask.unsqueeze(0).expand([4,-1,-1])
         tokens=torch.tensor(tokens)
+        action=torch.tensor([self.action_list.index( row["action"])])
                     
         if not self.pretrained:
             sequence=self.image_processor.preprocess(sequence)
@@ -131,8 +116,7 @@ class SequenceGameDatasetHF(Dataset):
         else:
             sequence=torch.stack(sequence)
         out = {"sequence":sequence,
-               "action":F.one_hot(torch.tensor(
-                   self.action_list.index( row["action"])),self.n_actions),
+               "action":action,
                "mask":mask,
                "tokens":tokens,
                #"score":row["template_score"],

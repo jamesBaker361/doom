@@ -57,6 +57,7 @@ parser.add_argument("--tokens_per_text",type=int,default=2)
 parser.add_argument("--pretrained",action="store_true")
 parser.add_argument("--desired_sequence_length",type=int,default=8)
 parser.add_argument("--dim",type=int,default=256)
+parser.add_argument("--n_layers",type=int,default=4)
 
 DIM_PER_TOKEN=768
 
@@ -154,7 +155,7 @@ def main(args):
     action_encoder=torch.nn.Embedding(n_actions,DIM_PER_TOKEN).to(device)
     token_encoder=torch.nn.Embedding(n_tokens,DIM_PER_TOKEN).to(device)
     
-    image_encoder=SequenceEncoder(args.sequence_length,args.desired_sequence_length,pretrained=args.pretrained,)
+    image_encoder=SequenceEncoder(args.sequence_length,args.desired_sequence_length,pretrained=args.pretrained,n_layers=args.n_layers)
     
     params=[p for p in unet.parameters() if p.requires_grad]+[p for p in action_encoder.parameters()]+[p for p in image_encoder.parameters()]
     optimizer=torch.optim.AdamW(params,args.lr)
@@ -185,13 +186,12 @@ def main(args):
         mask=batch["mask"]
         bsz=image.size()[0]
         
-        sequence=torch.stack([vae.encode(s).latent_dist.sample()*vae.config.scaling_factor for s in sequence])
+        
+        if not args.pretrained: 
+            sequence=torch.stack([vae.encode(s).latent_dist.sample()*vae.config.scaling_factor for s in sequence])
         
         if training:
             image=vae.encode(image).latent_dist.sample()*vae.config.scaling_factor
-            
-            
-            print(image.size(),sequence.size())
             
             timesteps = torch.randint(0, scheduler.config.num_train_timesteps, (bsz,), device=device)
             timesteps = timesteps.long()
@@ -206,6 +206,10 @@ def main(args):
                     action_embedding=action_encoder(action)
                     token_embedding=token_encoder(tokens)
                     sequence_embedding=image_encoder(sequence)
+                    
+                    if misc_dict["b"]==0 and misc_dict["epochs"]==start_epoch:
+                        print('image.size(),action.size(),tokens.size(),sequence.size()',image.size(),action.size(),tokens.size(),sequence.size())
+                        print('action_embedding.size(),token_embedding.size(),sequence_embedding.size()',action_embedding.size(),token_embedding.size(),sequence_embedding.size())
                     
                     encoder_hidden_states=torch.cat([action_embedding,token_embedding,sequence_embedding],dim=1)
                     
