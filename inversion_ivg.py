@@ -249,7 +249,7 @@ def main(args):
                     unet_optimizer.step()
                     unet_optimizer.zero_grad()
             elif misc_dict["b"]==0:
-                predicted=pipe(encoder_hidden_states=encoder_hidden_states,
+                predicted=pipe(prompt_embeds=encoder_hidden_states,
                                num_inference_steps=args.num_inference_steps,height=args.dim,width=args.dim,output_type="pt")
                 loss=F.mse_loss(predicted.float(),image.float())
             else:
