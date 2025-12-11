@@ -10,6 +10,7 @@ from shared import SONIC_GAME
 import random
 import numpy as np
 from transformers import AutoImageProcessor, AutoModel
+from torchvision.transforms.functional import resize
 
 import torch.nn.functional as F
 
@@ -99,6 +100,7 @@ class SequenceGameDatasetHF(Dataset):
                 img=Image.new('RGB',self.dim,'black')
             else:
                 img=self.data[i]["image"]
+            img=img.resize(self.dim)
             if self.pretrained:
                 inputs = self.processor(images=img, return_tensors="pt")
                 outputs = self.model(**inputs)

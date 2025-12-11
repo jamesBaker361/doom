@@ -56,6 +56,7 @@ parser.add_argument("--tokens_per_image",type=int,default=1)
 parser.add_argument("--tokens_per_text",type=int,default=2)
 parser.add_argument("--pretrained",action="store_true")
 parser.add_argument("--desired_sequence_length",type=int,default=8)
+parser.add_argument("--dim",type=int,default=256)
 
 DIM_PER_TOKEN=768
 
@@ -131,7 +132,7 @@ def main(args):
     
     data=SequenceGameDatasetHF(
         args.src_dataset,
-        image_processor,[],args.sequence_length,pretrained=args.pretrained
+        image_processor,[],args.sequence_length,pretrained=args.pretrained,dim=(args.dim,args.dim)
     )
     
     n_actions=data.n_actions
@@ -184,9 +185,11 @@ def main(args):
         mask=batch["mask"]
         bsz=image.size()[0]
         
+        sequence=torch.stack([vae.encode(s).latent_dist.sample()*vae.config.scaling_factor for s in sequence])
+        
         if training:
             image=vae.encode(image).latent_dist.sample()*vae.config.scaling_factor
-            sequence=torch.stack([vae.encode(s).latent_dist.sample()*vae.config.scaling_factor for s in sequence])
+            
             
             print(image.size(),sequence.size())
             
@@ -204,9 +207,9 @@ def main(args):
                     token_embedding=token_encoder(tokens)
                     sequence_embedding=image_encoder(sequence)
                     
-                    hidden_states=torch.cat([action_embedding,token_embedding,sequence_embedding],dim=1)
+                    encoder_hidden_states=torch.cat([action_embedding,token_embedding,sequence_embedding],dim=1)
                     
-                    predicted=unet(noisy_image, timesteps, hidden_states, return_dict=False)[0]
+                    predicted=unet(noisy_image, timesteps, encoder_hidden_states, return_dict=False)[0]
                     
                     predicted=predicted*mask
                     image=image*mask
@@ -216,6 +219,18 @@ def main(args):
                 accelerator.backward(loss)
                 optimizer.step()
                 optimizer.zero_grad()
+        elif misc_dict["b"]==0:
+            action_embedding=action_encoder(action)
+            token_embedding=token_encoder(tokens)
+            sequence_embedding=image_encoder(sequence)
+            encoder_hidden_states=torch.cat([action_embedding,token_embedding,sequence_embedding],dim=1)
+            predicted=pipe(num_inference_steps=args.num_inference_steps
+                           ,encoder_hidden_states=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt")
+            loss=F.mse_loss(predicted,image)
+            
+            
+            
+        
         else:
             loss=torch.tensor([0])
         
