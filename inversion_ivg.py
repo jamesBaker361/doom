@@ -98,6 +98,7 @@ def main(args):
     os.makedirs(save_subdir,exist_ok=True)
     
     pipe=DiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7").to(device)
+    print("execution device",pipe._execution_device)
     setattr(pipe, "safety_checker",None)
     unet=pipe.unet
     accelerator.print("len params  ",len([p for p in unet.parameters()]))
