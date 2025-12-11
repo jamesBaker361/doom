@@ -58,6 +58,7 @@ parser.add_argument("--pretrained",action="store_true")
 parser.add_argument("--desired_sequence_length",type=int,default=8)
 parser.add_argument("--dim",type=int,default=256)
 parser.add_argument("--n_layers",type=int,default=4)
+parser.add_argument("--unet_epochs",type=int,default=1)
 
 DIM_PER_TOKEN=768
 
@@ -157,11 +158,15 @@ def main(args):
     
     image_encoder=SequenceEncoder(args.sequence_length,args.desired_sequence_length,pretrained=args.pretrained,n_layers=args.n_layers)
     
-    params=[p for p in unet.parameters() if p.requires_grad]+[p for p in action_encoder.parameters()]+[p for p in image_encoder.parameters()]
+    params=[p for p in action_encoder.parameters()]+[p for p in image_encoder.parameters()]
+    unet_params=[p for p in unet.parameters() if p.requires_grad]
     optimizer=torch.optim.AdamW(params,args.lr)
+    unet_optimizer=torch.optim.AdamW(unet_params,args.lr)
     
-    optimizer,unet,action_encoder,train_loader,test_loader,val_loader,scheduler,ddim_scheduler,image_encoder = accelerator.prepare(optimizer,
-                    unet,action_encoder,train_loader,test_loader,val_loader,scheduler,ddim_scheduler,image_encoder)
+    optimizer,unet,action_encoder,train_loader,test_loader,val_loader,scheduler,ddim_scheduler,image_encoder,unet_optimizer = accelerator.prepare(
+        optimizer,unet,action_encoder,train_loader,
+        test_loader,val_loader,scheduler,ddim_scheduler,
+        image_encoder,unet_optimizer)
     
     save,load=save_and_load_functions({
         "pytorch_weights.safetensors":unet,
@@ -186,57 +191,87 @@ def main(args):
         mask=batch["mask"]
         bsz=image.size()[0]
         
+        if misc_dict["epochs"]>args.unet_epochs:
+            unet.requires_grad_(False)
         
-        if not args.pretrained: 
-            sequence=torch.stack([vae.encode(s).latent_dist.sample()*vae.config.scaling_factor for s in sequence])
-        
-        if training:
-            image=vae.encode(image).latent_dist.sample()*vae.config.scaling_factor
+            if not args.pretrained: 
+                sequence=torch.stack([vae.encode(s).latent_dist.sample()*vae.config.scaling_factor for s in sequence])
             
-            timesteps = torch.randint(0, scheduler.config.num_train_timesteps, (bsz,), device=device)
-            timesteps = timesteps.long()
-            
-            noise=torch.randn_like(image)
-            
-            mask=functional.resize(mask,image.size()[-2:])
-            
-            noisy_image = ddim_scheduler.add_noise(image,noise,timesteps)
-            with accelerator.accumulate(params):
-                with accelerator.autocast():
-                    action_embedding=action_encoder(action)
-                    token_embedding=token_encoder(tokens)
-                    sequence_embedding=image_encoder(sequence)
-                    
-                    if misc_dict["b"]==0 and misc_dict["epochs"]==start_epoch:
-                        print('image.size(),action.size(),tokens.size(),sequence.size()',image.size(),action.size(),tokens.size(),sequence.size())
-                        print('action_embedding.size(),token_embedding.size(),sequence_embedding.size()',action_embedding.size(),token_embedding.size(),sequence_embedding.size())
-                    
-                    encoder_hidden_states=torch.cat([action_embedding,token_embedding,sequence_embedding],dim=1)
-                    
-                    predicted=unet(noisy_image, timesteps, encoder_hidden_states, return_dict=False)[0]
-                    
-                    predicted=predicted*mask
-                    image=image*mask
-                    
-                    loss=F.mse_loss(predicted.float(),image.float())
+            if training:
+                image=vae.encode(image).latent_dist.sample()*vae.config.scaling_factor
                 
-                accelerator.backward(loss)
-                optimizer.step()
-                optimizer.zero_grad()
-        elif misc_dict["b"]==0:
-            action_embedding=action_encoder(action)
-            token_embedding=token_encoder(tokens)
-            sequence_embedding=image_encoder(sequence)
-            encoder_hidden_states=torch.cat([action_embedding,token_embedding,sequence_embedding],dim=1)
-            predicted=pipe(num_inference_steps=args.num_inference_steps
-                           ,encoder_hidden_states=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt")
-            loss=F.mse_loss(predicted,image)
+                timesteps = torch.randint(0, scheduler.config.num_train_timesteps, (bsz,), device=device)
+                timesteps = timesteps.long()
+                
+                noise=torch.randn_like(image)
+                
+                mask=functional.resize(mask,image.size()[-2:])
+                
+                noisy_image = ddim_scheduler.add_noise(image,noise,timesteps)
+                with accelerator.accumulate(params):
+                    with accelerator.autocast():
+                        action_embedding=action_encoder(action)
+                        token_embedding=token_encoder(tokens)
+                        sequence_embedding=image_encoder(sequence)
+                        
+                        if misc_dict["b"]==0 and misc_dict["epochs"]==start_epoch:
+                            print('image.size(),action.size(),tokens.size(),sequence.size()',image.size(),action.size(),tokens.size(),sequence.size())
+                            print('action_embedding.size(),token_embedding.size(),sequence_embedding.size()',action_embedding.size(),token_embedding.size(),sequence_embedding.size())
+                        
+                        encoder_hidden_states=torch.cat([action_embedding,token_embedding,sequence_embedding],dim=1)
+                        
+                        predicted=unet(noisy_image, timesteps, encoder_hidden_states, return_dict=False)[0]
+                        
+                        predicted=predicted*mask
+                        image=image*mask
+                        
+                        loss=F.mse_loss(predicted.float(),image.float())
+                    
+                    accelerator.backward(loss)
+                    optimizer.step()
+                    optimizer.zero_grad()
+            elif misc_dict["b"]==0:
+                action_embedding=action_encoder(action)
+                token_embedding=token_encoder(tokens)
+                sequence_embedding=image_encoder(sequence)
+                encoder_hidden_states=torch.cat([action_embedding,token_embedding,sequence_embedding],dim=1)
+                predicted=pipe(num_inference_steps=args.num_inference_steps
+                            ,encoder_hidden_states=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt")
+                loss=F.mse_loss(predicted.float(),image.float())
+                
+                
+                
             
-            
-            
-        
+            else:
+                loss=torch.tensor([0])
         else:
-            loss=torch.tensor([0])
+            if training:
+                image=vae.encode(image).latent_dist.sample()*vae.config.scaling_factor
+                    
+                timesteps = torch.randint(0, scheduler.config.num_train_timesteps, (bsz,), device=device)
+                timesteps = timesteps.long()
+                
+                noise=torch.randn_like(image)
+                noisy_image = ddim_scheduler.add_noise(image,noise,timesteps)
+                with accelerator.accumulate(unet_params):
+                    with accelerator.autocast():
+                        
+                        if misc_dict["b"]==0 and misc_dict["epochs"]==start_epoch:
+                            print('image.size()',image.size())
+                            
+                        predicted=unet(noisy_image, timesteps, return_dict=False)[0]
+                        
+                        loss=F.mse_loss(predicted.float(),image.float())
+                    
+                    accelerator.backward(loss)
+                    unet_optimizer.step()
+                    unet_optimizer.zero_grad()
+            elif misc_dict["b"]==0:
+                predicted=pipe(num_inference_steps=args.num_inference_steps,height=args.dim,width=args.dim,output_type="pt")
+                loss=F.mse_loss(predicted.float(),image.float())
+            else:
+                loss=torch.tensor([0])
+            
         
         return loss.cpu().detach().item()
         '''
