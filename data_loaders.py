@@ -31,7 +31,7 @@ def find_earliest_less_than(arr, target):
 
 class SequenceGameDatasetHF(Dataset):
     def __init__(self, src_dataset, image_processor, metadata_key_list=[], 
-                 sequence_length:int=1,
+                 sequence_length:int=2,
                  process=False,
                  dim=(256,256),
                  vae=None,
@@ -92,7 +92,7 @@ class SequenceGameDatasetHF(Dataset):
             img = self.image_processor.preprocess(img)[0]
             past_img = self.image_processor.preprocess(past_img)[0]'''
         sequence=[]
-        for j in range(self.seqence_length):
+        for j in range(1,self.seqence_length):
             if i-j <0:
                 sequence.append(Image.new('RGB',self.dim,'black'))
             elif self.data[i-j]["episode"]!=self.data[i]["episode"]:
@@ -121,7 +121,8 @@ class SequenceGameDatasetHF(Dataset):
                    self.action_list.index( row["action"])),self.n_actions),
                "mask":mask,
                "tokens":tokens,
-               "score":row["template_score"]
+               "score":row["template_score"],
+               "image":self.image_processor.preprocess(row["image"])[0]
                }
         return out
         
