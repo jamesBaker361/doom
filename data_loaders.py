@@ -84,7 +84,7 @@ class SequenceGameDatasetHF(Dataset):
                 img=Image.new('RGB',self.dim,'black')
             else:
                 img=self.data[i]["image"]
-            img=img.resize(self.dim)
+            img=img.resize((self.dim,self.dim))
             if self.pretrained:
                 inputs = self.processor(images=img, return_tensors="pt")
                 outputs = self.model(**inputs)
