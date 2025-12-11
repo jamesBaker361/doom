@@ -227,8 +227,9 @@ def main(args):
                 loss=torch.tensor([0])
         else:
             encoder_hidden_states=torch.zeros((bsz,1,DIM_PER_TOKEN),device=device)
+            image=vae.encode(image).latent_dist.sample()*vae.config.scaling_factor
             if training:
-                image=vae.encode(image).latent_dist.sample()*vae.config.scaling_factor
+                
                     
                 timesteps = torch.randint(0, scheduler.config.num_train_timesteps, (bsz,), device=device)
                 timesteps = timesteps.long()
