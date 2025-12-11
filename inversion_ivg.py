@@ -173,20 +173,22 @@ def main(args):
         if misc_dict["epochs"]>args.unet_epochs:
             unet.requires_grad_(False)
         
-            if not args.pretrained: 
-                sequence=torch.stack([vae.encode(s).latent_dist.sample()*vae.config.scaling_factor for s in sequence])
+            if not args.pretrained:
+                with torch.no_grad():
+                    sequence=torch.stack([vae.encode(s).latent_dist.sample()*vae.config.scaling_factor for s in sequence])
             
             if training:
-                image=vae.encode(image).latent_dist.sample()*vae.config.scaling_factor
-                
-                timesteps = torch.randint(0, scheduler.config.num_train_timesteps, (bsz,), device=device)
-                timesteps = timesteps.long()
-                
-                noise=torch.randn_like(image)
-                
-                mask=functional.resize(mask,image.size()[-2:])
-                
-                noisy_image = ddim_scheduler.add_noise(image,noise,timesteps)
+                with torch.no_grad():
+                    image=vae.encode(image).latent_dist.sample()*vae.config.scaling_factor
+                    
+                    timesteps = torch.randint(0, scheduler.config.num_train_timesteps, (bsz,), device=device)
+                    timesteps = timesteps.long()
+                    
+                    noise=torch.randn_like(image)
+                    
+                    mask=functional.resize(mask,image.size()[-2:])
+                    
+                    noisy_image = ddim_scheduler.add_noise(image,noise,timesteps)
                 with accelerator.accumulate(params):
                     with accelerator.autocast():
                         action_embedding=action_encoder(action)
