@@ -18,6 +18,7 @@ merged_dict={
     "coords":[],
     "template_score":[],
     "episode":[],
+    "action":[],
    # "mask":[],
     "step":[]
 }
