@@ -18,6 +18,7 @@ from experiment_helpers.data_helpers import split_data
 from experiment_helpers.image_helpers import concat_images_horizontally
 from data_loaders import SequenceGameDatasetHF
 from torchvision.transforms import functional
+import wandb
 
 try:
     from torch.distributed.fsdp import register_fsdp_forward_method
@@ -221,9 +222,14 @@ def main(args):
                 predicted=pipe(num_inference_steps=args.num_inference_steps
                             ,encoder_hidden_states=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt")
                 loss=F.mse_loss(predicted.float(),image.float())
-                
-                
-                
+                predicted_pil=image_processor.postprocess(predicted)
+                real_pil=image_processor.postprocess(image)
+                mode=misc_dict["mode"]
+                for i,(real,pred) in enumerate(zip(predicted_pil,real_pil)):
+                    concat=concat_images_horizontally(real,pred)
+                    accelerator.log({
+                        f"{mode}_{i}":wandb.Image(concat)
+                    })
             
             else:
                 loss=torch.tensor([0])
@@ -255,6 +261,11 @@ def main(args):
                 predicted=pipe(prompt_embeds=encoder_hidden_states,
                                num_inference_steps=args.num_inference_steps,height=args.dim,width=args.dim,output_type="pt").images
                 loss=F.mse_loss(predicted.float(),image.float())
+                mode=misc_dict["mode"]
+                for i,gen_image in enumerate(predicted):
+                    accelerator.log({
+                        f"{mode}_{i}":wandb.Image(gen_image)
+                    }) 
             else:
                 loss=torch.tensor([0])
             
