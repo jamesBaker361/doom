@@ -264,7 +264,7 @@ def main(args):
                 mode=misc_dict["mode"]
                 for i,gen_image in enumerate(predicted):
                     accelerator.log({
-                        f"{mode}_{i}":wandb.Image(gen_image)
+                        f"unet_{mode}_{i}":wandb.Image(gen_image)
                     }) 
             else:
                 loss=torch.tensor([0])
