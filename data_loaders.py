@@ -6,7 +6,7 @@ from datasets import load_dataset
 import datasets
 import torch
 from PIL import Image
-from shared import SONIC_GAME
+from shared import SONIC_GAME,game_state_dict,all_states,all_games,NONE_STRING
 import random
 import numpy as np
 from transformers import AutoImageProcessor, AutoModel
@@ -15,7 +15,7 @@ from torchvision.transforms.functional import resize
 import torch.nn.functional as F
 
 NULL_ACTION=35 #this is the "button" pressed for null frames ()
-NONE_STRING="None"
+
 
 def find_earliest_less_than(arr, target):
     left, right = 0, len(arr) - 1
@@ -30,6 +30,33 @@ def find_earliest_less_than(arr, target):
             left = mid + 1
 
     return result
+
+class ClassificationDataset(Dataset):
+    def __init__(self,src_dataset:str,image_processor:VaeImageProcessor):
+        super().__init__()
+        self.data = load_dataset(src_dataset, split="train")
+
+        try:
+            self.data = self.data.cast_column("image", datasets.Image())
+        except Exception as e:
+            print("map error ",e)
+
+        self.image_processor=image_processor
+        self.all_games=all_games+[NONE_STRING]
+        self.all_states=all_states+[NONE_STRING]
+
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, index):
+        return {
+            "image":self.image_processor.preprocess(self.data[index]["image"])[0],
+            "game":F.one_hot(torch.tensor(self.all_games.index(self.data[index]["game"])),len(self.all_games)).float(),
+            "state":F.one_hot(torch.tensor(self.all_states.index(self.data[index]["state"])),len(self.all_states)).float(),
+        }
+
+
+    
 
 class SequenceGameDatasetHF(Dataset):
     def __init__(self, src_dataset, image_processor, metadata_key_list=[], 

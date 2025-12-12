@@ -1,6 +1,7 @@
 from PIL import Image
 import numpy as np
 import cv2
+NONE_STRING="None"
 PATH="videos"
 def pil_grid(images):
     widths, heights = zip(*(i.size for i in images))
@@ -74,3 +75,12 @@ game_window_dict={
         'SuperMarioWorld-Snes':[224, 256], #["ChocolateIsland1",'DonutPlains1','Forest1','VanillaDome1'],
         'CastlevaniaBloodlines-Genesis': [224, 320], #['Level1-1','Level2-1','Level3-1','Level4-1']
 }
+all_states=[]
+all_tokens=[]
+all_games=[]
+for key,value_list in game_state_dict.items():
+    all_tokens.append(key)
+    all_games.append(key)
+    for v in value_list:
+        all_tokens.append(v)
+        all_states.append(v)
