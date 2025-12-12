@@ -111,8 +111,6 @@ def main(args):
             with accelerator.accumulate(params):
                 with accelerator.autocast():
                     pred_state,pred_game=model(image)
-                    print(pred_state.size(),state.size(),pred_state.dtype,state.dtype)
-                    print(pred_game.size(),game.size())
                     state_loss=ce_loss(pred_state,state)
                     game_loss=ce_loss(pred_game,game)
                     loss=game_loss+state_loss
