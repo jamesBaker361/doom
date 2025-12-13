@@ -218,7 +218,7 @@ def main(args):
                 sequence_embedding=image_encoder(sequence)
                 encoder_hidden_states=torch.cat([action_embedding,token_embedding,sequence_embedding],dim=1)
                 predicted=pipe(prompt=" ",num_inference_steps=args.num_inference_steps
-                            ,encoder_hidden_states=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt")
+                            ,encoder_hidden_states=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt").images
                 loss=F.mse_loss(predicted.float(),image.float())
                 predicted_pil=image_processor.postprocess(predicted)
                 real_pil=image_processor.postprocess(image)
