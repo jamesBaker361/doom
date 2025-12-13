@@ -224,11 +224,13 @@ def main(args):
                 real_pil=image_processor.postprocess(image)
                 mode=misc_dict["mode"]
                 for i,(real,pred) in enumerate(zip(predicted_pil,real_pil)):
-                    concat=concat_images_horizontally(real,pred)
+                    concat=concat_images_horizontally([real,pred])
                     accelerator.log({
                         f"{mode}_{i}":wandb.Image(concat)
                     })
-            
+                #video testing
+                null_sequence=torch.zeros_like(sequence) #front of list is most recent
+                
             else:
                 loss=torch.tensor([0])
         else:
@@ -279,6 +281,9 @@ def main(args):
                "image":self.image_processor.preprocess(row["image"])[0]
                }'''
     batch_function()
+    
+    #evaluate 
+    
         
         
 if __name__=='__main__':
