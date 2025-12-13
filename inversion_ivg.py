@@ -32,8 +32,6 @@ parser.add_argument("--src_dataset",type=str,default="jlbaker361/CastlevaniaBloo
 parser.add_argument("--num_inference_steps",type=int,default=4)
 parser.add_argument("--use_lora",action="store_true")
 parser.add_argument("--sequence_length",type=int,default=4)
-parser.add_argument("--tokens_per_image",type=int,default=1)
-parser.add_argument("--tokens_per_text",type=int,default=2)
 parser.add_argument("--pretrained",action="store_true")
 parser.add_argument("--desired_sequence_length",type=int,default=8)
 parser.add_argument("--dim",type=int,default=256)
@@ -219,7 +217,7 @@ def main(args):
                 token_embedding=token_encoder(tokens)
                 sequence_embedding=image_encoder(sequence)
                 encoder_hidden_states=torch.cat([action_embedding,token_embedding,sequence_embedding],dim=1)
-                predicted=pipe(num_inference_steps=args.num_inference_steps
+                predicted=pipe(prompt=" ",num_inference_steps=args.num_inference_steps
                             ,encoder_hidden_states=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt")
                 loss=F.mse_loss(predicted.float(),image.float())
                 predicted_pil=image_processor.postprocess(predicted)
