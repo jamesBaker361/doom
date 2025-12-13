@@ -19,6 +19,7 @@ from experiment_helpers.image_helpers import concat_images_horizontally
 from data_loaders import SequenceGameDatasetHF
 from torchvision.transforms import functional
 import wandb
+from classification_model import ClassificationModel,all_states,game_state_dict
 
 try:
     from torch.distributed.fsdp import register_fsdp_forward_method
@@ -37,6 +38,7 @@ parser.add_argument("--desired_sequence_length",type=int,default=8)
 parser.add_argument("--dim",type=int,default=256)
 parser.add_argument("--n_layers",type=int,default=4)
 parser.add_argument("--unet_epochs",type=int,default=1)
+parser.add_argument("--classifier_checkpoint",type=str,default="jlbaker361/ivg-class-50")
 
 DIM_PER_TOKEN=768
 
@@ -217,8 +219,8 @@ def main(args):
                 token_embedding=token_encoder(tokens)
                 sequence_embedding=image_encoder(sequence)
                 encoder_hidden_states=torch.cat([action_embedding,token_embedding,sequence_embedding],dim=1)
-                predicted=pipe(prompt=" ",num_inference_steps=args.num_inference_steps
-                            ,encoder_hidden_states=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt").images
+                predicted=pipe(num_inference_steps=args.num_inference_steps
+                            ,prompt_embeds=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt").images
                 loss=F.mse_loss(predicted.float(),image.float())
                 predicted_pil=image_processor.postprocess(predicted)
                 real_pil=image_processor.postprocess(image)
@@ -228,8 +230,16 @@ def main(args):
                     accelerator.log({
                         f"{mode}_{i}":wandb.Image(concat)
                     })
-                #video testing
-                null_sequence=torch.zeros_like(sequence) #front of list is most recent
+                if misc_dict["mode"]=="test":
+                    
+                    #video testing
+                    null_sequence=torch.zeros_like(sequence) #front of list is most recent
+                    
+                    
+                    
+                    model=ClassificationModel(args.dim,len(all_states)+1,1+len(game_state_dict))
+                    weight_path=hf_hub_download(args.classifier_checkpoint,"pytorch_weights.safetensors")
+                    model.load_state_dict(torch.load(weight_path,weights_only=True))
                 
             else:
                 loss=torch.tensor([0])
