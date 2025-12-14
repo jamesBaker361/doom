@@ -163,6 +163,8 @@ def main(args):
     start_epoch=load(False)
     
     accelerator.print("starting at ",start_epoch)
+    def save(*args,**kwargs):
+        pass
     
     @optimization_loop(
         accelerator,train_loader,args.epochs,args.val_interval,args.limit,
@@ -175,6 +177,7 @@ def main(args):
         tokens=batch["tokens"]
         mask=batch["mask"]
         bsz=image.size()[0]
+        print(misc_dict)
         
         if misc_dict["epochs"]>args.unet_epochs:
             unet.requires_grad_(False)
@@ -242,9 +245,12 @@ def main(args):
                     encoder_hidden_states=torch.cat([action_embedding,token_embedding,null_sequence_embedding],dim=1)
                     index=0
                     action_sequence=batch["action_sequence"]
+                    #print(action_sequence.size())
                     while index<args.desired_sequence_length:
-                        action=action_sequence[:,index]
+                        action=action_sequence[:,index].unsqueeze(1)
                         action_embedding=action_encoder(action)
+                        if index==0:
+                            print(action_embedding.size(),token_embedding.size(),null_sequence_embedding.size())
                         encoder_hidden_states=torch.cat([action_embedding,token_embedding,null_sequence_embedding],dim=1)
                         predicted=pipe(num_inference_steps=args.num_inference_steps
                             ,prompt_embeds=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt").images
@@ -253,11 +259,11 @@ def main(args):
                             ,prompt_embeds=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pil").images
                             inputs = dino_processor(images=predicted, return_tensors="pt")
                             outputs = dino_model(**inputs)
-                            predicted=outputs.pooler_output[0]
+                            predicted=outputs.pooler_output.unsqueeze(1)
                         else:
                             predicted=pipe(num_inference_steps=args.num_inference_steps
                             ,prompt_embeds=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt").images
-                        null_sequence=torch.cat([predicted,null_sequence])
+                        null_sequence=torch.cat([predicted,null_sequence],dim=1)
                         null_sequence=null_sequence[:,:-1,...]
                         
                     model=ClassificationModel(args.dim,len(all_states)+1,1+len(game_state_dict))
