@@ -101,22 +101,27 @@ class SequenceGameDatasetHF(Dataset):
     def __getitem__(self, i):
         row = self.data[i]
         sequence=[]
+        action_sequence=[]
         game_index=self.token_list.index(row["game"])
         state_index=self.token_list.index(row["state"])
         none_index=self.token_list.index(NONE_STRING)
         for j in range(1,self.seqence_length+1):
             if i-j <0:
                 img=Image.new('RGB',self.dim,'black')
+                past_action=NONE_STRING
             elif self.data[i-j]["episode"]!=self.data[i]["episode"]:
                 img=Image.new('RGB',self.dim,'black')
+                past_action=self.data[i-j]["action"]
             else:
                 img=self.data[i]["image"]
+                past_action=self.data[i-j]["action"]
             img=img.resize(self.dim)
             if self.pretrained:
                 inputs = self.processor(images=img, return_tensors="pt")
                 outputs = self.model(**inputs)
                 img=outputs.pooler_output[0]
             sequence.append(img)
+            action_sequence.append(past_action)
         tokens=[]       
         if  self.data[i]["template_score"]<self.threshold:
             coords=self.data[i]["coords"]
@@ -136,6 +141,7 @@ class SequenceGameDatasetHF(Dataset):
         mask=mask.unsqueeze(0).expand([4,-1,-1])
         tokens=torch.tensor(tokens)
         action=torch.tensor([self.action_list.index( row["action"])])
+        action_sequence=torch.tensor([self.action_list.index(p_action) for p_action in action_sequence])
                     
         if not self.pretrained:
             sequence=self.image_processor.preprocess(sequence)
@@ -146,6 +152,7 @@ class SequenceGameDatasetHF(Dataset):
                "action":action,
                "mask":mask,
                "tokens":tokens,
+               "action_sequence":action_sequence,
                #"score":row["template_score"],
                "image":self.image_processor.preprocess(row["image"].resize(self.dim))[0]
                }
