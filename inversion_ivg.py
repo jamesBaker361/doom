@@ -3,7 +3,7 @@ import argparse
 from experiment_helpers.gpu_details import print_details
 from experiment_helpers.saving_helpers import save_and_load_functions
 import json
-from constants import VAE_WEIGHTS_NAME
+from transformers import AutoImageProcessor, AutoModel
 from diffusers.schedulers.scheduling_flow_match_euler_discrete import FlowMatchEulerDiscreteScheduler
 from peft import LoraConfig
 from torch import nn
@@ -12,7 +12,6 @@ import torch
 import time
 import torch.nn.functional as F
 from diffusers import LCMScheduler,DiffusionPipeline,DEISMultistepScheduler,DDIMScheduler,SCMScheduler,AutoencoderKL
-from diffusers.models.attention_processor import IPAdapterAttnProcessor2_0
 from experiment_helpers.loop_decorator import optimization_loop
 from experiment_helpers.data_helpers import split_data
 from experiment_helpers.image_helpers import concat_images_horizontally
@@ -140,6 +139,10 @@ def main(args):
     
     image_encoder=SequenceEncoder(args.sequence_length,args.desired_sequence_length,pretrained=args.pretrained,n_layers=args.n_layers)
     
+    if args.pretrained:
+        dino_processor = AutoImageProcessor.from_pretrained("facebook/dinov3-vits16-pretrain-lvd1689m")
+        dino_model = AutoModel.from_pretrained("facebook/dinov3-vits16-pretrain-lvd1689m")
+    
     params=[p for p in action_encoder.parameters()]+[p for p in image_encoder.parameters()]
     unet_params=[p for p in unet.parameters() if p.requires_grad]
     optimizer=torch.optim.AdamW(params,args.lr)
@@ -231,12 +234,32 @@ def main(args):
                         f"{mode}_{i}":wandb.Image(concat)
                     })
                 if misc_dict["mode"]=="test":
+                    accelerator.print("testing")
                     
                     #video testing
                     null_sequence=torch.zeros_like(sequence) #front of list is most recent
-                    
-                    
-                    
+                    null_sequence_embedding=image_encoder(null_sequence)
+                    encoder_hidden_states=torch.cat([action_embedding,token_embedding,null_sequence_embedding],dim=1)
+                    index=0
+                    action_sequence=batch["action_sequence"]
+                    while index<args.desired_sequence_length:
+                        action=action_sequence[:,index]
+                        action_embedding=action_encoder(action)
+                        encoder_hidden_states=torch.cat([action_embedding,token_embedding,null_sequence_embedding],dim=1)
+                        predicted=pipe(num_inference_steps=args.num_inference_steps
+                            ,prompt_embeds=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt").images
+                        if args.pretrained:
+                            predicted=pipe(num_inference_steps=args.num_inference_steps
+                            ,prompt_embeds=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pil").images
+                            inputs = dino_processor(images=predicted, return_tensors="pt")
+                            outputs = dino_model(**inputs)
+                            predicted=outputs.pooler_output[0]
+                        else:
+                            predicted=pipe(num_inference_steps=args.num_inference_steps
+                            ,prompt_embeds=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt").images
+                        null_sequence=torch.cat([predicted,null_sequence])
+                        null_sequence=null_sequence[:,:-1,...]
+                        
                     model=ClassificationModel(args.dim,len(all_states)+1,1+len(game_state_dict))
                     weight_path=hf_hub_download(args.classifier_checkpoint,"pytorch_weights.safetensors")
                     model.load_state_dict(torch.load(weight_path,weights_only=True))
