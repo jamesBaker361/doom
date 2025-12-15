@@ -26,6 +26,8 @@ except ImportError:
     print("cant import register_fsdp_forward_method")
 from huggingface_hub import create_repo,HfApi,hf_hub_download
 from experiment_helpers.init_helpers import default_parser,repo_api_init
+from shared import SONIC_GAME,game_state_dict,all_states,all_games,NONE_STRING
+import numpy as np
 
 parser=default_parser()
 parser.add_argument("--src_dataset",type=str,default="jlbaker361/CastlevaniaBloodlines-Genesis_Level1-1_10_coords")
@@ -38,8 +40,12 @@ parser.add_argument("--dim",type=int,default=256)
 parser.add_argument("--n_layers",type=int,default=4)
 parser.add_argument("--unet_epochs",type=int,default=1)
 parser.add_argument("--classifier_checkpoint",type=str,default="jlbaker361/ivg-class-50")
+parser.add_argument("--test_only",action="store_true")
 
 DIM_PER_TOKEN=768
+
+all_games_plus_none=all_games+[NONE_STRING]
+all_states_plus_none=all_states+[NONE_STRING]
 
 class SequenceEncoder(torch.nn.Module):
     def __init__(self, 
@@ -88,9 +94,13 @@ class SequenceEncoder(torch.nn.Module):
             sequence=sequence.permute(0,2,1) # (B,C,n) -> (B,n,C)                 
         else: 
             sequence=sequence.permute(0,2,1,3,4) #(B,N,c,H,W) -> (B,c,N,H,W)
+            #print(sequence.size())
             sequence=self.layers(sequence) #  (B,c,N,H,W) -> (B,C,n,h,w)
+            #print(sequence.size())
             sequence=sequence.flatten(-3,-1) # (B,C,n,h,w) -> (B,C,nhw)
+            #print(sequence.size())
             sequence=sequence.permute(0,2,1) # (B,C,nhw) -> (B,nhw,C)
+            #print(sequence.size())
         return self.final_layer(sequence)
 
 def main(args):
@@ -122,7 +132,7 @@ def main(args):
     n_tokens=len(data.token_list)
     
     # Split the dataset
-    train_loader,test_loader,val_loader=split_data(data,0.8,args.batch_size)
+    train_loader,test_loader,val_loader=split_data(data,0.2,args.batch_size)
     for batch in train_loader:
         break
     if args.use_lora:
@@ -165,6 +175,20 @@ def main(args):
     accelerator.print("starting at ",start_epoch)
     def save(*args,**kwargs):
         pass
+
+    test_video_mse_list=[]
+    game_loss_list=[]
+    state_loss_list=[]
+    combined_game_loss_list=[]
+    combined_state_loss_list=[]
+    classification_model=ClassificationModel(256,len(all_states)+1,1+len(game_state_dict))
+    weight_path=hf_hub_download(args.classifier_checkpoint,"pytorch_weights.safetensors")
+    if torch.cuda.is_available():
+        classification_model.load_state_dict(torch.load(weight_path,weights_only=True))
+    else:
+        classification_model.load_state_dict(torch.load(weight_path,weights_only=True,map_location=torch.device('cpu')))
+
+    ce_loss = nn.CrossEntropyLoss()
     
     @optimization_loop(
         accelerator,train_loader,args.epochs,args.val_interval,args.limit,
@@ -177,7 +201,8 @@ def main(args):
         tokens=batch["tokens"]
         mask=batch["mask"]
         bsz=image.size()[0]
-        print(misc_dict)
+        if misc_dict["mode"]!="test" and args.test_only:
+            return  torch.tensor([0])
         
         if misc_dict["epochs"]>args.unet_epochs:
             unet.requires_grad_(False)
@@ -220,58 +245,104 @@ def main(args):
                     accelerator.backward(loss)
                     optimizer.step()
                     optimizer.zero_grad()
-            elif misc_dict["b"]==0:
-                action_embedding=action_encoder(action)
-                token_embedding=token_encoder(tokens)
-                sequence_embedding=image_encoder(sequence)
-                encoder_hidden_states=torch.cat([action_embedding,token_embedding,sequence_embedding],dim=1)
-                predicted=pipe(num_inference_steps=args.num_inference_steps
-                            ,prompt_embeds=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt").images
-                loss=F.mse_loss(predicted.float(),image.float())
-                predicted_pil=image_processor.postprocess(predicted)
-                real_pil=image_processor.postprocess(image)
-                mode=misc_dict["mode"]
-                for i,(real,pred) in enumerate(zip(predicted_pil,real_pil)):
-                    concat=concat_images_horizontally([real,pred])
-                    accelerator.log({
-                        f"{mode}_{i}":wandb.Image(concat)
-                    })
-                if misc_dict["mode"]=="test":
-                    accelerator.print("testing")
-                    
-                    #video testing
-                    null_sequence=torch.zeros_like(sequence) #front of list is most recent
-                    null_sequence_embedding=image_encoder(null_sequence)
-                    encoder_hidden_states=torch.cat([action_embedding,token_embedding,null_sequence_embedding],dim=1)
-                    index=0
-                    action_sequence=batch["action_sequence"]
-                    #print(action_sequence.size())
-                    while index<args.desired_sequence_length:
-                        action=action_sequence[:,index].unsqueeze(1)
-                        action_embedding=action_encoder(action)
-                        if index==0:
-                            print(action_embedding.size(),token_embedding.size(),null_sequence_embedding.size())
-                        encoder_hidden_states=torch.cat([action_embedding,token_embedding,null_sequence_embedding],dim=1)
-                        predicted=pipe(num_inference_steps=args.num_inference_steps
-                            ,prompt_embeds=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt").images
-                        if args.pretrained:
-                            predicted=pipe(num_inference_steps=args.num_inference_steps
-                            ,prompt_embeds=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pil").images
-                            inputs = dino_processor(images=predicted, return_tensors="pt")
-                            outputs = dino_model(**inputs)
-                            predicted=outputs.pooler_output.unsqueeze(1)
-                        else:
-                            predicted=pipe(num_inference_steps=args.num_inference_steps
-                            ,prompt_embeds=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt").images
-                        null_sequence=torch.cat([predicted,null_sequence],dim=1)
-                        null_sequence=null_sequence[:,:-1,...]
-                        
-                    model=ClassificationModel(args.dim,len(all_states)+1,1+len(game_state_dict))
-                    weight_path=hf_hub_download(args.classifier_checkpoint,"pytorch_weights.safetensors")
-                    model.load_state_dict(torch.load(weight_path,weights_only=True))
-                
             else:
-                loss=torch.tensor([0])
+                if (misc_dict["mode"]=="val" and misc_dict["b"]==0) or (misc_dict["mode"]=="test" and misc_dict["b"]<10):
+                    
+                    action_embedding=action_encoder(action)
+                    token_embedding=token_encoder(tokens)
+                    sequence_embedding=image_encoder(sequence)
+                    encoder_hidden_states=torch.cat([action_embedding,token_embedding,sequence_embedding],dim=1)
+                    predicted=pipe(num_inference_steps=args.num_inference_steps
+                                ,prompt_embeds=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt").images
+                    loss=F.mse_loss(predicted.float(),image.float())
+                    predicted_pil=image_processor.postprocess(predicted)
+                    real_pil=image_processor.postprocess(image)
+                    mode=misc_dict["mode"]
+                    for i,(real,pred) in enumerate(zip(predicted_pil,real_pil)):
+                        concat=concat_images_horizontally([real,pred])
+                        accelerator.log({
+                            f"{mode}_{i}":wandb.Image(concat)
+                        })
+
+                    
+
+                    
+                    if misc_dict["mode"]=="test":
+
+                        accelerator.print("testing")
+
+                        if args.dim!=256:
+                            predicted=functional.resize(predicted,(256,256))
+                        pred_state,pred_game=classification_model(predicted)
+
+                        state_index=tokens[:,0]
+                        #print(state_index[0].item(),type(state_index[0].item()),all_states_plus_none)
+                        state_names=[data.token_list[i] for i in state_index]
+                        new_state_index=torch.tensor([all_states_plus_none.index(sn) for sn in state_names])
+                        state_one_hot=torch.stack([F.one_hot(s,len(all_states_plus_none)) for s in new_state_index]).float()
+
+                        #print(all_games_plus_none)
+                                                
+                        game_index=tokens[:,1]
+                        game_names=[data.token_list[i] for i in game_index]
+                        new_game_index=torch.tensor([all_games_plus_none.index(gn) for gn in game_names])
+                        game_one_hot=torch.stack([F.one_hot(g,len(all_games_plus_none)) for g in new_game_index]).float()
+
+                        state_loss=ce_loss(pred_state,state_one_hot)
+                        game_loss=ce_loss(pred_game,game_one_hot)
+
+                        state_loss_list.append(state_loss.detach().cpu().numpy())
+                        game_loss_list.append(game_loss.detach().cpu().numpy())
+
+                        loss+=state_loss+game_loss
+                        
+                        #video testing
+                        null_sequence=torch.zeros_like(sequence) #front of list is most recent
+                        null_sequence_embedding=image_encoder(null_sequence)
+                        #encoder_hidden_states=torch.cat([action_embedding,token_embedding,null_sequence_embedding],dim=1)
+                        index=0
+                        action_sequence=batch["action_sequence"]
+                        #print(action_sequence.size())
+                        predicted_pt_list=[]
+                        predicted_pil_list=[]
+                        while index<min(args.desired_sequence_length,args.sequence_length):
+                            null_sequence_embedding=image_encoder(null_sequence)
+                            action=action_sequence[:,index].unsqueeze(1)
+                            action_embedding=action_encoder(action)
+                            if index==0:
+                                print(action_embedding.size(),token_embedding.size(),null_sequence_embedding.size())
+                            encoder_hidden_states=torch.cat([action_embedding,token_embedding,null_sequence_embedding],dim=1)
+                            predicted=pipe(num_inference_steps=args.num_inference_steps
+                                ,prompt_embeds=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt").images
+                            predicted_pt_list.append(predicted.detach().cpu().clone())
+                            predicted_pil=image_processor.postprocess(predicted)
+                            predicted_pil_list.append(predicted_pil)
+                            if args.pretrained:
+                                inputs = dino_processor(images=predicted_pil, return_tensors="pt")
+                                outputs = dino_model(**inputs)
+                                predicted=outputs.pooler_output.unsqueeze(1)
+                            else:
+                                predicted=torch.stack([vae.encode(p.unsqueeze(0)).latent_dist.sample()*vae.config.scaling_factor for p in predicted])
+                                #print(null_sequence.size(),null_sequence_embedding.size(),predicted.size())
+                            null_sequence=torch.cat([predicted,null_sequence],dim=1)
+                            null_sequence=null_sequence[:,:-1,...]
+                            index+=1
+                        
+                        print('torch.stack(predicted_pt_list).size(),batch[sequence].size()',torch.stack(predicted_pt_list).size(),batch["sequence"].size())
+                        if args.pretrained:
+                            video_mse=F.mse_loss(torch.stack(predicted_pt_list).permute(1,0,2,3,4),batch["image_sequence"])
+                        else:
+                            video_mse=F.mse_loss(torch.stack(predicted_pt_list).permute(1,0,2,3,4),batch["sequence"])
+                        
+                        test_video_mse_list.append(video_mse.detach().cpu().numpy())
+
+                            
+                        
+                        loss=video_mse
+
+
+                else:
+                    loss=torch.tensor([0])
         else:
             encoder_hidden_states=torch.zeros((bsz,1,DIM_PER_TOKEN),device=device)
             
@@ -320,7 +391,58 @@ def main(args):
                "image":self.image_processor.preprocess(row["image"])[0]
                }'''
     batch_function()
-    
+
+    for batch in train_loader:
+        break
+
+    for game in  all_games_plus_none:
+        for state in all_states_plus_none:
+            g=data.token_list.index(game)
+            s=data.token_list.index(state)
+            action_embedding=action_encoder(torch.tensor([[0]]))
+            token_embedding=token_encoder(torch.tensor([[g,  s]]))
+            null_sequence=torch.zeros_like(batch["sequence"][0].unsqueeze(0))
+            if not args.pretrained:
+                with torch.no_grad():
+                    null_sequence=torch.stack([vae.encode(s).latent_dist.sample()*vae.config.scaling_factor for s in null_sequence])
+            null_sequence_embedding=image_encoder(null_sequence)
+            encoder_hidden_states=encoder_hidden_states=torch.cat([action_embedding,token_embedding,null_sequence_embedding],dim=1)
+            predicted=pipe(num_inference_steps=args.num_inference_steps
+                                ,prompt_embeds=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt").images
+            new_s=all_states_plus_none.index(state)
+            new_g=all_games_plus_none.index(game)
+            state_one_hot=F.one_hot(torch.tensor(new_s),len(all_states_plus_none)).float().unsqueeze(0)
+            game_one_hot=F.one_hot(torch.tensor(new_g),len(all_games_plus_none)).float().unsqueeze(0)
+
+            if args.dim!=256:
+                predicted=functional.resize(predicted,(256,256))
+            pred_state,pred_game=classification_model(predicted)
+            state_loss=ce_loss(pred_state,state_one_hot)
+            game_loss=ce_loss(pred_game,game_one_hot)
+
+            combined_state_loss_list.append(state_loss.detach().cpu().numpy())
+            combined_game_loss_list.append(game_loss.detach().cpu().numpy())
+
+            image=image_processor.postprocess(predicted)[0]
+
+            accelerator.log({
+                f"combined_{game}_{state}":wandb.Image(image)
+            })
+
+
+
+            
+
+
+
+
+    '''print(test_video_mse_list)
+    print(game_loss_list)
+    print(state_loss_list)'''
+    for name, metric_list in zip(["test video","game loss", "state loss", "combined game loss", "combined state loss"],
+                                 [test_video_mse_list,game_loss_list, state_loss_list, combined_game_loss_list,combined_state_loss_list]):
+        accelerator.print(f"\t {name} {np.mean(metric_list)}")
+        print(f"\t {name} {np.mean(metric_list)}")
     #evaluate 
     
         

@@ -102,6 +102,7 @@ class SequenceGameDatasetHF(Dataset):
         row = self.data[i]
         sequence=[]
         action_sequence=[]
+        image_sequence=[]
         game_index=self.token_list.index(row["game"])
         state_index=self.token_list.index(row["state"])
         none_index=self.token_list.index(NONE_STRING)
@@ -116,6 +117,7 @@ class SequenceGameDatasetHF(Dataset):
                 img=self.data[i]["image"]
                 past_action=self.data[i-j]["action"]
             img=img.resize(self.dim)
+            image_sequence.append(img)
             if self.pretrained:
                 inputs = self.processor(images=img, return_tensors="pt")
                 outputs = self.model(**inputs)
@@ -154,7 +156,8 @@ class SequenceGameDatasetHF(Dataset):
                "tokens":tokens,
                "action_sequence":action_sequence,
                #"score":row["template_score"],
-               "image":self.image_processor.preprocess(row["image"].resize(self.dim))[0]
+               "image":self.image_processor.preprocess(row["image"].resize(self.dim))[0],
+               "image_sequence":self.image_processor.preprocess(image_sequence)
                }
         return out
         
