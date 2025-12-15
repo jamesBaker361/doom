@@ -109,7 +109,7 @@ class SequenceGameDatasetHF(Dataset):
         for j in range(1,self.seqence_length+1):
             if i-j <0:
                 img=Image.new('RGB',self.dim,'black')
-                past_action=NONE_STRING
+                past_action="DOWN"
             elif self.data[i-j]["episode"]!=self.data[i]["episode"]:
                 img=Image.new('RGB',self.dim,'black')
                 past_action=self.data[i-j]["action"]
