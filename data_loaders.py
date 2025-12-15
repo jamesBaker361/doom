@@ -109,7 +109,7 @@ class SequenceGameDatasetHF(Dataset):
         for j in range(1,self.seqence_length+1):
             if i-j <0:
                 img=Image.new('RGB',self.dim,'black')
-                past_action=NONE_STRING
+                past_action="B"
             elif self.data[i-j]["episode"]!=self.data[i]["episode"]:
                 img=Image.new('RGB',self.dim,'black')
                 past_action=self.data[i-j]["action"]
@@ -143,7 +143,10 @@ class SequenceGameDatasetHF(Dataset):
         mask=mask.unsqueeze(0).expand([4,-1,-1])
         tokens=torch.tensor(tokens)
         action=torch.tensor([self.action_list.index( row["action"])])
-        action_sequence=torch.tensor([self.action_list.index(p_action) for p_action in action_sequence])
+        try:
+            action_sequence=torch.tensor([self.action_list.index(p_action.upper()) for p_action in action_sequence])
+        except ValueError:
+            action_sequence=torch.tensor([self.action_list.index(p_action) for p_action in action_sequence])
                     
         if not self.pretrained:
             sequence=self.image_processor.preprocess(sequence)
