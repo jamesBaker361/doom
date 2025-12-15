@@ -144,7 +144,7 @@ class SequenceGameDatasetHF(Dataset):
         tokens=torch.tensor(tokens)
         action=torch.tensor([self.action_list.index( row["action"])])
         try:
-            action_sequence=torch.tensor([self.action_list.index(p_action).upper() for p_action in action_sequence])
+            action_sequence=torch.tensor([self.action_list.index(p_action.upper()) for p_action in action_sequence])
         except ValueError:
             action_sequence=torch.tensor([self.action_list.index(p_action) for p_action in action_sequence])
                     
