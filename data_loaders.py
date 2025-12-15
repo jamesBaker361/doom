@@ -143,7 +143,10 @@ class SequenceGameDatasetHF(Dataset):
         mask=mask.unsqueeze(0).expand([4,-1,-1])
         tokens=torch.tensor(tokens)
         action=torch.tensor([self.action_list.index( row["action"])])
-        action_sequence=torch.tensor([self.action_list.index(p_action) for p_action in action_sequence])
+        try:
+            action_sequence=torch.tensor([self.action_list.index(p_action).upper() for p_action in action_sequence])
+        except ValueError:
+            action_sequence=torch.tensor([self.action_list.index(p_action) for p_action in action_sequence])
                     
         if not self.pretrained:
             sequence=self.image_processor.preprocess(sequence)
