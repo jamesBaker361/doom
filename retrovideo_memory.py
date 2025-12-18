@@ -174,6 +174,9 @@ class FrameActionPerEpisodeLogger(BaseCallback):
             })
             #print(self.output_dict["episode"])
 
+            for k,v in self.output_dict.items():
+                print(k,len(v))
+
             Dataset.from_dict(self.output_dict).push_to_hub(self.dest_dataset)
             self.episode_idx += 1
             with open(self.json_path,"w+") as file:
@@ -414,6 +417,8 @@ if __name__=="__main__":
 
     gym.wrappers.TimeLimit
 
+    for k, v in output_dict.items():
+        print(k, len(v))
     Dataset.from_dict(output_dict).push_to_hub(args.dest_dataset)
 
     print("all done :)")
