@@ -62,9 +62,9 @@ SONIC_1GAME='SonicTheHedgehog-Genesis'
 
 game_state_dict={
       #  SONIC_GAME:['EmeraldHillZone.Act1','AquaticRuinZone.Act1','CasinoNightZone.Act1','HillTopZone.Act1'],
-        'SuperMarioWorld-Snes':["ChocolateIsland1",'DonutPlains1','Forest1','VanillaDome1']+["ChocolateIsland2",'DonutPlains2','Forest2','VanillaDome2'],
-        'CastlevaniaBloodlines-Genesis':['Level1-1','Level2-1','Level3-1','Level4-1']+['Level1-2','Level2-2','Level3-2','Level4-2'],
-        SONIC_1GAME:["GreenHillZone.Act1","LabyrinthZone.Act1","MarbleZone.Act1","ScrapBrainZone.Act1","SpringYardZone.Act1"]+["GreenHillZone.Act2","LabyrinthZone.Act2","MarbleZone.Act2","ScrapBrainZone.Act2","SpringYardZone.Act2"]
+        'SuperMarioWorld-Snes':["ChocolateIsland1",'DonutPlains1','Forest1','VanillaDome1'], #+["ChocolateIsland2",'DonutPlains2','Forest2','VanillaDome2'],
+        'CastlevaniaBloodlines-Genesis':['Level1-1','Level2-1','Level3-1','Level4-1'], #+['Level1-2','Level2-2','Level3-2','Level4-2'],
+        SONIC_1GAME:["GreenHillZone.Act1","LabyrinthZone.Act1","MarbleZone.Act1","ScrapBrainZone.Act1","SpringYardZone.Act1"], #+["GreenHillZone.Act2","LabyrinthZone.Act2","MarbleZone.Act2","ScrapBrainZone.Act2","SpringYardZone.Act2"]
     }
 
 game_key_dict={
