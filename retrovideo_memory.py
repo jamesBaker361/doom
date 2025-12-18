@@ -355,7 +355,7 @@ if __name__=="__main__":
     print("episode_start",episode_start, "steps_taken",steps_taken, f"taking {args.timesteps-steps_taken} steps ")
     
     env=MyWrapper(env,
-                  starting_x,starting_y,
+                  #starting_x,starting_y,
                   args.schedule,episode_start)
     try:
         model=PPO.load(save_path+".zip", env=env, verbose=1)
