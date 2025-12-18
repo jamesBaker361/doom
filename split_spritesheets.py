@@ -1,7 +1,7 @@
 import os
 import cv2 as cv
 import numpy as np
-from shared import crop_black,crop_black_gray,game_state_dict
+from shared import crop_black,crop_black_gray,game_state_dict,SONIC_1GAME
 from PIL import Image
 
 def is_almost_white(img, thresh=250, min_fraction=0.95):
