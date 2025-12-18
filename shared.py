@@ -58,22 +58,26 @@ def crop_black_gray(gray_img, threshold=10):
 SONIC_GAME='SonicTheHedgehog2-Genesis'
 MARIO_GAME='SuperMarioWorld-Snes'
 CASTLE_GAME='CastlevaniaBloodlines-Genesis'
+SONIC_1GAME='SonicTheHedgehog-Genesis'
 
 game_state_dict={
-        'SonicTheHedgehog2-Genesis':['EmeraldHillZone.Act1','AquaticRuinZone.Act1','CasinoNightZone.Act1','HillTopZone.Act1'],
-        'SuperMarioWorld-Snes':["ChocolateIsland1",'DonutPlains1','Forest1','VanillaDome1'],
-        'CastlevaniaBloodlines-Genesis':['Level1-1','Level2-1','Level3-1','Level4-1']
+      #  SONIC_GAME:['EmeraldHillZone.Act1','AquaticRuinZone.Act1','CasinoNightZone.Act1','HillTopZone.Act1'],
+        'SuperMarioWorld-Snes':["ChocolateIsland1",'DonutPlains1','Forest1','VanillaDome1']+["ChocolateIsland2",'DonutPlains2','Forest2','VanillaDome2'],
+        'CastlevaniaBloodlines-Genesis':['Level1-1','Level2-1','Level3-1','Level4-1']+['Level1-2','Level2-2','Level3-2','Level4-2'],
+        SONIC_1GAME:["GreenHillZone.Act1","LabyrinthZone.Act1","MarbleZone.Act1","ScrapBrainZone.Act1","SpringYardZone.Act1"]+["GreenHillZone.Act2","LabyrinthZone.Act2","MarbleZone.Act2","ScrapBrainZone.Act2","SpringYardZone.Act2"]
     }
 
 game_key_dict={
     'CastlevaniaBloodlines-Genesis':['gems', 'levelHi', 'lives', 'health', 'levelLo', 'map', 'score', 'action', 'save_path'],
     'SuperMarioWorld-Snes':['coins', 'score', 'lives', 'action', 'save_path'],
-    'SonicTheHedgehog2-Genesis':['act', 'game_mode', 'level_end_bonus', 'score', 'lives', 'rings', 'screen_x_end', 'screen_x', 'screen_y', 'x', 'y', 'zone', 'action', 'save_path']
+    SONIC_GAME:['act', 'game_mode', 'level_end_bonus', 'score', 'lives', 'rings', 'screen_x_end', 'screen_x', 'screen_y', 'x', 'y', 'zone', 'action', 'save_path'],
+    SONIC_1GAME: ['act', 'level_end_bonus', 'score', 'lives', 'rings', 'screen_x_end', 'screen_x', 'screen_y', 'x', 'y', 'zone', 'action', 'save_path']
 }
 game_window_dict={
-    'SonicTheHedgehog2-Genesis':[224, 320], #['EmeraldHillZone.Act1','AquaticRuinZone.Act1','CasinoNightZone.Act1','HillTopZone.Act1'],
+    SONIC_1GAME:[224, 320], #['EmeraldHillZone.Act1','AquaticRuinZone.Act1','CasinoNightZone.Act1','HillTopZone.Act1'],
         'SuperMarioWorld-Snes':[224, 256], #["ChocolateIsland1",'DonutPlains1','Forest1','VanillaDome1'],
-        'CastlevaniaBloodlines-Genesis': [224, 320], #['Level1-1','Level2-1','Level3-1','Level4-1']
+        'CastlevaniaBloodlines-Genesis': [224, 320], #['Level1-1','Level2-1','Level3-1','Level4-1'],
+        SONIC_GAME:[224,320]
 }
 all_states=[]
 all_tokens=[]
