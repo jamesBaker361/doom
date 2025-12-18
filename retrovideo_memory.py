@@ -218,25 +218,16 @@ class SonicDiscretizer(Discretizer):
     """
     def __init__(self, env):
         super().__init__(env=env, combos=COMBO_LIST)
-        
-class RingObservationReward(gym.ObservationWrapper):
-    def __init__(self, env):
-        super().__init__(env)
-        self.ring_count=0
-        
-    def observation(self, observation):
-        print(observation)
-        return observation
     
 class MyWrapper(gym.Wrapper):
     def __init__(self, env,
-                 starting_x,
-                 starting_y,
+                 #starting_x,
+                 #starting_y,
                     length_schedule:list=[],
                     length_index:int=0):
         super().__init__(env)
-        self.starting_x=starting_x
-        self.starting_y=starting_y
+        #self.starting_x=starting_x
+        #self.starting_y=starting_y
         self.visited_y=set()
         self.rings=0
         self.visited_x=set()
@@ -244,24 +235,28 @@ class MyWrapper(gym.Wrapper):
         self.length_index=length_index
         self.default_length=1000
         self.elapsed_steps=0
+        self.current_score=0
+        self.current_lives=-1
         
         
-    def step(self, a):
+    def step(self, action):
         obs, rew, terminated, truncated, info = super().step(action)
         self.elapsed_steps+=1
-        rings=dict(info)["rings"]
-        if rings!=self.rings:
-            rew+=(rings-self.rings)
-            self.rings=rings
-        x=dict(info)["x"]
-        y=dict(info)["y"]
-        if x not in self.visited_x:
-            self.visited_x.add(x)
-            rew+=0.01*abs(x-self.starting_x)
-        if y not in self.visited_y:
-            self.visited_y.add(y)
-            rew+=0.00001* abs(y-self.starting_y)
-        rew-=0.000001
+
+        rew=-1
+
+        score=dict(info)["score"]
+        if score> self.current_score:
+            rew+=score-self.current_score
+            self.current_score=score
+
+        if self.current_lives==-1:
+            self.current_lives=dict(info)["lives"]
+        elif dict(info)["lives"]<self.current_lives:
+            terminated=False
+            self.current_lives=-1
+
+        
         limit=self.default_length
         if len(self.length_schedule)>0:
             limit=self.length_schedule[min(len(self.length_schedule)-1,self.length_index)]
@@ -275,6 +270,8 @@ class MyWrapper(gym.Wrapper):
         self.visited_x=set()
         self.elapsed_steps=0
         self.length_index+=1
+        self.current_score=0
+        self.current_lives=-1
         return super().reset(seed=seed, options=options)
 
 
@@ -305,8 +302,8 @@ if __name__=="__main__":
     step= env.step(action)
     info=step[-1]
     
-    starting_x=info["x"]
-    starting_y=info["y"]
+    #starting_x=info["x"]
+    #starting_y=info["y"]
 
     action = env.action_space.sample()
     accelerator.print("action space",action,len(action))
