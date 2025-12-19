@@ -6,7 +6,7 @@ import time
 from PIL import Image
 import argparse
 import csv
-from shared import game_state_dict,NONE_STRING
+from shared import game_state_dict,NONE_STRING,SONIC_1GAME,MARIO_GAME,CASTLE_GAME
 import random
 
 
@@ -20,7 +20,7 @@ if __name__=='__main__':
         state_help+=f"{k} has states: "+",".join(v)+"\n"
 
     parser=argparse.ArgumentParser()
-    parser.add_argument("--game",type=str,default='SonicTheHedgehog2-Genesis',help="one of \n SuperMarioWorld-Snes \n CastlevaniaBloodlines-Genesis-v0 \n SonicTheHedgehog2-Genesis ")
+    parser.add_argument("--game",type=str,default=SONIC_1GAME,help=f"one of \n {MARIO_GAME} s \n {CASTLE_GAME} \n {SONIC_1GAME} ")
     parser.add_argument("--state",type=str,default='EmeraldHillZone.Act1',help=state_help)
     parser.add_argument("--save_dir",type=str,default="videos")
     parser.add_argument("--interval",type=int,default=4)
@@ -134,7 +134,7 @@ if __name__=='__main__':
                     output_dict["action"].append(NONE_STRING)
                 else:
                     output_dict["action"].append(button)
-                for _ in range(args.interval):
+                for _ in range(args.interval): #kjdfs
                     obs, rew, terminated, truncated, info=env.step(action)
                 env.render()
                 clock.tick(60)  # limit to 60 FPS for smooth control
@@ -146,6 +146,7 @@ if __name__=='__main__':
                     if past_lives is None:
                         past_lives=info["lives"]
                     elif info["lives"]<past_lives:
+                        print("life lost!")
                         break
 
 
