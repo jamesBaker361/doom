@@ -36,7 +36,7 @@ import struct
 import accelerate
 import wandb
 
-COMBO_LIST=[['LEFT'], ['RIGHT'], ['DOWN'], ['B']]
+COMBO_LIST=[['LEFT'], ['RIGHT'], ['DOWN'], ['B'],['A']]
 
 parser=argparse.ArgumentParser()
 parser.add_argument("--game",type=str,default="SonicTheHedgehog2-Genesis")
