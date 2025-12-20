@@ -3,7 +3,6 @@ import argparse
 from experiment_helpers.gpu_details import print_details
 from experiment_helpers.saving_helpers import save_and_load_functions
 import json
-from constants import VAE_WEIGHTS_NAME
 from diffusers.schedulers.scheduling_flow_match_euler_discrete import FlowMatchEulerDiscreteScheduler
 from peft import LoraConfig
 from torch import nn
