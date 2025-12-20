@@ -6,7 +6,8 @@ import cv2 as cv
 from PIL import Image
 import numpy as np
 from huggingface_hub import HfApi
-
+from typing import Tuple
+import torch
 api=HfApi()
 
 os.makedirs("testing_save",exist_ok=True)
@@ -35,41 +36,80 @@ black_list_dict={
     [f"{s}.jpg" for s in range(45,48)], #['EmeraldHillZone.Act1','AquaticRuinZone.Act1','CasinoNightZone.Act1','HillTopZone.Act1'],
         'SuperMarioWorld-Snes':[], #["ChocolateIsland1",'DonutPlains1','Forest1','VanillaDome1'],
         'CastlevaniaBloodlines-Genesis': ["107.jpg"],
+
 }
 
-interval=15
+def get_sprite_match(background:Image.Image,sprite_dir:str)-> Tuple[bool, np.ndarray]:
+    background_array=np.asarray(background)
+    #print(background_array.shape)
+    sprite_dir=os.path.join("sprite_from_sheet",game)
+    ranking=[]
+    for x,sprites_jpg in enumerate(os.listdir(sprite_dir)):
+        if sprites_jpg.endswith("jpg"):
+            sprite_path=os.path.join(sprite_dir,sprites_jpg)
+            sprite=Image.open(sprite_path).convert("RGB")
+            sprite_array=np.asarray(sprite)
+            mask = np.all(sprite_array != 0, axis=-1).astype(np.uint8)
+            max_scores=[]
+            loc_list=[]
+            for d in range(3):
+                back=background_array[:,:,d]
+                spr=sprite_array[:,:,d]
+                try:
+                    res=cv.matchTemplate(back,spr,cv.TM_SQDIFF_NORMED,mask=mask)
+                except Exception:
+                    print(sprite_path,sprite_array.shape)
+                    raise Exception("sdjf")
+                min_val, max_val, min_loc, max_loc = cv.minMaxLoc(res)
+                max_scores.append(min_val)
+                loc_list.append(min_loc)
 
+            if loc_list[0]== loc_list[1] and loc_list[1]==loc_list[2]: # or loc_list[0]==loc_list[2]:
+                ranking.append([np.mean(max_scores),
+                                sprites_jpg,
+                                loc_list,
+                                mask,
+                                sprite_array])
+
+    if len(ranking)==0:
+        return False,torch.ones_like(background_array)
+    else:
+        ranking.sort(key=lambda x: x[0])
+        [score, path,loc_list,mask,sprite_array]=ranking[0]
+        top_left = loc_list[0]
+        height,width = sprite_array.shape[:2]
+
+        # copy background
+        overlay = np.zeros_like(background_array)
+
+        # draw white where the sprite matches (respecting the mask)
+        y, x = top_left[1], top_left[0]
+
+        print(mask.shape,overlay.shape,sprite_array.shape)
+
+        for c in range(3):
+            for h in range(height):
+                for w in range(width):
+                    #if mask[h][w]:
+                    overlay[y+h][x+w][c]=255
+        return True,overlay
+
+
+interval=15
+limit=5
 button_list=["B","LEFT","RIGHT","DOWN","UP"]
 for game,states_list in game_state_dict.items():
-
+    sprite_dir=os.path.join("sprite_from_sheet",game)
 
     key_list=game_key_dict[game]
     output_dict={
-        key:[] for key in key_list+["image","state","game","episode","coords","template_score","step"] #LESS THEN .4 IS USUALLY SAFE
+        key:[] for key in key_list+["image","state","game","episode","step","overlay","use_overlay"] 
     }
-    path_list=[f for f in os.listdir(os.path.join("distorted_sprite_from_sheet",f"{game}")) 
-                     if f.endswith("jpg") and f not in black_list_dict[game] ]
-    template_list=[
-        cv.cvtColor(cv.imread( os.path.join("distorted_sprite_from_sheet",f"{game}", file) ,cv.IMREAD_COLOR),cv.COLOR_BGR2RGB) for file in 
-        path_list  
-    ]
-    print(black_list_dict[game] )
 
-    mask_list=[
-        mask_black_with_neighbors(template) for template in template_list
-    ]
-    limit=500
-    '''
-    template_list=[
-        cv.cvtColor(cv.imread( os.path.join("sprite_from_sheet",f"{game}", f"{button}.jpg") ,cv.IMREAD_COLOR),cv.COLOR_BGR2RGB) for button in button_list
-    ]
-    mask_list=[
-        mask_black_with_neighbors(template) for template in template_list
-    ]'''
     #print(len(template_list))
     for state in states_list[::-1]:
         
-        directory=os.path.join("videos",str(interval),game,state)
+        directory=os.path.join("new_vid",str(interval),game,state)
         repo=f"jlbaker361/{game}_{state}_{interval}_{limit}_coords"
         if os.path.exists(directory):
             if api.repo_exists(repo):
@@ -96,42 +136,18 @@ for game,states_list in game_state_dict.items():
                             for key,value in row.items():
                                 output_dict[key].append(value)
                             cv_image=cv.cvtColor(cv.imread(row["save_path"],cv.IMREAD_COLOR),cv.COLOR_BGR2RGB)
+                            pil_image=Image.fromarray(cv_image)
                             output_dict["state"].append(state)
                             output_dict["game"].append(game)
-                            output_dict["image"].append(Image.fromarray(cv_image))
+                            output_dict["image"].append(pil_image)
                             output_dict["episode"].append(episode)
-                            lowest=1.0
-                            best_template=None
-                            res_list=[]
-                            for n,(template,mask,path) in enumerate(zip(template_list,mask_list,path_list)):
-                                res = cv.matchTemplate(cv_image,template,cv.TM_SQDIFF_NORMED) #,mask=mask)
-                                min_val, _, min_loc, max_loc = cv.minMaxLoc(res)
-                                res_list.append([min_val,min_loc,max_loc,template,n,path])
-
-                            res_list.sort(key=lambda x: x[0])
-                            best=res_list[0]
-                            min_val,min_loc,max_loc,best_template,best_n,path=best
-                            h,w=best_template.shape[:2]
-                            top_left = min_loc
-
-                            bottom_right = (top_left[0] + w, top_left[1] + h)
-    
-                            '''cv.rectangle(cv_image,top_left, bottom_right, 255, 2)
-
-                            cv_image[top_left[1]:top_left[1]+h,top_left[0]:top_left[0]+w]=best_template
-
-                            cv.imwrite(f"test_{count}.jpg",cv.cvtColor(cv_image,cv.COLOR_RGB2BGR))
-                            print(f"test_{count}.jpg",best_n, min_val,path)'''
-
-                            output_dict["coords"].append([top_left, bottom_right])
-                            output_dict["template_score"].append(min_val)
+                            use_overlay,overlay=get_sprite_match(pil_image, sprite_dir)
+                            output_dict["overlay"].append(overlay)
+                            output_dict["use_overlay"].append(use_overlay)
 
                             #index+=1
                             
-                            '''if count>10:
-                                Dataset.from_dict(output_dict).push_to_hub(f"jlbaker361/{game}_{state}_10_coords")
-                                print("pushed")
-                                break'''
                 Dataset.from_dict(output_dict).push_to_hub(repo)
                 print(f"pushed {repo}")
-                            
+        else:
+            print(directory, "does not exist")                    
