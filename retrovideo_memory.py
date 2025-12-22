@@ -43,12 +43,13 @@ parser.add_argument("--game",type=str,default="SonicTheHedgehog2-Genesis")
 parser.add_argument("--project_name",type=str,default="sonic_data")
 parser.add_argument("--state",default=retro.State.DEFAULT)
 parser.add_argument("--scenario", default="MetropolisZone.Act1")
-parser.add_argument("--timesteps",type=int,default=10)
+#parser.add_argument("--timesteps",type=int,default=10)
 parser.add_argument("--record",action="store_true")
 parser.add_argument("--save_dir",type=str,default="rl_videos")
 parser.add_argument("--dest_dataset",type=str,default="jlbaker361/sonic_rl")
 parser.add_argument("--use_timelimit",action="store_true")
 parser.add_argument("--max_episode_steps",type=int,default=50)
+parser.add_argument("--n_episodes",type=int,default=1)
 parser.add_argument("--image_saving",action="store_false")
 parser.add_argument("--hard_coded_steps",type=int,default=1000)
 parser.add_argument("--schedule",nargs="*",type=int,default=[])
@@ -221,6 +222,7 @@ class SonicDiscretizer(Discretizer):
     
 class MyWrapper(gym.Wrapper):
     def __init__(self, env,
+                 steps_per_episode:int,
                  #starting_x,
                  #starting_y,
                     length_schedule:list=[],
@@ -233,7 +235,7 @@ class MyWrapper(gym.Wrapper):
         self.visited_x=set()
         self.length_schedule=length_schedule
         self.length_index=length_index
-        self.default_length=1000
+        self.default_length=steps_per_episode
         self.elapsed_steps=0
         self.current_score=0
         self.current_lives=-1
@@ -346,11 +348,13 @@ if __name__=="__main__":
     except:
         steps_taken=0
         
-    print("episode_start",episode_start, "steps_taken",steps_taken, f"taking {args.timesteps-steps_taken} steps ")
+    
+    print("episode_start",episode_start, "steps_taken",steps_taken, f"taking {args.n_episodes * args.max_episode_steps-steps_taken} steps ")
     
     env=MyWrapper(env,
+                  steps_per_episode=args.max_episode_steps,
                   #starting_x,starting_y,
-                  args.schedule,episode_start)
+                  length_schedule=  args.schedule,length_index= episode_start)
     try:
         model=PPO.load(save_path, env=env, verbose=1)
         print("successfully loaded")
@@ -376,7 +380,7 @@ if __name__=="__main__":
         steps_taken=steps_taken
     )
 
-    model.learn(args.timesteps-steps_taken,callback=CallbackList([
+    model.learn(total_timesteps=args.n_episodes * args.max_episode_steps-steps_taken,callback=CallbackList([
         #checkpoint_callback, 
         callback]))
     model.save(save_path)
