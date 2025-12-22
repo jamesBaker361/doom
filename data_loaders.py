@@ -42,8 +42,10 @@ class ClassificationDataset(Dataset):
             print("map error ",e)
 
         self.image_processor=image_processor
-        self.all_games=all_games+[NONE_STRING]
-        self.all_states=all_states+[NONE_STRING]
+        self.game_list=all_games+[NONE_STRING]
+        self.game_list.sort()
+        self.state_list=all_states+[NONE_STRING]
+        self.state_list.sort()
 
     def __len__(self):
         return len(self.data)
@@ -51,8 +53,8 @@ class ClassificationDataset(Dataset):
     def __getitem__(self, index):
         return {
             "image":self.image_processor.preprocess(self.data[index]["image"])[0],
-            "game":F.one_hot(torch.tensor(self.all_games.index(self.data[index]["game"])),len(self.all_games)).float(),
-            "state":F.one_hot(torch.tensor(self.all_states.index(self.data[index]["state"])),len(self.all_states)).float(),
+            "game":F.one_hot(torch.tensor(self.game_list.index(self.data[index]["game"])),len(self.game_list)).float(),
+            "state":F.one_hot(torch.tensor(self.state_list.index(self.data[index]["state"])),len(self.state_list)).float(),
         }
 
 
@@ -87,12 +89,18 @@ class SequenceGameDatasetHF(Dataset):
 
 
         self.n_actions = len(set(self.data["action"]))
-        self.action_list=list(set(self.data["action"]))
+        self.action_list=[NONE_STRING]+list(set(self.data["action"]))
+        
+        self.game_list=[NONE_STRING]+all_games
+        self.game_list.sort()
+        
+        self.state_list=[NONE_STRING]+all_states
+        self.state_list.sort()
 
         self.index_list = []
         self.seqence_length=sequence_length
         self.dim=dim
-        self.token_list=list(set([t for t in self.data["game"]]+[t for t in self.data["state"]]))+[NONE_STRING]
+        self.token_list=[NONE_STRING]+list(set([t for t in self.data["game"]]+[t for t in self.data["state"]]))
         
 
     def __len__(self):
@@ -104,12 +112,13 @@ class SequenceGameDatasetHF(Dataset):
         action_sequence=[]
         image_sequence=[]
         game_index=self.token_list.index(row["game"])
+        game=row["game"]
         state_index=self.token_list.index(row["state"])
-        none_index=self.token_list.index(NONE_STRING)
+        state=row["state"]
         for j in range(1,self.seqence_length+1):
             if i-j <0:
                 img=Image.new('RGB',self.dim,'black')
-                past_action="B"
+                past_action=NONE_STRING
             elif self.data[i-j]["episode"]!=self.data[i]["episode"]:
                 img=Image.new('RGB',self.dim,'black')
                 past_action=self.data[i-j]["action"]
@@ -124,25 +133,20 @@ class SequenceGameDatasetHF(Dataset):
                 img=outputs.pooler_output[0]
             sequence.append(img)
             action_sequence.append(past_action)
-        tokens=[]       
-        if  self.data[i]["template_score"]<self.threshold:
-            coords=self.data[i]["coords"]
-            (x1,y1),(x2,y2)=coords
+        tokens=[]   
+        mask=np.array(row["overlay"],dtype=np.uint8)/255
+        if  self.data[i]["use_overlay"]:
             if random.random()<0.5:
-                tokens+=[none_index,game_index]
-                mask=torch.zeros(self.dim,dtype=torch.bool)
-                mask[y1:y2,x1:x2]=True
+                state_index=self.state_list.index(NONE_STRING)
+                mask=1-mask
             else:
-                tokens+=[state_index,game_index]
-                mask=torch.ones(self.dim,dtype=torch.bool)
-                mask[y1:y2,x1:x2]=False
-        else:
-            mask=torch.ones(self.dim,dtype=torch.bool)
-            tokens+=[state_index,game_index]
+                #by default mask masks out only the sprite
+                game_index=self.game_list.index(NONE_STRING)
             
-        mask=mask.unsqueeze(0).expand([4,-1,-1])
-        tokens=torch.tensor(tokens)
-        action=torch.tensor([self.action_list.index( row["action"])])
+        mask=torch.tensor(mask).permute(1,0).unsqueeze(0).expand([4,-1,-1])
+        #mask=resize(mask,(self.dim,self.dim))
+        tokens=tokens
+        action=[row["action"]]
         try:
             action_sequence=torch.tensor([self.action_list.index(p_action.upper()) for p_action in action_sequence])
         except ValueError:
@@ -156,7 +160,8 @@ class SequenceGameDatasetHF(Dataset):
         out = {"sequence":sequence,
                "action":action,
                "mask":mask,
-               "tokens":tokens,
+               "state":torch.tensor(state_index),
+               "game":torch.tensor(game_index),
                "action_sequence":action_sequence,
                #"score":row["template_score"],
                "image":self.image_processor.preprocess(row["image"].resize(self.dim))[0],
