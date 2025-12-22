@@ -332,6 +332,7 @@ if __name__=="__main__":
 
 
     save_path=os.path.join(MODEL_SAVE_DIR,args.repo_id)
+    os.makedirs(save_path,exist_ok=True)
     checkpoint_path=os.path.join(save_path,"checkpoints")
     json_path=os.path.join(save_path,"data.json")
     
