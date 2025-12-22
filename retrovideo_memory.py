@@ -256,7 +256,7 @@ class MyWrapper(gym.Wrapper):
         if self.current_lives==-1:
             self.current_lives=dict(info)["lives"]
         elif dict(info)["lives"]<self.current_lives:
-            terminated=False
+            terminated=True
             self.current_lives=-1
 
         
@@ -296,16 +296,6 @@ if __name__=="__main__":
     
     original_reset=env.reset
     
-    
-    action = env.action_space.sample()
-    accelerator.print("action space",action,len(action))
-
-    # Take the step using the random action
-    env.reset()
-    step= env.step(action)
-    info=step[-1]
-    
-    #starting_x=info["x"]
     #starting_y=info["y"]
 
     action = env.action_space.sample()
@@ -320,6 +310,8 @@ if __name__=="__main__":
     
     
     info_keys=[k for k in step[-1].keys()]
+
+    print("info keys",info_keys)
 
     if args.record:
         env = gymnasium.wrappers.RecordVideo(
