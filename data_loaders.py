@@ -53,7 +53,7 @@ class ClassificationDataset(Dataset):
     
     def __getitem__(self, index):
         return {
-            "image":self.image_processor.preprocess(self.data[index]["image"].resize(self.dim,self.dim))[0],
+            "image":self.image_processor.preprocess(self.data[index]["image"].resize((self.dim,self.dim)))[0],
             "game":F.one_hot(torch.tensor(self.game_list.index(self.data[index]["game"])),len(self.game_list)).float(),
             "state":F.one_hot(torch.tensor(self.state_list.index(self.data[index]["state"])),len(self.state_list)).float(),
         }
@@ -126,7 +126,7 @@ class SequenceGameDatasetHF(Dataset):
             else:
                 img=self.data[i]["image"]
                 past_action=self.data[i-j]["action"]
-            img=img.resize(self.dim)
+            img=img.resize((self.dim,self.dim))
             image_sequence.append(img)
             if self.pretrained:
                 inputs = self.processor(images=img, return_tensors="pt")
@@ -165,7 +165,7 @@ class SequenceGameDatasetHF(Dataset):
                "game":torch.tensor(game_index),
                "action_sequence":action_sequence,
                #"score":row["template_score"],
-               "image":self.image_processor.preprocess(row["image"].resize(self.dim))[0],
+               "image":self.image_processor.preprocess(row["image"].resize((self.dim,self.dim)))[0],
                "image_sequence":self.image_processor.preprocess(image_sequence)
                }
         return out
