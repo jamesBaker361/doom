@@ -32,7 +32,7 @@ def find_earliest_less_than(arr, target):
     return result
 
 class ClassificationDataset(Dataset):
-    def __init__(self,src_dataset:str,image_processor:VaeImageProcessor):
+    def __init__(self,src_dataset:str,image_processor:VaeImageProcessor,dim:int=256):
         super().__init__()
         self.data = load_dataset(src_dataset, split="train")
 
@@ -46,13 +46,14 @@ class ClassificationDataset(Dataset):
         self.game_list.sort()
         self.state_list=all_states+[NONE_STRING]
         self.state_list.sort()
+        self.dim=dim
 
     def __len__(self):
         return len(self.data)
     
     def __getitem__(self, index):
         return {
-            "image":self.image_processor.preprocess(self.data[index]["image"])[0],
+            "image":self.image_processor.preprocess(self.data[index]["image"].resize(self.dim,self.dim))[0],
             "game":F.one_hot(torch.tensor(self.game_list.index(self.data[index]["game"])),len(self.game_list)).float(),
             "state":F.one_hot(torch.tensor(self.state_list.index(self.data[index]["state"])),len(self.state_list)).float(),
         }
