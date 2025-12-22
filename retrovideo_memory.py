@@ -36,7 +36,7 @@ import struct
 import accelerate
 import wandb
 
-COMBO_LIST=[['LEFT'], ['RIGHT'], ['DOWN'], ['B'],['A']]
+COMBO_LIST=[['LEFT'], ['RIGHT'], ['DOWN'],['UP'] ,['B'],['A']]
 
 parser=argparse.ArgumentParser()
 parser.add_argument("--game",type=str,default="SonicTheHedgehog2-Genesis")
@@ -172,10 +172,7 @@ class FrameActionPerEpisodeLogger(BaseCallback):
             accelerator.log({
                 "final_reward":self.locals["rewards"][0]
             })
-            #print(self.output_dict["episode"])
-
-            for k,v in self.output_dict.items():
-                print(k,len(v))
+            print("final_reward",self.locals["rewards"][0])
 
             Dataset.from_dict(self.output_dict).push_to_hub(self.dest_dataset)
             self.episode_idx += 1
@@ -406,12 +403,9 @@ if __name__=="__main__":
         for key,value in info.items():
             if key in output_dict:
                 output_dict[key].append(value)
-        
 
-    gym.wrappers.TimeLimit
-
-    for k, v in output_dict.items():
-        print(k, len(v))
+    '''for k, v in output_dict.items():
+        print(k, len(v))'''
     Dataset.from_dict(output_dict).push_to_hub(args.dest_dataset)
 
     print("all done :)")
