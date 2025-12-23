@@ -92,6 +92,11 @@ def main(args):
     start_epoch=load(False)
     
     accelerator.print("starting at ",start_epoch)
+    
+    metrics={
+        "correct_game":0,
+        "correct_state":0
+    }
 
     @optimization_loop(
         accelerator,train_loader,args.epochs,args.val_interval,args.limit,
@@ -121,6 +126,23 @@ def main(args):
             state_loss=ce_loss(pred_state,state)
             game_loss=ce_loss(pred_game,game)
             loss=game_loss+state_loss
+            if misc_dict["mode"]=="test":
+                pred_state_max=torch.argmax(pred_state,dim=-1)
+                pred_state=F.one_hot(pred_state_max,pred_state.size()[-1])
+                pred_game_max=torch.argmax(pred_game,dim=-1)
+                pred_game=F.one_hot(pred_game_max,pred_game.size()[-1])
+                
+                
+                
+                for b in range(state.size()[0]):
+                    
+                    if torch.sum(F.mse_loss(pred_state[b].float(),state[b].float()))==0:
+                        metrics["correct_state"]+=1
+                    if torch.sum(F.mse_loss(pred_game[b].float(),game[b].float()))==0:
+                        metrics["correct_game"]+=1
+                
+            
+            
 
         accelerator.log({
             "state":state_loss.cpu().detach().numpy(),
@@ -129,6 +151,11 @@ def main(args):
         return loss.cpu().detach().numpy()
     
     batch_function()
+    
+    for key,value in metrics.items():
+        accelerator.print(key,value/(len(test_loader)*args.batch_size))
+    
+    accelerator.log(metrics)
 
 
 
