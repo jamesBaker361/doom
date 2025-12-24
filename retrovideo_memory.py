@@ -278,6 +278,7 @@ class MyWrapper(gym.Wrapper):
         return obs, rew, terminated, truncated, dict(info)
         
     def reset(self,seed=None,options=None):
+        print("resetting! new episode")
         self.visited_y=set()
         self.rings=0
         self.visited_x=set()
