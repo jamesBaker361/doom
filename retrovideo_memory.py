@@ -89,6 +89,17 @@ def pad_image_with_text(img:Image.Image, lines:list, font_size:int=20)->Image.Im
     return new_img
 
 
+class SaveCallback(BaseCallback):
+    def __init__(self, save_path:str, interval:int, verbose = 0):
+        super().__init__(verbose)
+        self.save_path=save_path
+        self.interval=interval
+        
+    def _on_step(self) -> bool:
+        if self.n_calls % self.interval== 0:
+            self.model.save(self.save_path)
+
+
 class FrameActionPerEpisodeLogger(BaseCallback):
     def __init__(self, save_freq: int,info_keys:list,
                  accelerator:accelerate.Accelerator,dest_dataset:str,
@@ -363,11 +374,7 @@ if __name__=="__main__":
         print('didnt load',e)
         
 
-    checkpoint_callback = CheckpointCallback(
-        save_freq=10_000,
-        save_path=checkpoint_path,
-        name_prefix="ppo"
-    )
+    save_callback=SaveCallback(save_path,1000)
     
     callback = FrameActionPerEpisodeLogger(
         dest_dataset=args.dest_dataset,
@@ -381,7 +388,7 @@ if __name__=="__main__":
     )
 
     model.learn(total_timesteps=args.n_episodes * args.max_episode_steps-steps_taken,callback=CallbackList([
-        #checkpoint_callback, 
+        save_callback, 
         callback]))
     model.save(save_path)
     
