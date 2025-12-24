@@ -275,6 +275,7 @@ class MyWrapper(gym.Wrapper):
             limit=self.length_schedule[min(len(self.length_schedule)-1,self.length_index)]
         if self.elapsed_steps>=limit:
             truncated=True
+        print("step",truncated,terminated)
         return obs, rew, terminated, truncated, dict(info)
         
     def reset(self,seed=None,options=None):
