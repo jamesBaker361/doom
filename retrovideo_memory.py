@@ -388,10 +388,11 @@ if __name__=="__main__":
         steps_taken=steps_taken
     )
 
-    model.learn(total_timesteps=args.n_episodes * args.max_episode_steps-steps_taken,callback=CallbackList([
-        save_callback, 
-        callback]))
-    model.save(save_path)
+    for ep in range(episode_start,args.n_episodes):
+        model.learn(total_timesteps=args.n_episodes * args.max_episode_steps-steps_taken,callback=CallbackList([
+            save_callback, 
+            callback]))
+        model.save(save_path)
     
     output_dict=callback.output_dict
     hard_coded_steps=[]
