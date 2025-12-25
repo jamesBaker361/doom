@@ -120,7 +120,7 @@ if __name__=='__main__':
     env.reset()
     action = env.action_space.sample()
     print("action space",action,len(action))
-    next_state, reward, done, trunc, info = env.step(action=action)
+    next_state, reward, done, trunc, info = env.step(action)
     print(f"{next_state.shape},\n {reward},\n {done},\n {info}")
     
     
@@ -138,7 +138,7 @@ if __name__=='__main__':
     env.reset()
     action = env.action_space.sample()
     print("action space",action,len(action))
-    next_state, reward, done, trunc, info = env.step(action=action)
+    next_state, reward, done, trunc, info = env.step(action)
     print(f"{next_state.shape},\n {reward},\n {done},\n {info}")
     
     
