@@ -118,7 +118,9 @@ if __name__=='__main__':
             )
     
     env.reset()
-    next_state, reward, done, trunc, info = env.step(action=0)
+    action = env.action_space.sample()
+    print("action space",action,len(action))
+    next_state, reward, done, trunc, info = env.step(action=action)
     print(f"{next_state.shape},\n {reward},\n {done},\n {info}")
     
     
@@ -130,5 +132,13 @@ if __name__=='__main__':
         env = FrameStack(env, num_stack=4, new_step_api=True)
     else:
         env = FrameStack(env, num_stack=4)
+    
+    env=Discretizer(env,COMBO_LIST)
+    action = env.action_space.sample()
+    env.reset()
+    action = env.action_space.sample()
+    print("action space",action,len(action))
+    next_state, reward, done, trunc, info = env.step(action=action)
+    print(f"{next_state.shape},\n {reward},\n {done},\n {info}")
     
     
