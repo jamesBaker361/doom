@@ -17,7 +17,7 @@ import retro
 
 import json
 import gymnasium as gym
-from gymnasium.wrappers import FrameStack, GrayScaleObservation, TransformObservation
+from gymnasium.wrappers import FrameStackObservation, TransformObservation,GrayscaleObservation
 import ale_py
 from gymnasium.spaces import Box
 
@@ -126,12 +126,12 @@ if __name__=='__main__':
     
     # Apply Wrappers to environment
     env = SkipFrame(env, skip=4)
-    env = GrayScaleObservation(env)
+    env = GrayscaleObservation(env)
     env = ResizeObservation(env, shape=84)
     if gym.__version__ < '0.26':
-        env = FrameStack(env, num_stack=4, new_step_api=True)
+        env = FrameStackObservation(env, num_stack=4, new_step_api=True)
     else:
-        env = FrameStack(env, num_stack=4)
+        env = FrameStackObservation(env, num_stack=4)
     
     env=Discretizer(env,COMBO_LIST)
     action = env.action_space.sample()
