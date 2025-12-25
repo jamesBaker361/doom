@@ -51,7 +51,7 @@ parser.add_argument("--use_timelimit",action="store_true")
 parser.add_argument("--max_episode_steps",type=int,default=50)
 parser.add_argument("--n_episodes",type=int,default=1)
 parser.add_argument("--image_saving",action="store_false")
-parser.add_argument("--hard_coded_steps",type=int,default=1000)
+parser.add_argument("--hard_coded_steps",type=int,default=0)
 parser.add_argument("--schedule",nargs="*",type=int,default=[])
 parser.add_argument("--repo_id",type=str,default="jlbaker361/sonic-rl-agent")
 
@@ -364,10 +364,10 @@ if __name__=="__main__":
     
     print("episode_start",episode_start, "steps_taken",steps_taken, f"taking {args.n_episodes * args.max_episode_steps-steps_taken} steps ")
     
-    env=MyWrapper(env,
+    '''env=MyWrapper(env,
                   steps_per_episode=args.max_episode_steps,
                   #starting_x,starting_y,
-                  length_schedule=  args.schedule,length_index= episode_start)
+                  length_schedule=  args.schedule,length_index= episode_start)'''
     try:
         model=PPO.load(save_path, env=env, verbose=1)
         print("successfully loaded")
