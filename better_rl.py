@@ -12,11 +12,14 @@ import random, datetime, os
 from tensordict import TensorDict
 from torchrl.data import TensorDictReplayBuffer, LazyMemmapStorage
 
+
 import retro
 
 import json
 import gymnasium as gym
+from gymnasium.wrappers import FrameStack, GrayScaleObservation, TransformObservation
 import ale_py
+from gymnasium.spaces import Box
 
 class Discretizer(gym.ActionWrapper):
     """
@@ -43,6 +46,65 @@ class Discretizer(gym.ActionWrapper):
     def action(self, act):
         return self._decode_discrete_action[act].copy()
     
+    
+class SkipFrame(gym.Wrapper):
+    def __init__(self, env, skip):
+        """Return only every `skip`-th frame"""
+        super().__init__(env)
+        self._skip = skip
+
+    def step(self, action):
+        """Repeat action, and sum reward"""
+        total_reward = 0.0
+        for i in range(self._skip):
+            # Accumulate reward and repeat the same action
+            obs, reward, done, trunk, info = self.env.step(action)
+            total_reward += reward
+            if done:
+                break
+        return obs, total_reward, done, trunk, info
+
+
+'''class GrayScaleObservation(gym.ObservationWrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        obs_shape = self.observation_space.shape[:2]
+        self.observation_space = Box(low=0, high=255, shape=obs_shape, dtype=np.uint8)
+
+    def permute_orientation(self, observation):
+        # permute [H, W, C] array to [C, H, W] tensor
+        observation = np.transpose(observation, (2, 0, 1))
+        observation = torch.tensor(observation.copy(), dtype=torch.float)
+        return observation
+
+    def observation(self, observation):
+        observation = self.permute_orientation(observation)
+        transform = T.Grayscale()
+        observation = transform(observation)
+        return observation'''
+
+
+class ResizeObservation(gym.ObservationWrapper):
+    def __init__(self, env, shape):
+        super().__init__(env)
+        if isinstance(shape, int):
+            self.shape = (shape, shape)
+        else:
+            self.shape = tuple(shape)
+
+        obs_shape = self.shape + self.observation_space.shape[2:]
+        self.observation_space = Box(low=0, high=255, shape=obs_shape, dtype=np.uint8)
+
+    def observation(self, observation):
+        transforms = T.Compose(
+            [T.Resize(self.shape, antialias=True), T.Normalize(0, 255)]
+        )
+        observation = transforms(observation).squeeze(0)
+        return observation
+
+
+
+    
 COMBO_LIST=[['LEFT'], ['RIGHT'], ['DOWN'],['UP'] ,['B'],['A']]
 
 if __name__=='__main__':
@@ -58,3 +120,15 @@ if __name__=='__main__':
     env.reset()
     next_state, reward, done, trunc, info = env.step(action=0)
     print(f"{next_state.shape},\n {reward},\n {done},\n {info}")
+    
+    
+    # Apply Wrappers to environment
+    env = SkipFrame(env, skip=4)
+    env = GrayScaleObservation(env)
+    env = ResizeObservation(env, shape=84)
+    if gym.__version__ < '0.26':
+        env = FrameStack(env, num_stack=4, new_step_api=True)
+    else:
+        env = FrameStack(env, num_stack=4)
+    
+    
