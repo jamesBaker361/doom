@@ -25,11 +25,14 @@ import numpy as np
 import time, datetime
 import matplotlib.pyplot as plt
 from agent_rl import Agent
-from experiment_helpers.init_helpers import repo_api_init,default_parser
+from experiment_helpers.init_helpers import repo_api_init,default_parser,parse_args
+from experiment_helpers.gpu_details import print_details
+from accelerate import Accelerator
 
 
 class MetricLogger:
-    def __init__(self, save_dir):
+    def __init__(self, save_dir,accelerator:Accelerator=None):
+        self.accelerator=accelerator
         self.save_log = os.path.join(save_dir, "logs")
         with open(self.save_log, "w") as f:
             f.write(
@@ -119,12 +122,10 @@ class MetricLogger:
                 f"{time_since_last_record:15.3f}"
                 f"{datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'):>20}\n"
             )
-
-            '''        for metric in ["ep_lengths", "ep_avg_losses", "ep_avg_qs", "ep_rewards"]:
-            plt.clf()
-            plt.plot(getattr(self, f"moving_avg_{metric}"), label=f"moving_avg_{metric}")
-            plt.legend()
-            plt.savefig(getattr(self, f"{metric}_plot"))'''
+        if self.accelerator is not None:
+            self.accelerator.log({
+                f"moving_avg_{metric}":getattr(self, f"moving_avg_{metric}") for metric in ["ep_lengths", "ep_avg_losses", "ep_avg_qs", "ep_rewards"]
+            })
 
 class Discretizer(gym.ActionWrapper):
     """
@@ -211,7 +212,8 @@ class SkipFrame(gym.Wrapper):
     
 COMBO_LIST=[['LEFT'], ['RIGHT'], ['DOWN'],['UP'] ,['B'],['A']]
 
-if __name__=='__main__':
+def main(args):
+    hf_api, accelerator=repo_api_init(args)
     GAME='SonicTheHedgehog2-Genesis'
     SCENARIO='MetropolisZone.Act1'
     env = retro.make(
@@ -254,9 +256,7 @@ if __name__=='__main__':
     
     mario = Agent(state_dim=(stack_size,h,w), action_dim=env.action_space.n, save_dir=save_dir)
 
-    logger = MetricLogger(save_dir)
-    
-    print("reset",env.reset())
+    logger = MetricLogger(save_dir,accelerator)
 
     episodes = 40
     for e in range(episodes):
@@ -293,4 +293,15 @@ if __name__=='__main__':
         if (e % 20 == 0) or (e == episodes - 1):
             logger.record(episode=e, epsilon=mario.exploration_rate, step=mario.curr_step)
         
-        
+if __name__=='__main__':
+    parser=default_parser()
+    print_details()
+    start=time.time()
+    args=parse_args(parser)
+    print(args)
+    main(args)
+    end=time.time()
+    seconds=end-start
+    hours=seconds/(60*60)
+    print(f"successful generating:) time elapsed: {seconds} seconds = {hours} hours")
+    print("all done!")
