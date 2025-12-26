@@ -260,7 +260,7 @@ if __name__=='__main__':
     episodes = 40
     for e in range(episodes):
 
-        obs, info= env.reset()
+        state, info= env.reset()
 
         # Play the game!
         while True:
