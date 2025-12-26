@@ -156,7 +156,7 @@ class SkipFrame(gym.Wrapper):
         """Return only every `skip`-th frame"""
         super().__init__(env)
         self._skip = skip
-        self.points=None
+        self.score=None
         self.lives=None
         self.current_episode=0
 
