@@ -36,10 +36,6 @@ class MetricLogger:
                 f"{'MeanLength':>15}{'MeanLoss':>15}{'MeanQValue':>15}"
                 f"{'TimeDelta':>15}{'Time':>20}\n"
             )
-        self.ep_rewards_plot = save_dir / "reward_plot.jpg"
-        self.ep_lengths_plot = save_dir / "length_plot.jpg"
-        self.ep_avg_losses_plot = save_dir / "loss_plot.jpg"
-        self.ep_avg_qs_plot = save_dir / "q_plot.jpg"
 
         # History metrics
         self.ep_rewards = []
@@ -122,12 +118,6 @@ class MetricLogger:
                 f"{time_since_last_record:15.3f}"
                 f"{datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'):>20}\n"
             )
-
-        for metric in ["ep_lengths", "ep_avg_losses", "ep_avg_qs", "ep_rewards"]:
-            plt.clf()
-            plt.plot(getattr(self, f"moving_avg_{metric}"), label=f"moving_avg_{metric}")
-            plt.legend()
-            plt.savefig(getattr(self, f"{metric}_plot"))
 
 class Discretizer(gym.ActionWrapper):
     """
