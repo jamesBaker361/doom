@@ -156,6 +156,9 @@ class SkipFrame(gym.Wrapper):
         """Return only every `skip`-th frame"""
         super().__init__(env)
         self._skip = skip
+        self.points=None
+        self.lives=None
+        self.current_episode=0
 
     def step(self, action):
         """Repeat action, and sum reward"""
@@ -163,8 +166,21 @@ class SkipFrame(gym.Wrapper):
         for i in range(self._skip):
             # Accumulate reward and repeat the same action
             obs, reward, done, trunk, info = self.env.step(action)
+            score=obs["score"]
+            lives=obs["lives"]
+            if self.score is None:
+                self.score=score
+                self.lives=lives
+            else:
+                if score>self.score:
+                    reward+=(score-self.score)
+                    self.score=score
+                if lives<self.lives:
+                    done=True
             total_reward += reward
             if done:
+                self.lives=None
+                self.score=None
                 break
         return obs, total_reward, done, trunk, info
 
@@ -213,7 +229,7 @@ if __name__=='__main__':
     w=next_state.shape[1]//2
     
     # Apply Wrappers to environment
-    env = SkipFrame(env, skip=4)
+    env = SkipFrame(env, skip=15)
     env = GrayscaleObservation(env)
     env = ResizeObservation(env, shape=(h,w))
     env = FrameStackObservation(env, stack_size=4)
@@ -242,7 +258,7 @@ if __name__=='__main__':
     episodes = 40
     for e in range(episodes):
 
-        state = env.reset()
+        obs, info= env.reset()
 
         # Play the game!
         while True:
