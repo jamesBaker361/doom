@@ -226,7 +226,7 @@ if __name__=='__main__':
     action = env.action_space.sample()
     env.reset()
     action = env.action_space.sample()
-    print("action space",action,len(action))
+    print("action space",action)
     next_state, reward, done, trunc, info = env.step(action)
     print(f"{next_state.shape},\n {reward},\n {done},\n {info}")
     
