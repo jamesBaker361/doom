@@ -4,6 +4,7 @@ from pathlib import Path
 
 from neural_net_rl import AgentNet
 from collections import deque
+import os
 
 
 class Agent:
@@ -150,7 +151,7 @@ class Agent:
 
 
     def save(self):
-        save_path = self.save_dir / f"mario_net_{int(self.curr_step // self.save_every)}.chkpt"
+        save_path = os.path.join(self.save_dir,f"mario_net_{int(self.curr_step // self.save_every)}.chkpt")
         torch.save(
             dict(
                 model=self.net.state_dict(),

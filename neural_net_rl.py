@@ -42,7 +42,7 @@ class AgentNet(nn.Module):
         for p in self.target.parameters():
             p.requires_grad = False
             
-        self.moduel_list=torch.nn.ModuleList([self.online,self.target])
+        self.module_list=torch.nn.ModuleList([self.online,self.target])
 
     def forward(self, input, model):
         if model == 'online':
