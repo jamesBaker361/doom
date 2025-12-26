@@ -212,11 +212,14 @@ if __name__=='__main__':
     next_state, reward, done, trunc, info = env.step(action)
     print(f"{next_state.shape},\n {reward},\n {done},\n {info}")
     
+    stack_size=4
+    h=next_state.shape[0]//2
+    w=next_state.shape[1]//2
     
     # Apply Wrappers to environment
     env = SkipFrame(env, skip=4)
     env = GrayscaleObservation(env)
-    env = ResizeObservation(env, shape=(next_state.shape[0],next_state.shape[1]))
+    env = ResizeObservation(env, shape=(h,w))
     env = FrameStackObservation(env, stack_size=4)
     
     env=Discretizer(env,COMBO_LIST)
@@ -234,7 +237,7 @@ if __name__=='__main__':
     save_dir = os.path.join("checkpoints",GAME)
     os.makedirs(save_dir,exist_ok=True)
     
-    mario = Agent(state_dim=(4, 84, 84), action_dim=env.action_space.n, save_dir=save_dir)
+    mario = Agent(state_dim=(stack_size,h,w), action_dim=env.action_space.n, save_dir=save_dir)
 
     logger = MetricLogger(save_dir)
 
