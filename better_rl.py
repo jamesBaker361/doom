@@ -284,7 +284,7 @@ if __name__=='__main__':
             state = next_state
 
             # Check if end of game
-            if done or info["flag_get"]:
+            if done:
                 break
 
         logger.log_episode()
