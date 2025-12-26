@@ -119,6 +119,12 @@ class MetricLogger:
                 f"{datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'):>20}\n"
             )
 
+            '''        for metric in ["ep_lengths", "ep_avg_losses", "ep_avg_qs", "ep_rewards"]:
+            plt.clf()
+            plt.plot(getattr(self, f"moving_avg_{metric}"), label=f"moving_avg_{metric}")
+            plt.legend()
+            plt.savefig(getattr(self, f"{metric}_plot"))'''
+
 class Discretizer(gym.ActionWrapper):
     """
     Wrap a gym environment and make it use discrete actions.
@@ -200,7 +206,7 @@ if __name__=='__main__':
     action = env.action_space.sample()
     print("action space",action,len(action))
     next_state, reward, done, trunc, info = env.step(action)
-    print(f"{next_state.shape},\n {reward},\n {done},\n {info}")
+    print(f"next_state.shape {next_state.shape},\n reward {reward},\n done {done},\n info {info}")
     
     stack_size=4
     h=next_state.shape[0]//2
@@ -218,7 +224,7 @@ if __name__=='__main__':
     action = env.action_space.sample()
     print("action space",action)
     next_state, reward, done, trunc, info = env.step(action)
-    print(f"{next_state.shape},\n {reward},\n {done},\n {info}")
+    print(f"next_state.shape {next_state.shape},\n reward {reward},\n done {done},\n info {info}")
     
     use_cuda = torch.cuda.is_available()
     print(f"Using CUDA: {use_cuda}")
@@ -230,6 +236,8 @@ if __name__=='__main__':
     mario = Agent(state_dim=(stack_size,h,w), action_dim=env.action_space.n, save_dir=save_dir)
 
     logger = MetricLogger(save_dir)
+    
+    print("reset",env.reset())
 
     episodes = 40
     for e in range(episodes):
