@@ -175,7 +175,9 @@ class SkipFrame(gym.Wrapper):
                 if score>self.score:
                     reward+=(score-self.score)
                     self.score=score
+                    print("score =",self.score)
                 if lives<self.lives:
+                    print("lives = ",lives)
                     done=True
             total_reward += reward
             if done:
