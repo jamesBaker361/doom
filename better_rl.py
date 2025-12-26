@@ -129,9 +129,9 @@ if __name__=='__main__':
     env = GrayscaleObservation(env)
     env = ResizeObservation(env, shape=84)
     if gym.__version__ < '0.26':
-        env = FrameStackObservation(env, num_stack=4, new_step_api=True)
+        env = FrameStackObservation(env, stack_size=4, new_step_api=True)
     else:
-        env = FrameStackObservation(env, num_stack=4)
+        env = FrameStackObservation(env, stack_size=4)
     
     env=Discretizer(env,COMBO_LIST)
     action = env.action_space.sample()
