@@ -33,12 +33,16 @@ class AgentNet(nn.Module):
             nn.ReLU(),
             nn.Linear(512, output_dim)
         )
+        
+        self.online=torch.nn.Sequential(self.online_conv,self.online_dense)
 
         self.target = copy.deepcopy(self.online)
 
         # Q_target parameters are frozen.
         for p in self.target.parameters():
             p.requires_grad = False
+            
+        self.moduel_list=torch.nn.ModuleList([self.online,self.target])
 
     def forward(self, input, model):
         if model == 'online':
