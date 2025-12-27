@@ -1,5 +1,0 @@
-sbatch --constraint=L40S runpygpu_chip_l40.sh  inversion_ivg.py --batch_size 1 --sequence_length 2 --mixed_precision fp16 --epochs 2 --limit 2 --gradient_accumulation_steps 1 --repo_id jlbaker361/ivgtest2a --pretrained --dim 64
-sbatch --constraint=L40S runpygpu_chip_l40.sh  inversion_ivg.py --batch_size 1 --sequence_length 2 --mixed_precision fp16 --epochs 2 --limit 2 --gradient_accumulation_steps 1 --repo_id jlbaker361/ivgtesta --dim 64
-
-python inversion_ivg.py --batch_size 1 --sequence_length 2 --mixed_precision no --epochs 2 --limit 2 --gradient_accumulation_steps 1 --repo_id jlbaker361/ivgtest2mac --pretrained --dim 64 --n_layers 1
-python inversion_ivg.py --batch_size 1 --sequence_length 2 --mixed_precision no --epochs 2 --limit 2 --gradient_accumulation_steps 1 --repo_id jlbaker361/ivgtestmac  --dim 64 --n_layers 1
