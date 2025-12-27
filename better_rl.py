@@ -156,14 +156,14 @@ class Discretizer(gym.ActionWrapper):
     
     
 class SkipFrame(gym.Wrapper):
-    def __init__(self, env, skip,repo_id:str,game:str,state:str):
+    def __init__(self, env, skip,repo_id:str,game:str,scenario:str):
         """Return only every `skip`-th frame"""
         super().__init__(env)
         self._skip = skip
         self.score=None
         self.lives=None
         self.game=game
-        self.state=state
+        self.scenario=scenario
         self.repo_id=repo_id
         try:
             self.data_dict=load_dataset(repo_id,split="train").to_dict()
@@ -173,7 +173,7 @@ class SkipFrame(gym.Wrapper):
             self.current_episode=0
             self.data_dict={
                 "game":[],
-                "state":[],
+                "scenario":[],
                 "image":[],
                 "episode":[],
                 "overlay":[], # these will be none so we can separate template mmatching from rl training
@@ -204,7 +204,7 @@ class SkipFrame(gym.Wrapper):
                 
                 break
         self.data_dict["game"].append(self.game)
-        self.data_dict["state"].append(self.state)
+        self.data_dict["scenario"].append(self.state)
         self.data_dict["episode"].append(self.current_episode)
         self.data_dict["image"].append(Image.fromarray(obs))
         self.data_dict["overlay"].append(None)
@@ -264,7 +264,7 @@ def main(args):
     
     # Apply Wrappers to environment
     sprite_dir=os.path.join("sprite_from_sheet",GAME)
-    env = SkipFrame(env, skip=15)
+    env = SkipFrame(env, skip=15,args.repo_id,GAME,SCENARIO)
     env = GrayscaleObservation(env)
     env = ResizeObservation(env, shape=(h,w))
     env = FrameStackObservation(env, stack_size=4)
