@@ -204,7 +204,7 @@ class SkipFrame(gym.Wrapper):
                 
                 break
         self.data_dict["game"].append(self.game)
-        self.data_dict["scenario"].append(self.state)
+        self.data_dict["scenario"].append(self.scenario)
         self.data_dict["episode"].append(self.current_episode)
         self.data_dict["image"].append(Image.fromarray(obs))
         self.data_dict["overlay"].append(None)
