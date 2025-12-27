@@ -156,7 +156,7 @@ class Discretizer(gym.ActionWrapper):
     
     
 class SkipFrame(gym.Wrapper):
-    def __init__(self, env, skip,repo_id:str,game:str,scenario:str):
+    def __init__(self, env, skip,dest_dataset:str,game:str,scenario:str):
         """Return only every `skip`-th frame"""
         super().__init__(env)
         self._skip = skip
@@ -164,9 +164,9 @@ class SkipFrame(gym.Wrapper):
         self.lives=None
         self.game=game
         self.scenario=scenario
-        self.repo_id=repo_id
+        self.dest_dataset=dest_dataset
         try:
-            self.data_dict=load_dataset(repo_id,split="train").to_dict()
+            self.data_dict=load_dataset(dest_dataset,split="train").to_dict()
             if len(self.data_dict["episode"])>0:
                 self.current_episode=1+max(self.data_dict["episode"])
         except:
@@ -214,7 +214,7 @@ class SkipFrame(gym.Wrapper):
             self.lives=None
             self.score=None
             self.current_episode+=1
-            Dataset.from_dict(self.data_dict).push_to_hub(self.repo_id)
+            Dataset.from_dict(self.data_dict).push_to_hub(self.dest_dataset)
         return obs, total_reward, done, trunk, info
 
 
@@ -264,7 +264,7 @@ def main(args):
     
     # Apply Wrappers to environment
     sprite_dir=os.path.join("sprite_from_sheet",GAME)
-    env = SkipFrame(env, 15,args.repo_id,GAME,SCENARIO)
+    env = SkipFrame(env, 15,args.dest_dataset,GAME,SCENARIO)
     env = GrayscaleObservation(env)
     env = ResizeObservation(env, shape=(h,w))
     env = FrameStackObservation(env, stack_size=4)
