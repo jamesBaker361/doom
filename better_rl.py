@@ -264,7 +264,7 @@ def main(args):
     
     # Apply Wrappers to environment
     sprite_dir=os.path.join("sprite_from_sheet",GAME)
-    env = SkipFrame(env, skip=15,args.repo_id,GAME,SCENARIO)
+    env = SkipFrame(env, 15,args.repo_id,GAME,SCENARIO)
     env = GrayscaleObservation(env)
     env = ResizeObservation(env, shape=(h,w))
     env = FrameStackObservation(env, stack_size=4)
