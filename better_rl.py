@@ -281,10 +281,12 @@ def main(args):
     print(f"Using CUDA: {use_cuda}")
     print()
 
-    save_dir = os.path.join("checkpoints",GAME)
+    save_dir = os.path.join("checkpoints",GAME,SCENARIO)
     os.makedirs(save_dir,exist_ok=True)
+    save_path=os.path.join(save_dir,"savedict.pth")
     
-    mario = Agent(state_dim=(stack_size,h,w), action_dim=env.action_space.n, save_dir=save_dir)
+    mario = Agent(state_dim=(stack_size,h,w), action_dim=env.action_space.n, save_path=save_path,save_every=10,burnin=1)
+    mario.load()
 
     logger = MetricLogger(save_dir,accelerator)
 
