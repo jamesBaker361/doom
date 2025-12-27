@@ -1,80 +1,75 @@
-import retro
-import pygame
-import numpy as np
-import os
-import time
-from PIL import Image
-import argparse
+from datasets import Dataset
 import csv
+import os
+from shared import game_state_dict,game_key_dict,SONIC_1GAME,SONIC_GAME,MARIO_GAME,CASTLE_GAME
 import cv2 as cv
-from shared import pil_grid,crop_black
-
-rects=[
-    [(10,10),(100,100)],
-    [(10,10),(100,100)],
-    [(10,10),(100,100)],
-]
-
-moving_rects=[
-        [(10,10),(100,100)],
-    [(10,10),(100,100)],
-    [(10,10),(100,100)],
-]
-games=['SonicTheHedgehog2-Genesis','SuperMarioWorld-Snes','CastlevaniaBloodlines-Genesis']
+from PIL import Image
+import numpy as np
+from huggingface_hub import HfApi
+from typing import Tuple
+import torch
+api=HfApi()
 
 
+black_list_dict={
+    SONIC_GAME:[],
+    SONIC_1GAME:[],
+        MARIO_GAME:[], #["ChocolateIsland1",'DonutPlains1','Forest1','VanillaDome1'],
+        CASTLE_GAME :["107.jpg"],
 
-for game,rect,move_rect in zip(games,rects,moving_rects):
-    env = retro.make(
-            game=game,
-            #state=args.state,
-            #record=save_dir,
-            use_restricted_actions=retro.Actions.ALL
-        )
-    BUTTONS = env.buttons
-    action = np.zeros(len(BUTTONS), dtype=np.int8)
-    
-    env.reset()
-    still_obs, rew, terminated, truncated, info=env.step(action)
-    #still_obs=cv.rectangle(still_obs,rect[0],rect[1],color=1,thickness=5)
-    still_image = Image.fromarray(still_obs).resize((256,256))
-    still_image.save(f"None_{game[:10]}.jpg")
-    env.reset()
+}
 
-    KEY_TO_BUTTON = {
-        pygame.K_d: "RIGHT",
-        pygame.K_a: "LEFT",
-        pygame.K_w: "UP",
-        pygame.K_s: "DOWN",
+def get_sprite_match(background:Image.Image,sprite_dir:str,)-> Tuple[bool, np.ndarray]:
+    background_array=np.asarray(background)
+    #print(background_array.shape)
+    ranking=[]
+    for x,sprites_jpg in enumerate(os.listdir(sprite_dir)):
+        if sprites_jpg.endswith("jpg"):
+            sprite_path=os.path.join(sprite_dir,sprites_jpg)
+            sprite=Image.open(sprite_path).convert("RGB")
+            sprite_array=np.asarray(sprite)
+            mask = np.all(sprite_array != 0, axis=-1).astype(np.uint8)
+            max_scores=[]
+            loc_list=[]
+            for d in range(3):
+                back=background_array[:,:,d]
+                spr=sprite_array[:,:,d]
+                try:
+                    res=cv.matchTemplate(back,spr,cv.TM_SQDIFF_NORMED,mask=mask)
+                except Exception:
+                    print(sprite_path,sprite_array.shape)
+                    raise Exception("sdjf")
+                min_val, max_val, min_loc, max_loc = cv.minMaxLoc(res)
+                max_scores.append(min_val)
+                loc_list.append(min_loc)
 
-        pygame.K_q: "B",      # Jump
-        #pygame.K_x: "LEFT",
-        #.K_c: "C",
+            if loc_list[0]== loc_list[1] and loc_list[1]==loc_list[2]: # or loc_list[0]==loc_list[2]:
+                ranking.append([np.mean(max_scores),
+                                sprites_jpg,
+                                loc_list,
+                                mask,
+                                sprite_array])
 
-        pygame.K_RETURN: "Start",
-    }
+    if len(ranking)==0:
+        return False,torch.ones_like(background_array)
+    else:
+        ranking.sort(key=lambda x: x[0])
+        [score, path,loc_list,mask,sprite_array]=ranking[0]
+        top_left = loc_list[0]
+        height,width = sprite_array.shape[:2]
 
-    # Reverse lookup: button name → index
+        # copy background
+        overlay = np.zeros_like(background_array)
 
-    button_index = {b: i for i, b in enumerate(BUTTONS)}
+        # draw white where the sprite matches (respecting the mask)
+        y, x = top_left[1], top_left[0]
 
-    image_list=[]
+        print(mask.shape,overlay.shape,sprite_array.shape)
 
-    for button_name in ["RIGHT","LEFT","B"]:
-        action = np.zeros(len(BUTTONS), dtype=np.int8)
-        for _ in range(100):
-            obs, rew, terminated, truncated, info=env.step(action)
-        #for key, button_name in KEY_TO_BUTTON.items():
-        idx = button_index.get(button_name, None)
-        if idx is not None:
-            action[idx] = 1
+        for c in range(3):
+            for h in range(height):
+                for w in range(width):
+                    #if mask[h][w]:
+                    overlay[y+h][x+w][c]=255
+        return True,overlay
 
-        for _ in range(7):
-            obs, rew, terminated, truncated, info=env.step(action)
-        #obs==cv.rectangle(obs,rect[0],rect[1],color=1,thickness=5)
-
-        image=Image.fromarray(obs).resize((256,256))
-        image.save(f"{button_name}_{game[:10]}.jpg")
-\
-        env.reset()
-    env.close()
