@@ -163,7 +163,7 @@ class Agent:
 
 
     def load(self):
-        if not self.save_path.exists():
+        if not os.path.exists(self.save_path):
             print(f"{self.save_path} does not exist")
         else:
             ckp = torch.load(self.save_path, map_location=('cuda' if self.use_cuda else 'cpu'))
