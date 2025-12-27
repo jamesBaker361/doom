@@ -28,6 +28,8 @@ from agent_rl import Agent
 from experiment_helpers.init_helpers import repo_api_init,default_parser,parse_args
 from experiment_helpers.gpu_details import print_details
 from accelerate import Accelerator
+from datasets import load_dataset,Dataset
+from extract_sprites import get_sprite_match
 
 
 class MetricLogger:
@@ -154,13 +156,29 @@ class Discretizer(gym.ActionWrapper):
     
     
 class SkipFrame(gym.Wrapper):
-    def __init__(self, env, skip):
+    def __init__(self, env, skip,repo_id:str,game:str,state:str):
         """Return only every `skip`-th frame"""
         super().__init__(env)
         self._skip = skip
         self.score=None
         self.lives=None
-        self.current_episode=0
+        self.game=game
+        self.state=state
+        self.repo_id=repo_id
+        try:
+            self.data_dict=load_dataset(repo_id,split="train").to_dict()
+            if len(self.data_dict["episode"])>0:
+                self.current_episode=1+max(self.data_dict["episode"])
+        except:
+            self.current_episode=0
+            self.data_dict={
+                "game":[],
+                "state":[],
+                "image":[],
+                "episode":[],
+                "overlay":[], # these will be none so we can separate template mmatching from rl training
+                "use_overlay":[] # these will be none so we can separate template mmatching from rl training
+            }
 
     def step(self, action):
         """Repeat action, and sum reward"""
@@ -183,9 +201,20 @@ class SkipFrame(gym.Wrapper):
                     done=True
             total_reward += reward
             if done:
-                self.lives=None
-                self.score=None
+                
                 break
+        self.data_dict["game"].append(self.game)
+        self.data_dict["state"].append(self.state)
+        self.data_dict["episode"].append(self.current_episode)
+        self.data_dict["image"].append(Image.fromarray(obs))
+        self.data_dict["overlay"].append(None)
+        self.data_dict["use_overlay"].append(None)
+        
+        if done:
+            self.lives=None
+            self.score=None
+            self.current_episode+=1
+            Dataset.from_dict(self.data_dict).push_to_hub(self.repo_id)
         return obs, total_reward, done, trunk, info
 
 
@@ -234,6 +263,7 @@ def main(args):
     w=next_state.shape[1]//2
     
     # Apply Wrappers to environment
+    sprite_dir=os.path.join("sprite_from_sheet",GAME)
     env = SkipFrame(env, skip=15)
     env = GrayscaleObservation(env)
     env = ResizeObservation(env, shape=(h,w))
@@ -258,7 +288,7 @@ def main(args):
 
     logger = MetricLogger(save_dir,accelerator)
 
-    episodes = 40
+    episodes = 6
     for e in range(episodes):
 
         state, info= env.reset()
@@ -290,11 +320,12 @@ def main(args):
 
         logger.log_episode()
 
-        if (e % 20 == 0) or (e == episodes - 1):
+        if (e % 2 == 0) or (e == episodes - 1):
             logger.record(episode=e, epsilon=mario.exploration_rate, step=mario.curr_step)
         
 if __name__=='__main__':
     parser=default_parser()
+
     print_details()
     start=time.time()
     args=parse_args(parser)

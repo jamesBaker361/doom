@@ -55,6 +55,8 @@ def crop_black_gray(gray_img, threshold=10):
     cropped = gray_img[y0:y1+1, x0:x1+1]
     return cropped
 
+
+
 SONIC_GAME='SonicTheHedgehog2-Genesis'
 MARIO_GAME='SuperMarioWorld-Snes'
 CASTLE_GAME='CastlevaniaBloodlines-Genesis'
