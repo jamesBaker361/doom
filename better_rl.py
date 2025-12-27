@@ -177,7 +177,8 @@ class SkipFrame(gym.Wrapper):
                 "image":[],
                 "episode":[],
                 "overlay":[], # these will be none so we can separate template mmatching from rl training
-                "use_overlay":[] # these will be none so we can separate template mmatching from rl training
+                "use_overlay":[] , # these will be none so we can separate template mmatching from rl training
+                "action":[]
             }
 
     def step(self, action):
@@ -201,7 +202,6 @@ class SkipFrame(gym.Wrapper):
                     done=True
             total_reward += reward
             if done:
-                
                 break
         self.data_dict["game"].append(self.game)
         self.data_dict["scenario"].append(self.scenario)
@@ -209,6 +209,7 @@ class SkipFrame(gym.Wrapper):
         self.data_dict["image"].append(Image.fromarray(obs))
         self.data_dict["overlay"].append(None)
         self.data_dict["use_overlay"].append(None)
+        self.data_dict["action"].append(action)
         
         if done:
             self.lives=None
