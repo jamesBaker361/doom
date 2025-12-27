@@ -164,12 +164,12 @@ class Agent:
 
     def load(self, load_path):
         if not load_path.exists():
-            raise ValueError(f"{load_path} does not exist")
+            print(f"{load_path} does not exist")
+        else:
+            ckp = torch.load(load_path, map_location=('cuda' if self.use_cuda else 'cpu'))
+            exploration_rate = ckp.get('exploration_rate')
+            state_dict = ckp.get('model')
 
-        ckp = torch.load(load_path, map_location=('cuda' if self.use_cuda else 'cpu'))
-        exploration_rate = ckp.get('exploration_rate')
-        state_dict = ckp.get('model')
-
-        print(f"Loading model at {load_path} with exploration rate {exploration_rate}")
-        self.net.load_state_dict(state_dict)
-        self.exploration_rate = exploration_rate
+            print(f"Loading model at {load_path} with exploration rate {exploration_rate}")
+            self.net.load_state_dict(state_dict)
+            self.exploration_rate = exploration_rate
