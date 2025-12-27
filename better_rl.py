@@ -213,7 +213,7 @@ class SkipFrame(gym.Wrapper):
 COMBO_LIST=[['LEFT'], ['RIGHT'], ['DOWN'],['UP'] ,['B'],['A']]
 
 def main(args):
-    hf_api, accelerator=repo_api_init(args)
+    hf_api, accelerator,device=repo_api_init(args)
     GAME='SonicTheHedgehog2-Genesis'
     SCENARIO='MetropolisZone.Act1'
     env = retro.make(
