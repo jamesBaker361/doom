@@ -222,6 +222,7 @@ class SkipFrame(gym.Wrapper):
             self.score=None
             self.current_episode+=1
             Dataset.from_dict(self.data_dict).push_to_hub(self.dest_dataset)
+            print(f"uploaded dataset len {len(self.data_dict['game'])} to {self.dest_dataset}" )
         return obs, total_reward, done, trunk, info
 
 
