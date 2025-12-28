@@ -30,6 +30,7 @@ from experiment_helpers.gpu_details import print_details
 from accelerate import Accelerator
 from datasets import load_dataset,Dataset
 from extract_sprites import get_sprite_match
+from shared import SONIC_GAME,SONIC_1GAME,CASTLE_GAME,MARIO_GAME,game_state_dict
 
 COMBO_LIST=[['LEFT'], ['RIGHT'], ['DOWN'],['UP'] ,['B'],['A']]
 
@@ -249,8 +250,11 @@ class SkipFrame(gym.Wrapper):
 
 def main(args):
     hf_api, accelerator,device=repo_api_init(args)
-    GAME='SonicTheHedgehog2-Genesis'
-    SCENARIO='MetropolisZone.Act1'
+    GAME=args.game
+    SCENARIO=args.scenario
+    if SCENARIO not in game_state_dict[GAME]:
+        SCENARIO=game_state_dict[GAME][0]
+        print("scenario not present!!! defaulting to ",SCENARIO)
     env = retro.make(
                 game=GAME,
                 #state=args.state,
@@ -287,7 +291,7 @@ def main(args):
     print(f"Using CUDA: {use_cuda}")
     print()
 
-    save_dir = os.path.join("checkpoints",GAME,SCENARIO)
+    save_dir = os.path.join("checkpoints",args.repo_id)
     os.makedirs(save_dir,exist_ok=True)
     save_path=os.path.join(save_dir,"savedict.pth")
     
@@ -334,6 +338,9 @@ def main(args):
 if __name__=='__main__':
     parser=default_parser()
     parser.add_argument("--dest_dataset",type=str,default="jlbaker361/jskadfjsdk")
+    parser.add_argument("--episodes",type=int,default=100)
+    parser.add_argument("--game",type=str,default=SONIC_1GAME)
+    parser.add_argument("--scenario",type=str,default=game_state_dict[SONIC_1GAME][0])
 
     print_details()
     start=time.time()
