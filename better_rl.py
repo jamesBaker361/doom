@@ -311,7 +311,7 @@ def main(args):
 
     logger = MetricLogger(save_dir,accelerator)
 
-    episodes = 6
+    episodes = args.episodes
     for e in range(episodes):
 
         state, info= env.reset()
