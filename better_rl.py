@@ -306,7 +306,7 @@ def main(args):
     
     player_agent = Agent(state_dim=(stack_size,h,w), action_dim=env.action_space.n, 
                   save_path=save_path,save_every=args.save_every,
-                  burnin=args.burnin,batch_size=args.batch_size)
+                  burnin=args.burnin,batch_size=args.batch_size,accelerator=accelerator)
     player_agent.load()
 
     logger = MetricLogger(save_dir,accelerator)
