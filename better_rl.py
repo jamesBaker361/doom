@@ -179,6 +179,7 @@ class SkipFrame(gym.Wrapper):
             self.data_dict=load_dataset(dest_dataset,split="train").to_dict()
             if len(self.data_dict["episode"])>0:
                 self.current_episode=1+max(self.data_dict["episode"])
+            print(f"loaded from {dest_dataset} startign at {self.current_episode}")
         except:
             self.current_episode=0
             self.data_dict={
@@ -190,6 +191,7 @@ class SkipFrame(gym.Wrapper):
                 "use_overlay":[] , # these will be none so we can separate template mmatching from rl training
                 "action":[]
             }
+        print("data dict keys",[k for k in self.data_dict.keys()])
 
     def step(self, action):
         """Repeat action, and sum reward"""
