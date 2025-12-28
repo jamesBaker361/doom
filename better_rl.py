@@ -161,6 +161,7 @@ class SkipFrame(gym.Wrapper):
     def __init__(self, env, skip,dest_dataset:str,game:str,scenario:str):
         """Return only every `skip`-th frame"""
         super().__init__(env)
+        self.buttons=env.unwrapped.buttons
         self._skip = skip
         self.score=None
         self.lives=None
@@ -213,7 +214,7 @@ class SkipFrame(gym.Wrapper):
         self.data_dict["overlay"].append(None)
         self.data_dict["use_overlay"].append(None)
         true_index=action.tolist().index(True)
-        self.data_dict["action"].append(COMBO_LIST[true_index])
+        self.data_dict["action"].append(self.buttons[true_index])
         
         if done:
             self.lives=None
