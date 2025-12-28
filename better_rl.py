@@ -296,7 +296,9 @@ def main(args):
     os.makedirs(save_dir,exist_ok=True)
     save_path=os.path.join(save_dir,"savedict.pth")
     
-    mario = Agent(state_dim=(stack_size,h,w), action_dim=env.action_space.n, save_path=save_path,save_every=10,burnin=1,batch_size=args.batch_size)
+    mario = Agent(state_dim=(stack_size,h,w), action_dim=env.action_space.n, 
+                  save_path=save_path,save_every=args.save_every,
+                  burnin=args.burnin,batch_size=args.batch_size)
     mario.load()
 
     logger = MetricLogger(save_dir,accelerator)
@@ -342,6 +344,8 @@ if __name__=='__main__':
     parser.add_argument("--episodes",type=int,default=100)
     parser.add_argument("--game",type=str,default=SONIC_1GAME)
     parser.add_argument("--scenario",type=str,default=game_state_dict[SONIC_1GAME][0])
+    parser.add_argument("--save_every",type=int,default=5000)
+    parser.add_argument("--burnin",type=int,default=1000)
 
     print_details()
     start=time.time()
