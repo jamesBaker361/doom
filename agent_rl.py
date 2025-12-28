@@ -1,6 +1,7 @@
 import torch
 import random, numpy as np
 from pathlib import Path
+from accelerate import Accelerator
 
 from neural_net_rl import AgentNet
 from collections import deque
@@ -11,7 +12,8 @@ class Agent:
     def __init__(self, state_dim, action_dim, save_path,
                  burnin:int=1e5,
                  learn_every:int=3,
-                 save_every:int=5e5,batch_size:int=32):
+                 save_every:int=5e5,batch_size:int=32,
+                 accelerator:Accelerator=None):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.memory = deque(maxlen=100000)
@@ -38,6 +40,7 @@ class Agent:
             self.net = self.net.to(device='cuda')
 
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.00025)
+        self.accelerator=accelerator
         self.loss_fn = torch.nn.SmoothL1Loss()
 
 
@@ -80,11 +83,11 @@ class Agent:
         reward (float),
         done(bool))
         """
-        state = torch.FloatTensor(state).cuda() if self.use_cuda else torch.FloatTensor(state)
-        next_state = torch.FloatTensor(next_state).cuda() if self.use_cuda else torch.FloatTensor(next_state)
-        action = torch.LongTensor([action]).cuda() if self.use_cuda else torch.LongTensor([action])
-        reward = torch.DoubleTensor([reward]).cuda() if self.use_cuda else torch.DoubleTensor([reward])
-        done = torch.BoolTensor([done]).cuda() if self.use_cuda else torch.BoolTensor([done])
+        state = torch.FloatTensor(state) #.cuda() if self.use_cuda else torch.FloatTensor(state)
+        next_state = torch.FloatTensor(next_state) #.cuda() if self.use_cuda else torch.FloatTensor(next_state)
+        action = torch.LongTensor([action]) #.cuda() if self.use_cuda else torch.LongTensor([action])
+        reward = torch.DoubleTensor([reward]) #.cuda() if self.use_cuda else torch.DoubleTensor([reward])
+        done = torch.BoolTensor([done]) #.cuda() if self.use_cuda else torch.BoolTensor([done])
 
         self.memory.append( (state, next_state, action, reward, done,) )
 
@@ -112,10 +115,19 @@ class Agent:
 
 
     def update_Q_online(self, td_estimate, td_target) :
-        loss = self.loss_fn(td_estimate, td_target)
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+        
+        
+        if self.accelerator is not None:
+            with self.accelerator.accumulate(self.net.parameters()):
+                self.optimizer.zero_grad()
+                loss = self.loss_fn(td_estimate, td_target)
+                loss.backward()
+                self.optimizer.step()
+        else:
+            self.optimizer.zero_grad()
+            loss = self.loss_fn(td_estimate, td_target)
+            loss.backward()
+            self.optimizer.step()
         return loss.item()
 
 
@@ -138,6 +150,12 @@ class Agent:
 
         # Sample from memory
         state, next_state, action, reward, done = self.recall()
+        if self.use_cuda:
+            state=state.cuda()
+            next_state=next_state.cuda()
+            action=action.cuda()
+            reward=reward.cuda()
+            done=done.cuda()
 
         # Get TD Estimate
         td_est = self.td_estimate(state, action)
@@ -147,8 +165,12 @@ class Agent:
 
         # Backpropagate loss through Q_online
         loss = self.update_Q_online(td_est, td_tgt)
+        
+        torch.cuda.empty_cache()
 
         return (td_est.mean().item(), loss)
+    
+    
 
 
     def save(self):
