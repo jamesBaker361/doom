@@ -212,7 +212,7 @@ class SkipFrame(gym.Wrapper):
         self.data_dict["image"].append(Image.fromarray(obs))
         self.data_dict["overlay"].append(None)
         self.data_dict["use_overlay"].append(None)
-        true_index=action.index(True)
+        true_index=action.tolist().index(True)
         self.data_dict["action"].append(COMBO_LIST[true_index])
         
         if done:
