@@ -296,10 +296,10 @@ def main(args):
     os.makedirs(save_dir,exist_ok=True)
     save_path=os.path.join(save_dir,"savedict.pth")
     
-    mario = Agent(state_dim=(stack_size,h,w), action_dim=env.action_space.n, 
+    player_agent = Agent(state_dim=(stack_size,h,w), action_dim=env.action_space.n, 
                   save_path=save_path,save_every=args.save_every,
                   burnin=args.burnin,batch_size=args.batch_size)
-    mario.load()
+    player_agent.load()
 
     logger = MetricLogger(save_dir,accelerator)
 
@@ -312,16 +312,16 @@ def main(args):
         while True:
 
             # Run agent on the state
-            action = mario.act(state)
+            action = player_agent.act(state)
 
             # Agent performs action
             next_state, reward, done, trunc, info = env.step(action)
 
             # Remember
-            mario.cache(state, next_state, action, reward, done)
+            player_agent.cache(state, next_state, action, reward, done)
 
             # Learn
-            q, loss = mario.learn()
+            q, loss = player_agent.learn()
 
             # Logging
             logger.log_step(reward, loss, q)
@@ -335,8 +335,8 @@ def main(args):
 
         logger.log_episode()
 
-        if (e % 2 == 0) or (e == episodes - 1):
-            logger.record(episode=e, epsilon=mario.exploration_rate, step=mario.curr_step)
+        if (e % 5 == 0) or (e == episodes - 1):
+            logger.record(episode=e, epsilon=player_agent.exploration_rate, step=player_agent.curr_step)
         
 if __name__=='__main__':
     parser=default_parser()
