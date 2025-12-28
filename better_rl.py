@@ -31,6 +31,8 @@ from accelerate import Accelerator
 from datasets import load_dataset,Dataset
 from extract_sprites import get_sprite_match
 
+COMBO_LIST=[['LEFT'], ['RIGHT'], ['DOWN'],['UP'] ,['B'],['A']]
+
 
 class MetricLogger:
     def __init__(self, save_dir,accelerator:Accelerator=None):
@@ -209,7 +211,7 @@ class SkipFrame(gym.Wrapper):
         self.data_dict["image"].append(Image.fromarray(obs))
         self.data_dict["overlay"].append(None)
         self.data_dict["use_overlay"].append(None)
-        self.data_dict["action"].append(action)
+        self.data_dict["action"].append(COMBO_LIST[action])
         
         if done:
             self.lives=None
@@ -240,7 +242,7 @@ class SkipFrame(gym.Wrapper):
 
 
     
-COMBO_LIST=[['LEFT'], ['RIGHT'], ['DOWN'],['UP'] ,['B'],['A']]
+
 
 def main(args):
     hf_api, accelerator,device=repo_api_init(args)
@@ -286,7 +288,7 @@ def main(args):
     os.makedirs(save_dir,exist_ok=True)
     save_path=os.path.join(save_dir,"savedict.pth")
     
-    mario = Agent(state_dim=(stack_size,h,w), action_dim=env.action_space.n, save_path=save_path,save_every=10,burnin=1)
+    mario = Agent(state_dim=(stack_size,h,w), action_dim=env.action_space.n, save_path=save_path,save_every=10,burnin=1,batch_size=args.batch_size)
     mario.load()
 
     logger = MetricLogger(save_dir,accelerator)
