@@ -73,7 +73,6 @@ class MetricLogger:
             self.curr_ep_loss_length += 1
 
     def log_episode(self):
-        "Mark end of episode"
         self.ep_rewards.append(self.curr_ep_reward)
         self.ep_lengths.append(self.curr_ep_length)
         if self.curr_ep_loss_length == 0:
@@ -84,6 +83,13 @@ class MetricLogger:
             ep_avg_q = np.round(self.curr_ep_q / self.curr_ep_loss_length, 5)
         self.ep_avg_losses.append(ep_avg_loss)
         self.ep_avg_qs.append(ep_avg_q)
+        if self.accelerator is not None:
+            self.accelerator.log({
+                "ep_avg_loss":ep_avg_loss,
+                "ep_avg_q":ep_avg_q,
+                "ep_reward":self.curr_ep_reward,
+                "ep_length":self.curr_ep_length
+            })
 
         self.init_episode()
 
