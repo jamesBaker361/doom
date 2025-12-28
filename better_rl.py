@@ -185,7 +185,7 @@ class SkipFrame(gym.Wrapper):
 
     def step(self, action):
         """Repeat action, and sum reward"""
-        print(action)
+        #print(action)
         total_reward = 0.0
         for i in range(self._skip):
             # Accumulate reward and repeat the same action
