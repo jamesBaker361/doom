@@ -22,3 +22,6 @@ if -1 in args.episode_list:
     biggest=max(episode_set)
     episode_data=data.filter(lambda row: row["episode"]==biggest)["image"]
     episode_data[0].save(f"{data_name}_episode_final.gif",save_all=True,append_images=episode_data[1:],optimize=False,duration=len(episode_data)/4)
+    
+    
+print("all done :)")
