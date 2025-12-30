@@ -284,6 +284,8 @@ def main(args):
     # Apply Wrappers to environment
     sprite_dir=os.path.join("sprite_from_sheet",GAME)
     env = SkipFrame(env, 15,args.dest_dataset,GAME,SCENARIO)
+    
+    current_episode=env.current_episode
     env = GrayscaleObservation(env)
     env = ResizeObservation(env, shape=(h,w))
     env = FrameStackObservation(env, stack_size=4)
@@ -311,8 +313,8 @@ def main(args):
 
     logger = MetricLogger(save_dir,accelerator)
 
-    episodes = args.episodes
-    for e in range(episodes):
+    episodes = args.episodes+1
+    for e in range(current_episode,episodes):
 
         state, info= env.reset()
 
