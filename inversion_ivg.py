@@ -30,7 +30,7 @@ from shared import SONIC_GAME,game_state_dict,all_states,all_games,NONE_STRING
 import numpy as np
 
 parser=default_parser()
-parser.add_argument("--src_dataset",type=str,default="jlbaker361/CastlevaniaBloodlines-Genesis_Level1-1_10_coords")
+parser.add_argument("--src_dataset",type=str,default="jlbaker361/SuperMarioWorld-Snes_ChocolateIsland1_15_5_coords")
 parser.add_argument("--num_inference_steps",type=int,default=4)
 parser.add_argument("--use_lora",action="store_true")
 parser.add_argument("--sequence_length",type=int,default=4)
@@ -46,6 +46,8 @@ DIM_PER_TOKEN=768
 
 all_games_plus_none=all_games+[NONE_STRING]
 all_states_plus_none=all_states+[NONE_STRING]
+
+        
 
 class SequenceEncoder(torch.nn.Module):
     def __init__(self, 
@@ -131,6 +133,11 @@ def main(args):
     n_actions=data.n_actions
     n_tokens=len(data.token_list)
     
+    action_list=data.action_list
+    token_list=data.token_list
+    game_list=data.game_list
+    state_list=data.state_list
+    
     # Split the dataset
     train_loader,test_loader,val_loader=split_data(data,0.2,args.batch_size)
     for batch in train_loader:
@@ -145,7 +152,8 @@ def main(args):
             )
         )
     action_encoder=torch.nn.Embedding(n_actions,DIM_PER_TOKEN).to(device)
-    token_encoder=torch.nn.Embedding(n_tokens,DIM_PER_TOKEN).to(device)
+    state_encoder=torch.nn.Embedding(len(state_list),DIM_PER_TOKEN,padding_idx=state_list.index(NONE_STRING))
+    game_encoder=torch.nn.Embedding(len(game_list),DIM_PER_TOKEN,padding_idx=game_list.index(NONE_STRING))
     
     image_encoder=SequenceEncoder(args.sequence_length,args.desired_sequence_length,pretrained=args.pretrained,n_layers=args.n_layers)
     
@@ -158,15 +166,16 @@ def main(args):
     optimizer=torch.optim.AdamW(params,args.lr)
     unet_optimizer=torch.optim.AdamW(unet_params,args.lr)
     
-    optimizer,unet,action_encoder,train_loader,test_loader,val_loader,scheduler,ddim_scheduler,image_encoder,unet_optimizer = accelerator.prepare(
+    optimizer,unet,action_encoder,train_loader,test_loader,val_loader,scheduler,ddim_scheduler,image_encoder,unet_optimizer,state_encoder,game_encoder = accelerator.prepare(
         optimizer,unet,action_encoder,train_loader,
         test_loader,val_loader,scheduler,ddim_scheduler,
-        image_encoder,unet_optimizer)
+        image_encoder,unet_optimizer,state_encoder,game_encoder)
     
     save,load=save_and_load_functions({
         "pytorch_weights.safetensors":unet,
         "action_pytorch_weights.safetensors":action_encoder,
-        "token_pytorch_weights.safetensors":token_encoder,
+        "state_pytorch_weights.safetensors":state_encoder,
+        "game_pytorch_weights.safetensors":game_encoder,
         "image_pytorch_weights.safetensors":image_encoder
     },save_subdir,api,args.repo_id)
     
@@ -198,7 +207,9 @@ def main(args):
         sequence=batch["sequence"]
         action=batch["action"]
         image=batch["image"]
-        tokens=batch["tokens"]
+        #tokens=batch["tokens"]
+        game=batch["game"]
+        state=batch["state"]
         mask=batch["mask"]
         bsz=image.size()[0]
         if misc_dict["mode"]!="test" and args.test_only:
@@ -226,14 +237,15 @@ def main(args):
                 with accelerator.accumulate(params):
                     with accelerator.autocast():
                         action_embedding=action_encoder(action)
-                        token_embedding=token_encoder(tokens)
+                        game_embedding=game_encoder(game)
+                        state_embedding=state_encoder(state)
                         sequence_embedding=image_encoder(sequence)
                         
                         if misc_dict["b"]==0 and misc_dict["epochs"]==start_epoch:
-                            print('image.size(),action.size(),tokens.size(),sequence.size()',image.size(),action.size(),tokens.size(),sequence.size())
-                            print('action_embedding.size(),token_embedding.size(),sequence_embedding.size()',action_embedding.size(),token_embedding.size(),sequence_embedding.size())
+                            print('image.size(),action.size(),state.size(),sequence.size()',image.size(),action.size(),game.size(),state.size(),sequence.size())
+                            print('action_embedding.size(),state_embedding.size(),sequence_embedding.size()',action_embedding.size(),state_embedding.size(),game_embedding.size(),sequence_embedding.size())
                         
-                        encoder_hidden_states=torch.cat([action_embedding,token_embedding,sequence_embedding],dim=1)
+                        encoder_hidden_states=torch.cat([action_embedding,state_embedding,game_embedding,sequence_embedding],dim=1)
                         
                         predicted=unet(noisy_image, timesteps, encoder_hidden_states, return_dict=False)[0]
                         
@@ -249,9 +261,11 @@ def main(args):
                 if (misc_dict["mode"]=="val" and misc_dict["b"]==0) or (misc_dict["mode"]=="test" and misc_dict["b"]<10):
                     
                     action_embedding=action_encoder(action)
-                    token_embedding=token_encoder(tokens)
+                    game_embedding=game_encoder(game)
+                    state_embedding=state_encoder(state)
+                    #token_embedding=token_encoder(tokens)
                     sequence_embedding=image_encoder(sequence)
-                    encoder_hidden_states=torch.cat([action_embedding,token_embedding,sequence_embedding],dim=1)
+                    encoder_hidden_states=torch.cat([action_embedding,state_embedding,game_embedding,sequence_embedding],dim=1)
                     predicted=pipe(num_inference_steps=args.num_inference_steps
                                 ,prompt_embeds=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt").images
                     loss=F.mse_loss(predicted.float(),image.float())
@@ -275,7 +289,7 @@ def main(args):
                             predicted=functional.resize(predicted,(256,256))
                         pred_state,pred_game=classification_model(predicted)
 
-                        state_index=tokens[:,0]
+                        state_index=state
                         #print(state_index[0].item(),type(state_index[0].item()),all_states_plus_none)
                         state_names=[data.token_list[i] for i in state_index]
                         new_state_index=torch.tensor([all_states_plus_none.index(sn) for sn in state_names])
@@ -283,7 +297,7 @@ def main(args):
 
                         #print(all_games_plus_none)
                                                 
-                        game_index=tokens[:,1]
+                        game_index=game
                         game_names=[data.token_list[i] for i in game_index]
                         new_game_index=torch.tensor([all_games_plus_none.index(gn) for gn in game_names])
                         game_one_hot=torch.stack([F.one_hot(g,len(all_games_plus_none)) for g in new_game_index]).float()
@@ -310,8 +324,8 @@ def main(args):
                             action=action_sequence[:,index].unsqueeze(1)
                             action_embedding=action_encoder(action)
                             if index==0:
-                                print(action_embedding.size(),token_embedding.size(),null_sequence_embedding.size())
-                            encoder_hidden_states=torch.cat([action_embedding,token_embedding,null_sequence_embedding],dim=1)
+                                print(action_embedding.size(),null_sequence_embedding.size())
+                            encoder_hidden_states=torch.cat([action_embedding,state_embedding,game_embedding,null_sequence_embedding],dim=1)
                             predicted=pipe(num_inference_steps=args.num_inference_steps
                                 ,prompt_embeds=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt").images
                             predicted_pt_list.append(predicted.detach().cpu().clone())
@@ -394,19 +408,25 @@ def main(args):
 
     for batch in train_loader:
         break
+    
+    normal_loss=[]
+    mismatched_loss=[]
 
-    for game in  all_games_plus_none:
-        for state in all_states_plus_none:
-            g=data.token_list.index(game)
-            s=data.token_list.index(state)
-            action_embedding=action_encoder(torch.tensor([[0]]))
-            token_embedding=token_encoder(torch.tensor([[g,  s]]))
+    for game_str in  all_games_plus_none:
+        for state_str in all_states_plus_none:
+            game=torch.tensor([[data.game_list.index(game_str)]])
+            state=torch.tensor([[data.state_list.index(state_str)]])
+            action=torch.tensor([[action_list.index(NONE_STRING)]])
+            action_embedding=action_encoder(action)
+            game_embedding=game_encoder(game)
+            state_embedding=state_encoder(state)
+            #token_embedding=token_encoder(torch.tensor([[g,  s]]))
             null_sequence=torch.zeros_like(batch["sequence"][0].unsqueeze(0))
             if not args.pretrained:
                 with torch.no_grad():
                     null_sequence=torch.stack([vae.encode(s).latent_dist.sample()*vae.config.scaling_factor for s in null_sequence])
             null_sequence_embedding=image_encoder(null_sequence)
-            encoder_hidden_states=encoder_hidden_states=torch.cat([action_embedding,token_embedding,null_sequence_embedding],dim=1)
+            encoder_hidden_states=encoder_hidden_states=torch.cat([action_embedding,state_embedding,game_embedding,null_sequence_embedding],dim=1)
             predicted=pipe(num_inference_steps=args.num_inference_steps
                                 ,prompt_embeds=encoder_hidden_states,height=args.dim,width=args.dim,output_type="pt").images
             new_s=all_states_plus_none.index(state)
@@ -428,6 +448,11 @@ def main(args):
             accelerator.log({
                 f"combined_{game}_{state}":wandb.Image(image)
             })
+            
+            if state_str in game_state_dict[game_str]:
+                normal_loss.append(state_loss.detach().cpu().numpy()+game_loss.detach().cpu().numpy())
+            else:
+                mismatched_loss.append(state_loss.detach().cpu().numpy()+game_loss.detach().cpu().numpy())
 
 
 
@@ -439,10 +464,14 @@ def main(args):
     '''print(test_video_mse_list)
     print(game_loss_list)
     print(state_loss_list)'''
-    for name, metric_list in zip(["test video","game loss", "state loss", "combined game loss", "combined state loss"],
-                                 [test_video_mse_list,game_loss_list, state_loss_list, combined_game_loss_list,combined_state_loss_list]):
+    acc_log_dict={}
+    for name, metric_list in zip(["test video","game loss", "state loss", "combined game loss", "combined state loss","normal_loss","mismatched_loss"],
+                                 [test_video_mse_list,game_loss_list, state_loss_list, combined_game_loss_list,combined_state_loss_list,normal_loss,mismatched_loss]):
         accelerator.print(f"\t {name} {np.mean(metric_list)}")
         print(f"\t {name} {np.mean(metric_list)}")
+        acc_log_dict[name]=np.mean(metric_list)
+        
+    accelerator.log(acc_log_dict)
     #evaluate 
     
         
