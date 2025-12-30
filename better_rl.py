@@ -314,6 +314,7 @@ def main(args):
     logger = MetricLogger(save_dir,accelerator)
 
     episodes = args.episodes+1
+    print(f"training from {current_episode} to {episodes} ")
     for e in range(current_episode,episodes):
 
         state, info= env.reset()
