@@ -14,6 +14,7 @@ episode_set=set([e for e in data["episode"]])
 for e in args.episode_list:
     if e in episode_set:
         episode_data=data.filter(lambda row: row["episode"]==e)["image"]
+        print(episode_data)
         episode_data[0].save(f"{data_name}_episode_{e}.gif",save_all=True,append_images=episode_data[1:],optimize=False,duration=len(episode_data)/4)
         
 if -1 in args.episode_list:
