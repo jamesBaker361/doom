@@ -175,11 +175,15 @@ class SkipFrame(gym.Wrapper):
         self.game=game
         self.state=state
         self.dest_dataset=dest_dataset
+        keys=["game","state","image","episode","overlay","use_overlay","action"]
         try:
             self.data_dict=load_dataset(dest_dataset,split="train").to_dict()
             if len(self.data_dict["episode"])>0:
                 self.current_episode=1+max(self.data_dict["episode"])
             print(f"loaded from {dest_dataset} startign at {self.current_episode}")
+            for k in ["game","state","image","episode","overlay","use_overlay","action"]:
+                if k not in [dk for dk in self.data_dict.keys()]:
+                    raise Exception()
         except:
             self.current_episode=0
             self.data_dict={
