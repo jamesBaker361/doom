@@ -165,7 +165,7 @@ class Discretizer(gym.ActionWrapper):
     
     
 class SkipFrame(gym.Wrapper):
-    def __init__(self, env, skip,dest_dataset:str,game:str,scenario:str):
+    def __init__(self, env, skip,dest_dataset:str,game:str,state:str):
         """Return only every `skip`-th frame"""
         super().__init__(env)
         self.buttons=env.unwrapped.buttons
@@ -173,7 +173,7 @@ class SkipFrame(gym.Wrapper):
         self.score=None
         self.lives=None
         self.game=game
-        self.scenario=scenario
+        self.state=state
         self.dest_dataset=dest_dataset
         try:
             self.data_dict=load_dataset(dest_dataset,split="train").to_dict()
@@ -184,7 +184,7 @@ class SkipFrame(gym.Wrapper):
             self.current_episode=0
             self.data_dict={
                 "game":[],
-                "scenario":[],
+                "state":[],
                 "image":[],
                 "episode":[],
                 "overlay":[], # these will be none so we can separate template mmatching from rl training
@@ -217,7 +217,7 @@ class SkipFrame(gym.Wrapper):
             if done:
                 break
         self.data_dict["game"].append(self.game)
-        self.data_dict["scenario"].append(self.scenario)
+        self.data_dict["state"].append(self.state)
         self.data_dict["episode"].append(self.current_episode)
         self.data_dict["image"].append(Image.fromarray(obs))
         self.data_dict["overlay"].append(None)
@@ -260,14 +260,13 @@ class SkipFrame(gym.Wrapper):
 def main(args):
     hf_api, accelerator,device=repo_api_init(args)
     GAME=args.game
-    SCENARIO=args.scenario
-    if SCENARIO not in game_state_dict[GAME]:
-        SCENARIO=game_state_dict[GAME][0]
-        print("scenario not present!!! defaulting to ",SCENARIO)
+    STATE=args.state
+    if STATE not in game_state_dict[GAME]:
+        STATE=game_state_dict[GAME][0]
+        print("state not present!!! defaulting to ",STATE)
     env = retro.make(
                 game=GAME,
-                #state=args.state,
-                scenario=SCENARIO,
+                state=args.state,
                 render_mode="rgb_array",
             )
     
@@ -283,7 +282,7 @@ def main(args):
     
     # Apply Wrappers to environment
     sprite_dir=os.path.join("sprite_from_sheet",GAME)
-    env = SkipFrame(env, 15,args.dest_dataset,GAME,SCENARIO)
+    env = SkipFrame(env, 15,args.dest_dataset,GAME,STATE)
     
     current_episode=env.current_episode
     env = GrayscaleObservation(env)
@@ -354,7 +353,7 @@ if __name__=='__main__':
     parser.add_argument("--dest_dataset",type=str,default="jlbaker361/jskadfjsdk")
     parser.add_argument("--episodes",type=int,default=100)
     parser.add_argument("--game",type=str,default=SONIC_1GAME)
-    parser.add_argument("--scenario",type=str,default=game_state_dict[SONIC_1GAME][0])
+    parser.add_argument("--state",type=str,default=game_state_dict[SONIC_1GAME][0])
     parser.add_argument("--save_every",type=int,default=5000)
     parser.add_argument("--burnin",type=int,default=1000)
 

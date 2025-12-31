@@ -20,7 +20,7 @@ class Agent:
         self.batch_size = batch_size
 
         self.exploration_rate = 1
-        self.exploration_rate_decay = 0.99999975
+        self.exploration_rate_decay = 0.995
         self.exploration_rate_min = 0.1
         self.gamma = 0.9
 
