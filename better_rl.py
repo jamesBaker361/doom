@@ -220,21 +220,24 @@ class SkipFrame(gym.Wrapper):
             total_reward += reward
             if done:
                 break
-        self.data_dict["game"].append(self.game)
-        self.data_dict["state"].append(self.state)
-        self.data_dict["episode"].append(self.current_episode)
-        self.data_dict["image"].append(Image.fromarray(obs))
-        self.data_dict["overlay"].append(None)
-        self.data_dict["use_overlay"].append(None)
-        true_index=action.tolist().index(True)
-        self.data_dict["action"].append(self.buttons[true_index])
+            
+        if self.current_episode%10==0:
+            self.data_dict["game"].append(self.game)
+            self.data_dict["state"].append(self.state)
+            self.data_dict["episode"].append(self.current_episode)
+            self.data_dict["image"].append(Image.fromarray(obs))
+            self.data_dict["overlay"].append(None)
+            self.data_dict["use_overlay"].append(None)
+            true_index=action.tolist().index(True)
+            self.data_dict["action"].append(self.buttons[true_index])
         
         if done:
             self.lives=None
             self.score=None
             self.current_episode+=1
-            Dataset.from_dict(self.data_dict).push_to_hub(self.dest_dataset)
-            print(f"uploaded dataset len {len(self.data_dict['game'])} to {self.dest_dataset}" )
+            if self.current_episode%10==0:
+                Dataset.from_dict(self.data_dict).push_to_hub(self.dest_dataset)
+                print(f"uploaded dataset len {len(self.data_dict['game'])} to {self.dest_dataset}" )
         return obs, total_reward, done, trunk, info
 
 
