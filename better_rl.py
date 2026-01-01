@@ -165,7 +165,7 @@ class Discretizer(gym.ActionWrapper):
     
     
 class SkipFrame(gym.Wrapper):
-    def __init__(self, env, skip,dest_dataset:str,game:str,state:str):
+    def __init__(self, env, skip,dest_dataset:str,game:str,state:str,episode_interval:int):
         """Return only every `skip`-th frame"""
         super().__init__(env)
         self.buttons=env.unwrapped.buttons
@@ -175,6 +175,7 @@ class SkipFrame(gym.Wrapper):
         self.game=game
         self.state=state
         self.dest_dataset=dest_dataset
+        self.episode_interval=episode_interval
         keys=["game","state","image","episode","overlay","use_overlay","action"]
         try:
             self.data_dict=load_dataset(dest_dataset,split="train").to_dict()
@@ -211,17 +212,18 @@ class SkipFrame(gym.Wrapper):
                 self.lives=lives
             else:
                 if score>self.score:
-                    reward+=(score-self.score)
+                    reward+=1
                     self.score=score
                     #print("score =",self.score)
                 if lives<self.lives:
                     #print("lives = ",lives)
+                    reward-=1
                     done=True
             total_reward += reward
             if done:
                 break
             
-        if self.current_episode%10==0:
+        if self.current_episode%self.episode_interval==0:
             self.data_dict["game"].append(self.game)
             self.data_dict["state"].append(self.state)
             self.data_dict["episode"].append(self.current_episode)
@@ -235,7 +237,7 @@ class SkipFrame(gym.Wrapper):
             self.lives=None
             self.score=None
             self.current_episode+=1
-            if self.current_episode%10==0:
+            if self.current_episode%self.episode_interval==0:
                 Dataset.from_dict(self.data_dict).push_to_hub(self.dest_dataset)
                 print(f"uploaded dataset len {len(self.data_dict['game'])} to {self.dest_dataset}" )
         return obs, total_reward, done, trunk, info
@@ -363,6 +365,7 @@ if __name__=='__main__':
     parser.add_argument("--state",type=str,default=game_state_dict[SONIC_1GAME][0])
     parser.add_argument("--save_every",type=int,default=5000)
     parser.add_argument("--burnin",type=int,default=1000)
+    parser.add_argument("--episode_interval",type=int,default=50)
 
     print_details()
     start=time.time()
