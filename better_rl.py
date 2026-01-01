@@ -291,7 +291,7 @@ def main(args):
     
     # Apply Wrappers to environment
     sprite_dir=os.path.join("sprite_from_sheet",GAME)
-    env = SkipFrame(env, 15,args.dest_dataset,GAME,STATE)
+    env = SkipFrame(env, 15,args.dest_dataset,GAME,STATE,args.episode_interval)
     
     current_episode=env.current_episode
     env = GrayscaleObservation(env)
