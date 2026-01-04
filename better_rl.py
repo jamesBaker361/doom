@@ -341,9 +341,8 @@ def main(args):
             player_agent.cache(state, next_state, action, reward, done)
 
             if step_count%args.batch_size==0:
-                with accelerator.accumulate(player_agent.net):
-                    # Learn
-                    q, loss = player_agent.learn()
+                # Learn
+                q, loss = player_agent.learn()
 
             # Logging
             logger.log_step(reward, loss, q)
