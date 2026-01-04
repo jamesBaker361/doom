@@ -328,6 +328,7 @@ def main(args):
         state, info= env.reset()
 
         # Play the game!
+        step_count=0
         while True:
 
             # Run agent on the state
@@ -339,8 +340,11 @@ def main(args):
             # Remember
             player_agent.cache(state, next_state, action, reward, done)
 
-            # Learn
-            q, loss = player_agent.learn()
+            if step_count%args.batch_size==0:
+                with accelerator.autocast:
+                    with accelerator.accumulate():
+                        # Learn
+                        q, loss = player_agent.learn()
 
             # Logging
             logger.log_step(reward, loss, q)

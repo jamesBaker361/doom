@@ -92,11 +92,26 @@ class Agent:
         self.memory.append( (state, next_state, action, reward, done,) )
 
 
-    def recall(self):
+    def normalize_rewards(self,rewards):
+        all_rewards=[row[3] for row in self.memory]
+        std=np.std(all_rewards)
+        mean=np.mean(all_rewards)
+        return [(r-mean)/std for r in rewards]
+        
+    
+    def random_recall(self):
         """
         Retrieve a batch of experiences from memory
         """
         batch = random.sample(self.memory, self.batch_size)
+        state, next_state, action, reward, done = map(torch.stack, zip(*batch))
+        return state, next_state, action.squeeze(), reward.squeeze(), done.squeeze()
+    
+    def recall(self):
+        """
+        Retrieve a batch of experiences from memory
+        """
+        batch = self.memory[-self.batch_size:]
         state, next_state, action, reward, done = map(torch.stack, zip(*batch))
         return state, next_state, action.squeeze(), reward.squeeze(), done.squeeze()
 
@@ -150,6 +165,7 @@ class Agent:
 
         # Sample from memory
         state, next_state, action, reward, done = self.recall()
+        reward=self.normalize_rewards(reward)
         if self.use_cuda:
             state=state.cuda()
             next_state=next_state.cuda()
