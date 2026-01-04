@@ -93,10 +93,10 @@ class Agent:
 
 
     def normalize_rewards(self,rewards):
-        all_rewards=[row[3] for row in self.memory]
-        std=np.std(all_rewards)
-        mean=np.mean(all_rewards)
-        return [(r-mean)/std for r in rewards]
+        all_rewards=torch.stack([row[3] for row in self.memory])
+        std=torch.std(all_rewards)
+        mean=torch.mean(all_rewards)
+        return torch.stack([(r-mean)/std for r in rewards])
         
     
     def random_recall(self):
@@ -160,8 +160,8 @@ class Agent:
         if self.curr_step < self.burnin:
             return None, None
 
-        if self.curr_step % self.learn_every != 0:
-            return None, None
+        '''if self.curr_step % self.learn_every != 0:
+            return None, None'''
 
         # Sample from memory
         state, next_state, action, reward, done = self.recall()
