@@ -112,7 +112,7 @@ class Agent:
         Retrieve a batch of experiences from memory
         """
         #batch = self.memory[-self.batch_size:] #list(itertools.islice(dq, len(dq)-2, len(dq)))
-        batch =list(itertools.islice(self.memory),len(self.memory)-self.batch_size,len(self.memory))
+        batch =list(itertools.islice(self.memory,len(self.memory)-self.batch_size,len(self.memory)))
         state, next_state, action, reward, done = map(torch.stack, zip(*batch))
         return state, next_state, action.squeeze(), reward.squeeze(), done.squeeze()
 
