@@ -351,7 +351,7 @@ def main(args):
             state = next_state
 
             # Check if end of game
-            if done:
+            if done or trunc:
                 break
 
         logger.log_episode()
