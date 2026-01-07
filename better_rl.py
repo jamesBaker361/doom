@@ -17,7 +17,7 @@ import retro
 
 import json
 import gymnasium as gym
-from gymnasium.wrappers import FrameStackObservation, TransformObservation,GrayscaleObservation,ResizeObservation
+from gymnasium.wrappers import FrameStackObservation, TransformObservation,GrayscaleObservation,ResizeObservation,NormalizeObservation
 import ale_py
 from gymnasium.spaces import Box
 
@@ -294,9 +294,10 @@ def main(args):
     env = SkipFrame(env, 15,args.dest_dataset,GAME,STATE,args.episode_interval)
     
     current_episode=env.current_episode
+    env=NormalizeObservation(env)
     env = GrayscaleObservation(env)
     env = ResizeObservation(env, shape=(h,w))
-    env = FrameStackObservation(env, stack_size=4)
+    env = FrameStackObservation(env, stack_size=8)
     
     env=Discretizer(env,COMBO_LIST)
     action = env.action_space.sample()
@@ -314,50 +315,56 @@ def main(args):
     os.makedirs(save_dir,exist_ok=True)
     save_path=os.path.join(save_dir,"savedict.pth")
     
-    player_agent = Agent(state_dim=(stack_size,h,w), action_dim=env.action_space.n, 
-                  save_path=save_path,save_every=args.save_every,
-                  burnin=args.burnin,batch_size=args.batch_size,accelerator=accelerator)
-    player_agent.load()
+    if args.rl_method.lower()=="deepq":
+    
+        player_agent = Agent(state_dim=(stack_size,h,w), action_dim=env.action_space.n, 
+                    save_path=save_path,save_every=args.save_every,
+                    burnin=args.burnin,batch_size=args.batch_size,accelerator=accelerator)
+        player_agent.load()
 
-    logger = MetricLogger(save_dir,accelerator)
+        logger = MetricLogger(save_dir,accelerator)
 
-    episodes = args.episodes+1
-    print(f"training from {current_episode} to {episodes} ")
-    for e in range(current_episode,episodes):
+        episodes = args.episodes+1
+        print(f"training from {current_episode} to {episodes} ")
+        for e in range(current_episode,episodes):
 
-        state, info= env.reset()
+            state, info= env.reset()
 
-        # Play the game!
-        step_count=0
-        while True:
+            # Play the game!
+            step_count=0
+            while True:
 
-            # Run agent on the state
-            action = player_agent.act(state)
+                # Run agent on the state
+                action = player_agent.act(state)
 
-            # Agent performs action
-            next_state, reward, done, trunc, info = env.step(action)
+                # Agent performs action
+                next_state, reward, done, trunc, info = env.step(action)
 
-            # Remember
-            player_agent.cache(state, next_state, action, reward, done)
+                # Remember
+                player_agent.cache(state, next_state, action, reward, done)
 
-            if step_count%args.batch_size==0:
-                # Learn
-                q, loss = player_agent.learn()
+                if step_count%args.batch_size==0:
+                    # Learn
+                    q, loss = player_agent.learn()
 
-            # Logging
-            logger.log_step(reward, loss, q)
+                # Logging
+                logger.log_step(reward, loss, q)
 
-            # Update state
-            state = next_state
+                # Update state
+                state = next_state
 
-            # Check if end of game
-            if done or trunc:
-                break
+                # Check if end of game
+                if done or trunc:
+                    break
 
-        logger.log_episode()
+            logger.log_episode()
 
-        if (e % 5 == 0) or (e == episodes - 1):
-            logger.record(episode=e, epsilon=player_agent.exploration_rate, step=player_agent.curr_step)
+            if (e % 5 == 0) or (e == episodes - 1):
+                logger.record(episode=e, epsilon=player_agent.exploration_rate, step=player_agent.curr_step)
+    
+    elif args.rl_method.lower()=="ppo":
+        pass
+        
         
 if __name__=='__main__':
     parser=default_parser()
@@ -368,6 +375,7 @@ if __name__=='__main__':
     parser.add_argument("--save_every",type=int,default=5000)
     parser.add_argument("--burnin",type=int,default=1000)
     parser.add_argument("--episode_interval",type=int,default=50)
+    parser.add_argument("--rl_method",type=str,default="deepq",help="deepq or ppo")
 
     print_details()
     start=time.time()
