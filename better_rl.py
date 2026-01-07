@@ -13,7 +13,7 @@ from tensordict import TensorDict
 from torchrl.data import TensorDictReplayBuffer, LazyMemmapStorage
 
 
-#import retro
+import retro
 
 import json
 import gymnasium as gym
@@ -310,12 +310,12 @@ def main(args):
     if STATE not in game_state_dict[GAME]:
         STATE=game_state_dict[GAME][0]
         print("state not present!!! defaulting to ",STATE)
-    '''env = retro.make(
+    env = retro.make(
                 game=GAME,
                 state=args.state,
                 render_mode="rgb_array",
-            )'''
-    env=DummyEnv(shape=(3,256,256))
+            )
+    #env=DummyEnv(shape=(3,256,256))
     env.reset()
     action = env.action_space.sample()
     print("action space",action,len(action))
