@@ -13,7 +13,7 @@ from tensordict import TensorDict
 from torchrl.data import TensorDictReplayBuffer, LazyMemmapStorage
 
 
-import retro
+#import retro
 
 import json
 import gymnasium as gym
@@ -31,8 +31,45 @@ from accelerate import Accelerator
 from datasets import load_dataset,Dataset
 from extract_sprites import get_sprite_match
 from shared import SONIC_GAME,SONIC_1GAME,CASTLE_GAME,MARIO_GAME,game_state_dict
+from gymnasium.core import ActType, ObsType, WrapperActType, WrapperObsType
 
 COMBO_LIST=[['LEFT'], ['RIGHT'], ['DOWN'],['UP'] ,['B'],['A']]
+
+class DummyEnv(gym.Env):
+    def __init__(self,shape,*args,**kwargs):
+        super().__init__()
+        self.shape=shape
+        self.observation_space = gym.spaces.Box(
+            low=0,
+            high=255,
+            shape=shape,
+            dtype=np.uint8,
+        )
+        
+    def render(self):
+        return None
+    
+    def step(self, action):
+        obs=np.random.uniform(0,255,self.shape).astype(np.uint8)
+        return obs, 1, False,False,{}
+
+class NormWrap(gym.ObservationWrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        
+        
+    def observation(self, observation: ObsType) -> WrapperObsType:
+        return np.float32(
+            (observation - 128) / 256
+        )
+        
+class TensorWrap(gym.ObservationWrapper):
+    def __init__(self, env,stack_size):
+        super().__init__(env)
+        
+    def observation(self, observation: ObsType) -> WrapperObsType:
+        observation =[torch.tensor(obs).permute(2,1,0) for obs in observation]
+        return torch.cat(observation)
 
 
 class MetricLogger:
@@ -273,19 +310,19 @@ def main(args):
     if STATE not in game_state_dict[GAME]:
         STATE=game_state_dict[GAME][0]
         print("state not present!!! defaulting to ",STATE)
-    env = retro.make(
+    '''env = retro.make(
                 game=GAME,
                 state=args.state,
                 render_mode="rgb_array",
-            )
-    
+            )'''
+    env=DummyEnv(shape=(3,256,256))
     env.reset()
     action = env.action_space.sample()
     print("action space",action,len(action))
     next_state, reward, done, trunc, info = env.step(action)
     print(f"next_state.shape {next_state.shape},\n reward {reward},\n done {done},\n info {info}")
     
-    stack_size=4
+    stack_size=args.stack_size
     h=next_state.shape[0]//2
     w=next_state.shape[1]//2
     
@@ -294,10 +331,11 @@ def main(args):
     env = SkipFrame(env, 15,args.dest_dataset,GAME,STATE,args.episode_interval)
     
     current_episode=env.current_episode
-    env=NormalizeObservation(env)
-    env = GrayscaleObservation(env)
-    env = ResizeObservation(env, shape=(h,w))
-    env = FrameStackObservation(env, stack_size=8)
+    
+    #env = GrayscaleObservation(env)
+    #env = ResizeObservation(env, shape=(h,w))
+    env = FrameStackObservation(env, stack_size=stack_size)
+    env=NormWrap(env)
     
     env=Discretizer(env,COMBO_LIST)
     action = env.action_space.sample()
@@ -305,7 +343,7 @@ def main(args):
     action = env.action_space.sample()
     print("action space",action)
     next_state, reward, done, trunc, info = env.step(action)
-    print(f"next_state.shape {next_state.shape},\n reward {reward},\n done {done},\n info {info}")
+    print(f"next_state.shape {next_state.ssize()},\n reward {reward},\n done {done},\n info {info}")
     
     use_cuda = torch.cuda.is_available()
     print(f"Using CUDA: {use_cuda}")
@@ -317,7 +355,7 @@ def main(args):
     
     if args.rl_method.lower()=="deepq":
     
-        player_agent = Agent(state_dim=(stack_size,h,w), action_dim=env.action_space.n, 
+        player_agent = Agent(state_dim=(stack_size*3,h,w), action_dim=env.action_space.n, 
                     save_path=save_path,save_every=args.save_every,
                     burnin=args.burnin,batch_size=args.batch_size,accelerator=accelerator)
         player_agent.load()
@@ -333,19 +371,48 @@ def main(args):
             # Play the game!
             step_count=0
             while True:
+                
+                state_tensor=[]
+                next_state_tensor=[]
+                action_tensor=[]
+                reward_tensor=[]
+                done_tensor=[]
+                
+                #for _ in range(args.batch_size):
 
-                # Run agent on the state
-                action = player_agent.act(state)
+                    # Run agent on the state
+                action = player_agent.act(state.unsqueeze(0))
+                    
+                '''state = torch.FloatTensor(state) #.cuda() if self.use_cuda else torch.FloatTensor(state)
+                next_state = torch.FloatTensor(next_state) #.cuda() if self.use_cuda else torch.FloatTensor(next_state)
+                action = torch.LongTensor([action]) #.cuda() if self.use_cuda else torch.LongTensor([action])
+                reward = torch.DoubleTensor([reward]) #.cuda() if self.use_cuda else torch.DoubleTensor([reward])
+                done = torch.BoolTensor([done]) #.cuda() if self.use_cuda else torch.BoolTensor([done])'''
 
-                # Agent performs action
+                    # Agent performs action
                 next_state, reward, done, trunc, info = env.step(action)
+                    
+                '''state_tensor.append(state)
+                next_state_tensor.append(next_state)
+                action_tensor.append(action)
+                done_tensor.append(done)
+                reward_tensor.append(reward)
+                state=next_state'''
+                    
+                '''state_tensor=torch.stack([torch.FloatTensor(s) for s in state_tensor])
+                next_state_tensor=torch.stack([torch.FloatTensor(n) for n in next_state_tensor])
+                action_tensor=torch.stack([torch.LongTensor(a) for a in action_tensor])
+                reward_tensor=torch.stack([torch.DoubleTensor(r) for r in reward_tensor])
+                done_tensor=torch.stack([torch.BoolTensor(d) for d in done_tensor])'''
+                    
 
                 # Remember
-                player_agent.cache(state, next_state, action, reward, done)
+                #player_agent.cache(state_tensor,next_state_tensor, action_tensor, reward_tensor, done_tensor)
+                player_agent.cache(state,next_state, action, reward, done)                
 
-                if step_count%args.batch_size==0:
-                    # Learn
-                    q, loss = player_agent.learn()
+                #if step_count%args.batch_size==0:
+                # Learn
+                q, loss = player_agent.learn()
 
                 # Logging
                 logger.log_step(reward, loss, q)
@@ -376,6 +443,7 @@ if __name__=='__main__':
     parser.add_argument("--burnin",type=int,default=1000)
     parser.add_argument("--episode_interval",type=int,default=50)
     parser.add_argument("--rl_method",type=str,default="deepq",help="deepq or ppo")
+    parser.add_argument("--stack_size",type=int,default=4)
 
     print_details()
     start=time.time()

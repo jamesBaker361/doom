@@ -93,7 +93,7 @@ class Agent:
 
 
     def normalize_rewards(self,rewards):
-        all_rewards=torch.stack([row[3] for row in self.memory])
+        all_rewards=torch.cat([row[3] for row in self.memory])
         std=torch.std(all_rewards)
         mean=torch.mean(all_rewards)
         return torch.stack([(r-mean)/std for r in rewards])
