@@ -2,6 +2,14 @@ from torch import nn
 import torch
 import copy
 
+class PrintModule(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+    def forward(self,x):
+        print(x.size())
+        return x
+
 class AgentNet(nn.Module):
     '''mini cnn structure
     input -> (conv2d + LeakyReLU) x 3 -> flatten -> (dense + LeakyReLU) x 2 -> output
@@ -50,7 +58,7 @@ class AgentNet(nn.Module):
             nn.Linear(128, output_dim)
         )
         
-        self.online=torch.nn.Sequential(self.online_conv,self.online_dense)
+        self.online=torch.nn.Sequential(self.online_conv,PrintModule(),self.online_dense)
 
         self.target = copy.deepcopy(self.online)
 
