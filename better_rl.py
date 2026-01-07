@@ -345,7 +345,9 @@ def main(args):
     print("action space",action)
     next_state, reward, done, trunc, info = env.step(action)
     print(next_state)
-    print(f"next_state.shape {next_state.size()},\n reward {reward},\n done {done},\n info {info}")
+    print(type(next_state))
+    print(next_state.size)
+    print(f"next_state.shape {next_state.size},\n reward {reward},\n done {done},\n info {info}")
     
     use_cuda = torch.cuda.is_available()
     print(f"Using CUDA: {use_cuda}")
