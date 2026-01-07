@@ -323,7 +323,7 @@ def main(args):
     print(next_state)
     print(type(next_state))
     print(next_state.size)
-    print(f"next_state.size{next_state.size()},\n reward {reward},\n done {done},\n info {info}")
+    print(f"next_state.shape {next_state.shape},\n reward {reward},\n done {done},\n info {info}")
     
     stack_size=args.stack_size
     h=next_state.shape[0]//2
@@ -350,7 +350,7 @@ def main(args):
     print(next_state)
     print(type(next_state))
     print(next_state.size)
-    print(f"next_state.shape {next_state.size},\n reward {reward},\n done {done},\n info {info}")
+    print(f"next_state.size {next_state.size()},\n reward {reward},\n done {done},\n info {info}")
     
     use_cuda = torch.cuda.is_available()
     print(f"Using CUDA: {use_cuda}")
