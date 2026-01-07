@@ -69,7 +69,7 @@ class TensorWrap(gym.ObservationWrapper):
         
     def observation(self, observation: ObsType) -> WrapperObsType:
         observation =[torch.tensor(obs).permute(2,1,0) for obs in observation]
-        return torch.cat(observation)
+        return (torch.cat(observation)-128.0)-1.0
 
 
 class MetricLogger:
@@ -335,7 +335,8 @@ def main(args):
     #env = GrayscaleObservation(env)
     #env = ResizeObservation(env, shape=(h,w))
     env = FrameStackObservation(env, stack_size=stack_size)
-    env=NormWrap(env)
+    env=TensorWrap(env,stack_size=stack_size)
+    #env=NormWrap(env)
     
     env=Discretizer(env,COMBO_LIST)
     action = env.action_space.sample()
@@ -343,7 +344,7 @@ def main(args):
     action = env.action_space.sample()
     print("action space",action)
     next_state, reward, done, trunc, info = env.step(action)
-    print(f"next_state.shape {next_state.ssize()},\n reward {reward},\n done {done},\n info {info}")
+    print(f"next_state.shape {next_state.size()},\n reward {reward},\n done {done},\n info {info}")
     
     use_cuda = torch.cuda.is_available()
     print(f"Using CUDA: {use_cuda}")
