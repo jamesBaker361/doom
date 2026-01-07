@@ -388,7 +388,7 @@ def main(args):
                 #for _ in range(args.batch_size):
 
                     # Run agent on the state
-                action = player_agent.act(state.unsqueeze(0))
+                action = player_agent.act(state)
                     
                 '''state = torch.FloatTensor(state) #.cuda() if self.use_cuda else torch.FloatTensor(state)
                 next_state = torch.FloatTensor(next_state) #.cuda() if self.use_cuda else torch.FloatTensor(next_state)
