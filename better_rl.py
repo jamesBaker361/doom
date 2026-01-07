@@ -326,8 +326,8 @@ def main(args):
     print(f"next_state.shape {next_state.shape},\n reward {reward},\n done {done},\n info {info}")
     
     stack_size=args.stack_size
-    h=next_state.shape[0]//2
-    w=next_state.shape[1]//2
+    h=next_state.shape[0]
+    w=next_state.shape[1]
     
     # Apply Wrappers to environment
     sprite_dir=os.path.join("sprite_from_sheet",GAME)
@@ -347,9 +347,7 @@ def main(args):
     action = env.action_space.sample()
     print("action space",action)
     next_state, reward, done, trunc, info = env.step(action)
-    print(next_state)
-    print(type(next_state))
-    print(next_state.size)
+
     print(f"next_state.size {next_state.size()},\n reward {reward},\n done {done},\n info {info}")
     
     use_cuda = torch.cuda.is_available()

@@ -25,6 +25,7 @@ class AgentNet(nn.Module):
             nn.LeakyReLU(),
             nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1),
             nn.LeakyReLU(),
+            nn.MaxPool2d(2),
             nn.Flatten(),
         )
         
