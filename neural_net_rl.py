@@ -58,7 +58,11 @@ class AgentNet(nn.Module):
             nn.Linear(128, output_dim)
         )
         
-        self.online=torch.nn.Sequential(PrintModule(),self.online_conv,PrintModule(),self.online_dense)
+        self.online=torch.nn.Sequential(
+            #PrintModule(),
+            self.online_conv,
+            #PrintModule(),
+            self.online_dense)
 
         self.target = copy.deepcopy(self.online)
 
