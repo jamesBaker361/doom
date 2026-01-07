@@ -320,7 +320,7 @@ def main(args):
     action = env.action_space.sample()
     print("action space",action,len(action))
     next_state, reward, done, trunc, info = env.step(action)
-    print(f"next_state.shape {next_state.shape},\n reward {reward},\n done {done},\n info {info}")
+    print(f"next_state.size{next_state.size()},\n reward {reward},\n done {done},\n info {info}")
     
     stack_size=args.stack_size
     h=next_state.shape[0]//2
