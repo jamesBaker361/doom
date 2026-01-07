@@ -344,6 +344,7 @@ def main(args):
     action = env.action_space.sample()
     print("action space",action)
     next_state, reward, done, trunc, info = env.step(action)
+    print(next_state)
     print(f"next_state.shape {next_state.size()},\n reward {reward},\n done {done},\n info {info}")
     
     use_cuda = torch.cuda.is_available()
