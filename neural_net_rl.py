@@ -95,6 +95,7 @@ class AEKLAgentNet(nn.Module):
     def __init__(self, input_dim, output_dim):
         super().__init__()
         self.encoder=AutoencoderKL.from_pretrained("SimianLuo/LCM_Dreamshaper_v7",subfolder="vae")
+        self.scaling_factor=self.encoder.config.scaling_factor
         self.encoder.requires_grad_(False)
         c, h, w = input_dim
         self.online_conv = nn.Sequential(
@@ -111,7 +112,7 @@ class AEKLAgentNet(nn.Module):
         )
         
         result=torch.zeros((1,c,h,w))
-        result=self.encoder.encode(result).latent_dist.sample()
+        result=torch.cat([self.scaling_factor* self.encoder.encode(i).latent_dist.sample() for i in torch.chunk(result, c // 3, dim=1)],dim=1)
         result=self.online_conv(result)
         dim=1
         for r in result.size():
@@ -152,7 +153,7 @@ class AEKLAgentNet(nn.Module):
         
         C=input.size()[1]
         input= torch.chunk(input, C // 3, dim=1)
-        input=torch.cat([self.encoder.encode(i).latent_dist.sample() for i in input],dim=1)
+        input=torch.cat([self.scaling_factor* self.encoder.encode(i).latent_dist.sample() for i in input],dim=1)
         if model == 'online':
             return self.online(input)
         elif model == 'target':
@@ -163,6 +164,7 @@ class AEDCAgentNet(nn.Module):
     def __init__(self, input_dim, output_dim):
         super().__init__()
         self.encoder=AutoencoderDC.from_pretrained("mit-han-lab/dc-ae-f32c32-sana-1.0-diffusers")
+        self.scaling_factor=self.encoder.config.scaling_factor
         self.encoder.requires_grad_(False)
         c, h, w = input_dim
         self.online_conv = nn.Sequential(
@@ -173,7 +175,7 @@ class AEDCAgentNet(nn.Module):
         )
         
         result=torch.zeros((1,c,h,w))
-        result=self.encoder.encode(result).latent
+        result=torch.cat([self.scaling_factor* self.encoder.encode(i).latent for i in torch.chunk(result, c // 3, dim=1)],dim=1)
         result=self.online_conv(result)
         dim=1
         for r in result.size():
@@ -213,7 +215,7 @@ class AEDCAgentNet(nn.Module):
     def forward(self, input, model):
         C=input.size()[1]
         input= torch.chunk(input, C // 3, dim=1)
-        input=torch.cat([self.encoder.encode(i).latent for i in input],dim=1)
+        input=torch.cat([self.scaling_factor* self.encoder.encode(i).latent for i in input],dim=1)
         if model == 'online':
             return self.online(input)
         elif model == 'target':
