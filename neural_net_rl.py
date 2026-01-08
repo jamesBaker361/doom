@@ -122,13 +122,7 @@ class AEKLAgentNet(nn.Module):
         print(f" {(c,h,w)} -> {dim} ")
         
         self.online_dense=nn.Sequential(
-            nn.Linear(int(dim), 1024),
-            nn.Dropout(0.1),
-            nn.LeakyReLU(),
-            nn.Linear(1024, 512),
-            nn.Dropout(0.1),
-            nn.LeakyReLU(),
-            nn.Linear(512, 256),
+            nn.Linear(int(dim), 256),
             nn.Dropout(0.1),
             nn.LeakyReLU(),
             nn.Linear(256, 128),
