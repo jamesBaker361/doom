@@ -69,7 +69,7 @@ class TensorWrap(gym.ObservationWrapper):
         
     def observation(self, observation: ObsType) -> WrapperObsType:
         observation =[torch.tensor(obs).permute(2,1,0) for obs in observation]
-        return (torch.cat(observation)-128.0)-1.0
+        return (torch.cat(observation)-128.0)/128.0
 
 
 class MetricLogger:

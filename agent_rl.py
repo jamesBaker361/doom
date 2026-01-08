@@ -3,7 +3,7 @@ import random, numpy as np
 from pathlib import Path
 from accelerate import Accelerator
 
-from neural_net_rl import AgentNet
+from neural_net_rl import ConvAgentNet
 from collections import deque
 import os
 import itertools
@@ -35,7 +35,7 @@ class Agent:
         self.use_cuda = torch.cuda.is_available()
 
         # Mario's DNN to predict the most optimal action - we implement this in the Learn section
-        self.net = AgentNet(self.state_dim, self.action_dim).float()
+        self.net = ConvAgentNet(self.state_dim, self.action_dim).float()
         if self.use_cuda:
             self.net = self.net.to(device='cuda')
 
