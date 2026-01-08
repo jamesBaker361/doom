@@ -98,15 +98,16 @@ class AEKLAgentNet(nn.Module):
         self.scaling_factor=self.encoder.config.scaling_factor
         self.encoder.requires_grad_(False)
         c, h, w = input_dim
+        stack_size=c//3
         self.online_conv = nn.Sequential(
-            nn.Conv2d(in_channels=4, out_channels=8, kernel_size=4, stride=2),
-            nn.BatchNorm2d(8),
+            nn.Conv2d(in_channels=4*stack_size, out_channels=8*stack_size, kernel_size=4, stride=2),
+            nn.BatchNorm2d(8*stack_size),
             nn.LeakyReLU(),
-            nn.Conv2d(in_channels=8, out_channels=16, kernel_size=4, stride=2),
-            nn.BatchNorm2d(16),
+            nn.Conv2d(in_channels=8*stack_size, out_channels=16*stack_size, kernel_size=4, stride=2),
+            nn.BatchNorm2d(16*stack_size),
             nn.LeakyReLU(),
-            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=4, stride=2),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(in_channels=16*stack_size, out_channels=32*stack_size, kernel_size=4, stride=2),
+            nn.BatchNorm2d(32*stack_size),
             nn.LeakyReLU(),
             nn.Flatten()
         )
@@ -167,12 +168,15 @@ class AEDCAgentNet(nn.Module):
         self.scaling_factor=self.encoder.config.scaling_factor
         self.encoder.requires_grad_(False)
         c, h, w = input_dim
+        stack_size=c//3
         self.online_conv = nn.Sequential(
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(in_channels=32 *stack_size, out_channels=64 *stack_size, kernel_size=4, stride=2),
+            nn.BatchNorm2d(64 * stack_size),
             nn.LeakyReLU(),
             nn.Flatten()
         )
+        
+        stack_size=c//3
         
         result=torch.zeros((1,c,h,w))
         result=torch.cat([self.scaling_factor* self.encoder.encode(i).latent for i in torch.chunk(result, c // 3, dim=1)],dim=1)
