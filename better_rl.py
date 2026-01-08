@@ -362,7 +362,7 @@ def main(args):
     
         player_agent = Agent(state_dim=(stack_size*3,h,w), action_dim=env.action_space.n, 
                     save_path=save_path,save_every=args.save_every,
-                    burnin=args.burnin,batch_size=args.batch_size,accelerator=accelerator)
+                    burnin=args.burnin,batch_size=args.batch_size,accelerator=accelerator,agent_type=args.agent_type)
         player_agent.load()
 
         logger = MetricLogger(save_dir,accelerator)
@@ -450,6 +450,7 @@ if __name__=='__main__':
     parser.add_argument("--episode_interval",type=int,default=50)
     parser.add_argument("--rl_method",type=str,default="deepq",help="deepq or ppo")
     parser.add_argument("--stack_size",type=int,default=4)
+    parser.add_argument("--agent_type",type=str,default="conv",help="one of conv, kl, dc")
 
     print_details()
     start=time.time()

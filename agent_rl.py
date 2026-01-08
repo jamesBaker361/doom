@@ -3,7 +3,7 @@ import random, numpy as np
 from pathlib import Path
 from accelerate import Accelerator
 
-from neural_net_rl import ConvAgentNet
+from neural_net_rl import ConvAgentNet,AEDCAgentNet,AEKLAgentNet
 from collections import deque
 import os
 import itertools
@@ -13,14 +13,15 @@ class Agent:
                  burnin:int=1e5,
                  learn_every:int=3,
                  save_every:int=5e5,batch_size:int=32,
-                 accelerator:Accelerator=None):
+                 accelerator:Accelerator=None,
+                 agent_type:str="conv"):
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.memory = deque(maxlen=100000)
+        self.memory = deque(maxlen=100)
         self.batch_size = batch_size
 
         self.exploration_rate = 1
-        self.exploration_rate_decay = 0.995
+        self.exploration_rate_decay = 0.999
         self.exploration_rate_min = 0.1
         self.gamma = 0.9
 
@@ -35,7 +36,12 @@ class Agent:
         self.use_cuda = torch.cuda.is_available()
 
         # Mario's DNN to predict the most optimal action - we implement this in the Learn section
-        self.net = ConvAgentNet(self.state_dim, self.action_dim).float()
+        agent_net_class={
+            "conv":ConvAgentNet,
+            "kl":AEKLAgentNet,
+            "dc":AEDCAgentNet
+        }[agent_type]
+        self.net = agent_net_class(self.state_dim, self.action_dim).float()
         if self.use_cuda:
             self.net = self.net.to(device='cuda')
 

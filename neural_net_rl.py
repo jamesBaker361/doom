@@ -163,14 +163,8 @@ class AEDCAgentNet(nn.Module):
         self.encoder.requires_grad_(False)
         c, h, w = input_dim
         self.online_conv = nn.Sequential(
-            nn.Conv2d(in_channels=4, out_channels=8, kernel_size=4, stride=2),
-            nn.BatchNorm2d(8),
-            nn.LeakyReLU(),
-            nn.Conv2d(in_channels=8, out_channels=16, kernel_size=4, stride=2),
-            nn.BatchNorm2d(16),
-            nn.LeakyReLU(),
-            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=4, stride=2),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2),
+            nn.BatchNorm2d(64),
             nn.LeakyReLU(),
             nn.Flatten()
         )
