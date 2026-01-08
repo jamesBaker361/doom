@@ -44,6 +44,8 @@ class Agent:
         self.net = agent_net_class(self.state_dim, self.action_dim).float()
         if self.use_cuda:
             self.net = self.net.to(device='cuda')
+            if getattr(self.net,"encoder",None) is not None:
+                self.net.encoder.to(device='cuda')
 
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.00025)
         self.accelerator=accelerator
