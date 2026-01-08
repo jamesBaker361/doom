@@ -149,7 +149,10 @@ class AEKLAgentNet(nn.Module):
         self.module_list=torch.nn.ModuleList([self.encoder,self.online,self.target])
         
     def forward(self, input, model):
-        input=self.encoder.encode(input).latent_dist.sample()
+        
+        C=input.size()[1]
+        input= torch.chunk(input, C // 3, dim=1)
+        input=torch.cat([self.encoder.encode(i).latent_dist.sample() for i in input],dim=1)
         if model == 'online':
             return self.online(input)
         elif model == 'target':
@@ -208,7 +211,9 @@ class AEDCAgentNet(nn.Module):
         self.module_list=torch.nn.ModuleList([self.encoder,self.online,self.target])
         
     def forward(self, input, model):
-        input=self.encoder.encode(input).latent
+        C=input.size()[1]
+        input= torch.chunk(input, C // 3, dim=1)
+        input=torch.cat([self.encoder.encode(i).latent for i in input],dim=1)
         if model == 'online':
             return self.online(input)
         elif model == 'target':
