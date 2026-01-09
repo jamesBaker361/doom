@@ -47,7 +47,7 @@ class Agent:
             if getattr(self.net,"encoder",None) is not None:
                 self.net.encoder.to(device='cuda')
 
-        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.00025)
+        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.00001)
         self.accelerator=accelerator
         self.loss_fn = torch.nn.SmoothL1Loss()
 
